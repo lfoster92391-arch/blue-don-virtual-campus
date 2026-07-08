@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Blue Don Virtual Campus Badge Studio">
+  <defs>
+    <linearGradient id="silver" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8EEF5"/>
+      <stop offset="35%" stop-color="#B8C4D4"/>
+      <stop offset="65%" stop-color="#8A9BB0"/>
+      <stop offset="100%" stop-color="#D4DCE8"/>
+    </linearGradient>
+    <linearGradient id="shieldFill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#D8DEE8"/>
+    </linearGradient>
+    <linearGradient id="swordBlade" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F4F7FB"/>
+      <stop offset="50%" stop-color="#A8B8CC"/>
+      <stop offset="100%" stop-color="#D0DAE6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Navy background with rounded corners -->
+  <rect width="512" height="512" rx="56" fill="#0A2342"/>
+  <rect x="10" y="10" width="492" height="492" rx="48" fill="none" stroke="url(#silver)" stroke-width="8"/>
+
+  <!-- Emblem group (scaled for full logo layout) -->
+  <g transform="translate(0, -8) scale(0.78) translate(56, 20)">
+    <!-- Knight helmet -->
+    <g transform="translate(118, 72)">
+      <path
+        d="M88 18 C118 8 158 14 178 42 C188 58 192 78 188 98 L184 118 C180 132 168 142 152 146 L148 168 C142 196 118 214 88 218 C58 214 34 196 28 168 L24 146 C8 142 -4 132 -8 118 L-12 98 C-16 78 -12 58 -2 42 C18 14 58 8 88 18 Z"
+        fill="#FFFFFF"
+        transform="translate(12, 0)"
+      />
+      <path d="M52 108 C72 100 104 100 124 108 L118 118 C100 112 76 112 58 118 Z" fill="#0A2342" opacity="0.35" transform="translate(12, 0)"/>
+      <path d="M168 52 C196 36 224 40 236 62 C244 78 238 98 220 110 L200 118 C210 100 208 78 196 66 C186 56 176 52 168 52 Z" fill="#FFFFFF" opacity="0.92"/>
+    </g>
+
+    <!-- Shield -->
+    <g transform="translate(256, 248)">
+      <path
+        d="M0 -108 L88 -88 L88 42 C88 88 44 128 0 148 C-44 128 -88 88 -88 42 L-88 -88 Z"
+        fill="url(#shieldFill)"
+        stroke="url(#silver)"
+        stroke-width="5"
+      />
+      <text x="0" y="18" font-family="Georgia, 'Times New Roman', serif" font-size="96" font-weight="700" fill="#0A2342" text-anchor="middle" dominant-baseline="middle">M</text>
+    </g>
+
+    <!-- Sword -->
+    <g transform="translate(256, 230)">
+      <rect x="-6" y="-140" width="12" height="220" rx="4" fill="url(#swordBlade)" transform="rotate(-18)"/>
+      <path d="M-18 -148 L18 -148 L8 -168 L-8 -168 Z" fill="url(#silver)" transform="rotate(-18)"/>
+      <rect x="-22" y="72" width="44" height="14" rx="4" fill="url(#silver)" transform="rotate(-18)"/>
+    </g>
+
+    <!-- DONS banner -->
+    <g transform="translate(256, 392)">
+      <path d="M-108 -22 L108 -22 L96 22 L-96 22 Z" fill="#FFFFFF" stroke="url(#silver)" stroke-width="3"/>
+      <text x="0" y="4" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" fill="#0A2342" text-anchor="middle" dominant-baseline="middle" letter-spacing="6">DONS</text>
+    </g>
+  </g>
+
+  <!-- CAMPUS title -->
+  <text
+    x="256"
+    y="318"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="54"
+    font-weight="800"
+    fill="#FFFFFF"
+    text-anchor="middle"
+    letter-spacing="8"
+  >CAMPUS</text>
+
+  <!-- Badge Studio subtitle -->
+  <text
+    x="256"
+    y="352"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="16"
+    font-weight="600"
+    fill="#B8C4D4"
+    text-anchor="middle"
+    letter-spacing="3"
+  >— BADGE STUDIO —</text>
+
+  <!-- Bottom action bar -->
+  <rect x="24" y="388" width="464" height="96" rx="20" fill="#061829" stroke="url(#silver)" stroke-width="2" opacity="0.95"/>
+  <g fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" text-anchor="middle">
+    <!-- IDENTIFY -->
+    <g transform="translate(88, 418)">
+      <circle cx="0" cy="0" r="16" fill="none" stroke="#B8C4D4" stroke-width="2"/>
+      <circle cx="0" cy="0" r="6" fill="#B8C4D4"/>
+      <text x="0" y="34" fill="#D8DEE8" letter-spacing="1">IDENTIFY</text>
+    </g>
+    <!-- GENERATE -->
+    <g transform="translate(192, 418)">
+      <rect x="-14" y="-12" width="28" height="24" rx="3" fill="none" stroke="#B8C4D4" stroke-width="2"/>
+      <path d="M-6 -4 L6 -4 L6 8 L-6 8 Z" fill="#B8C4D4"/>
+      <text x="0" y="34" fill="#D8DEE8" letter-spacing="1">GENERATE</text>
+    </g>
+    <!-- PRINT -->
+    <g transform="translate(320, 418)">
+      <rect x="-16" y="-4" width="32" height="18" rx="2" fill="none" stroke="#B8C4D4" stroke-width="2"/>
+      <rect x="-12" y="-12" width="24" height="10" rx="1" fill="#B8C4D4"/>
+      <text x="0" y="34" fill="#D8DEE8" letter-spacing="1">PRINT</text>
+    </g>
+    <!-- SECURE -->
+    <g transform="translate(424, 418)">
+      <path d="M-12 4 L-12 -2 C-12 -10 -4 -14 0 -14 C4 -14 12 -10 12 -2 L12 4 Z" fill="none" stroke="#B8C4D4" stroke-width="2"/>
+      <rect x="-14" y="4" width="28" height="16" rx="3" fill="none" stroke="#B8C4D4" stroke-width="2"/>
+      <text x="0" y="34" fill="#D8DEE8" letter-spacing="1">SECURE</text>
+    </g>
+  </g>
+</svg>

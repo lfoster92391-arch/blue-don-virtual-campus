@@ -1,0 +1,1052 @@
+// Phases 5–10 schema (forms through knowledge vault).
+// Full data model: docs/blueprint/05_DATABASE_BLUEPRINT.md
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  ADVISOR
+  TEACHER
+  STUDENT
+  PARENT
+  SPONSOR
+  ALUMNI
+  STAFF
+  COACH
+  COUNSELOR
+}
+
+enum OrganizationType {
+  CLUB
+  CLASS
+  TEAM
+  ACADEMY
+  DEPARTMENT
+}
+
+enum OrgMembershipRole {
+  LEAD
+  OFFICER
+  MODERATOR
+  MEMBER
+}
+
+enum OrgVisibility {
+  SCHOOL
+  MEMBERS_ONLY
+  PRIVATE
+}
+
+enum MembershipStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  REJECTED
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+enum EventStatus {
+  DRAFT
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AssignmentStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  COMPLETED
+  OVERDUE
+}
+
+enum ParticipantRole {
+  ORGANIZER
+  VOLUNTEER
+  ATTENDEE
+  SPEAKER
+}
+
+enum AttendanceStatus {
+  REGISTERED
+  ATTENDED
+  ABSENT
+  CANCELLED
+}
+
+enum FormStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  PUBLISHED
+  COMPLETE
+  ARCHIVED
+}
+
+enum FormType {
+  ENROLLMENT_PACKET
+  STUDENT_AGREEMENT
+  PARENT_AGREEMENT
+  PARTICIPATION_COMMITMENT
+  MEDIA_RELEASE
+  TECHNOLOGY_AGREEMENT
+  EVENT_REGISTRATION
+  VOLUNTEER_FORM
+  SPONSOR_PACKET
+  PURCHASE_REQUEST
+  TRAVEL_APPROVAL
+  RISK_ACKNOWLEDGEMENT
+  EQUIPMENT_CHECKOUT
+  CUSTOM
+}
+
+enum ApprovalType {
+  JOIN_ACADEMY
+  PURCHASE
+  SPONSOR
+  EVENT
+  TRAVEL
+  IMPACT_FUND
+  CAPSTONE
+  PUBLISHING
+}
+
+enum AcademyMembershipStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  REJECTED
+}
+
+enum ChecklistStatus {
+  DRAFT
+  ACTIVE
+  COMPLETE
+  ARCHIVED
+}
+
+enum PortfolioItemType {
+  PROJECT
+  CERTIFICATION
+  SERVICE
+  LEADERSHIP
+  ACHIEVEMENT
+}
+
+enum PortfolioItemStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketCategory {
+  TECHNICAL
+  ACADEMIC
+  FACILITIES
+  ACCOUNT
+  OTHER
+}
+
+enum KnowledgeArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum LabStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum LabDifficulty {
+  INTRODUCTORY
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum LabSessionStatus {
+  REGISTERED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum SimulatorStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum SimulatorCategory {
+  STEM
+  BUSINESS
+  MEDIA
+  SERVICE
+  GENERAL
+}
+
+enum ImpactFundProposalStatus {
+  DRAFT
+  SUBMITTED
+  VOTING
+  APPROVED
+  REJECTED
+  FUNDED
+  ARCHIVED
+}
+
+enum ImpactFundVoteChoice {
+  FOR
+  AGAINST
+  ABSTAIN
+}
+
+enum CareerPathway {
+  BROADCAST_MEDIA
+  IT
+  ROBOTICS_ENGINEERING
+  SOFTWARE_DEVELOPMENT
+  DIGITAL_MARKETING
+  GRAPHIC_DESIGN
+  BUSINESS_ENTREPRENEURSHIP
+}
+
+enum AcademyLevelTier {
+  EXPLORER
+  FOUNDATION
+  INTERMEDIATE
+  ADVANCED
+  PROFESSIONAL
+  COLLEGIATE
+  INDUSTRY_CAPSTONE
+}
+
+enum LearningStepType {
+  LEARN
+  WATCH
+  GUIDED_LAB
+  PRACTICE_LAB
+  CHALLENGE_LAB
+  TROUBLESHOOTING_LAB
+  PRACTICAL_EXAM
+  CERTIFICATION
+  PORTFOLIO_PROJECT
+  CAPSTONE_MISSION
+}
+
+enum ModuleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum MissionStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum AssessmentType {
+  KNOWLEDGE_CHECK
+  PRACTICAL_EXAM
+  QUIZ
+}
+
+enum CertificationStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  LOCKED
+}
+
+model School {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  users     User[]
+
+  @@map("schools")
+}
+
+model Academy {
+  id          String              @id @default(cuid())
+  slug        String              @unique
+  name        String
+  description String?
+  color       String?
+  icon        String?
+  sortOrder   Int                 @default(0) @map("sort_order")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+  events      Event[]
+  assignments Assignment[]
+  memberships AcademyMembership[]
+  checklists  Checklist[]
+  portfolioItems PortfolioItem[]
+  knowledgeArticles KnowledgeArticle[]
+  labs           Lab[]
+  simulators     Simulator[]
+  impactFundProposals ImpactFundProposal[]
+  pathwayMappings AcademyPathwayMapping[]
+  levels          AcademyLevel[]
+  modules         LearningModule[]
+  videos          Video[]
+  missions        Mission[]
+  certifications  Certification[]
+  leaderboardEntries LeaderboardEntry[]
+  studentProgress StudentAcademyProgress[]
+
+  @@map("academies")
+}
+
+model User {
+  id                 String             @id @db.Uuid
+  email              String             @unique
+  displayName        String?            @map("display_name")
+  firstName          String?            @map("first_name")
+  lastName           String?            @map("last_name")
+  role               UserRole           @default(STUDENT)
+  schoolId           String?            @map("school_id")
+  profileImage       String?            @map("profile_image")
+  status             UserStatus         @default(PENDING)
+  onboardedAt        DateTime?          @map("onboarded_at")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  school             School?            @relation(fields: [schoolId], references: [id])
+  createdEvents      Event[]            @relation("EventCreator")
+  eventParticipation EventParticipant[]
+  assignments        Assignment[]
+  eventReminders     EventReminder[]
+  formSubmissions    FormSubmission[]       @relation("FormSubmissionUser")
+  approvedSubmissions FormSubmission[]      @relation("FormSubmissionApprover")
+  academyMemberships AcademyMembership[]
+  checklistCompletions ChecklistItemCompletion[]
+  portfolioItems     PortfolioItem[]
+  tickets            Ticket[]               @relation("TicketUser")
+  assignedTickets    Ticket[]               @relation("TicketAssignee")
+  ticketComments     TicketComment[]
+  knowledgeArticles  KnowledgeArticle[]
+  labSessions        LabSession[]
+  simulatorRuns      SimulatorRun[]
+  impactFundProposals ImpactFundProposal[] @relation("ImpactFundProposer")
+  impactFundVotes    ImpactFundVote[]
+  moduleProgress     StudentModuleProgress[]
+  academyProgress    StudentAcademyProgress[]
+  certifications     StudentCertification[]
+  leaderboardEntries LeaderboardEntry[]
+  organizationMemberships OrganizationMembership[]
+
+  @@index([role])
+  @@index([schoolId])
+  @@map("users")
+}
+
+model Organization {
+  id          String             @id @default(cuid())
+  slug        String             @unique
+  name        String
+  type        OrganizationType
+  description String?
+  academyId   String?            @unique @map("academy_id")
+  visibility  OrgVisibility      @default(SCHOOL)
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+  memberships OrganizationMembership[]
+
+  @@index([type])
+  @@map("organizations")
+}
+
+model OrganizationMembership {
+  id             String            @id @default(cuid())
+  organizationId String            @map("organization_id")
+  userId         String            @map("user_id") @db.Uuid
+  orgRole        OrgMembershipRole @default(MEMBER) @map("org_role")
+  status         MembershipStatus  @default(ACTIVE)
+  joinedAt       DateTime?         @map("joined_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([status])
+  @@map("organization_memberships")
+}
+
+model Event {
+  id           String             @id @default(cuid())
+  title        String
+  academyId    String             @map("academy_id")
+  startDate    DateTime           @map("start_date")
+  endDate      DateTime           @map("end_date")
+  location     String?
+  description  String?
+  budgetId     String?            @map("budget_id")
+  status       EventStatus        @default(SCHEDULED)
+  impactPoints Int                @default(0) @map("impact_points")
+  archiveFlag  Boolean            @default(false) @map("archive_flag")
+  createdById  String             @map("created_by_id") @db.Uuid
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+  academy      Academy            @relation(fields: [academyId], references: [id])
+  createdBy    User               @relation("EventCreator", fields: [createdById], references: [id])
+  participants EventParticipant[]
+  assignments  Assignment[]
+  reminders    EventReminder[]
+  checklists   Checklist[]
+  portfolioItems PortfolioItem[]
+
+  @@index([academyId])
+  @@index([startDate])
+  @@index([archiveFlag])
+  @@index([createdById])
+  @@map("events")
+}
+
+model EventParticipant {
+  id         String           @id @default(cuid())
+  eventId    String           @map("event_id")
+  userId     String           @map("user_id") @db.Uuid
+  role       ParticipantRole  @default(ATTENDEE)
+  attendance AttendanceStatus @default(REGISTERED)
+  hours      Float?
+  reflection String?
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+  event      Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([userId])
+  @@map("event_participants")
+}
+
+model Assignment {
+  id          String           @id @default(cuid())
+  title       String
+  description String?
+  dueDate     DateTime         @map("due_date")
+  userId      String?          @map("user_id") @db.Uuid
+  academyId   String?          @map("academy_id")
+  eventId     String?          @map("event_id")
+  status      AssignmentStatus @default(PENDING)
+  points      Int              @default(0)
+  completion  Float?
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  user        User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  academy     Academy?         @relation(fields: [academyId], references: [id], onDelete: SetNull)
+  event       Event?           @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([eventId])
+  @@index([dueDate])
+  @@index([academyId])
+  @@map("assignments")
+}
+
+model EventReminder {
+  id        String   @id @default(cuid())
+  eventId   String   @map("event_id")
+  userId    String   @map("user_id") @db.Uuid
+  remindAt  DateTime @map("remind_at")
+  sent      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, remindAt])
+  @@index([eventId])
+  @@map("event_reminders")
+}
+
+model Form {
+  id               String       @id @default(cuid())
+  title            String
+  type             FormType
+  version          Int          @default(1)
+  status           FormStatus   @default(DRAFT)
+  description      String?
+  content          String?
+  formFields       Json?        @map("form_fields")
+  approvalRequired Boolean      @default(false) @map("approval_required")
+  approvalType     ApprovalType? @map("approval_type")
+  archiveFlag      Boolean      @default(false) @map("archive_flag")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+  submissions      FormSubmission[]
+
+  @@index([status])
+  @@index([archiveFlag])
+  @@index([type])
+  @@map("forms")
+}
+
+model FormSubmission {
+  id            String    @id @default(cuid())
+  formId        String    @map("form_id")
+  userId        String    @map("user_id") @db.Uuid
+  signed        Boolean   @default(false)
+  signatureName String?   @map("signature_name")
+  approved      Boolean?
+  approvedById  String?   @map("approved_by_id") @db.Uuid
+  approvedAt    DateTime? @map("approved_at")
+  responseData  Json?     @map("response_data")
+  submittedAt   DateTime? @map("submitted_at")
+  expiresAt     DateTime? @map("expires_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  form          Form      @relation(fields: [formId], references: [id], onDelete: Cascade)
+  user          User      @relation("FormSubmissionUser", fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy    User?     @relation("FormSubmissionApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  @@unique([formId, userId])
+  @@index([userId])
+  @@index([approved])
+  @@index([submittedAt])
+  @@map("form_submissions")
+}
+
+model AcademyMembership {
+  id        String                  @id @default(cuid())
+  userId    String                  @map("user_id") @db.Uuid
+  academyId String                  @map("academy_id")
+  status    AcademyMembershipStatus @default(PENDING)
+  joinedAt  DateTime?               @map("joined_at")
+  createdAt DateTime                @default(now()) @map("created_at")
+  updatedAt DateTime                @updatedAt @map("updated_at")
+  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  academy   Academy                 @relation(fields: [academyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, academyId])
+  @@index([academyId])
+  @@index([status])
+  @@map("academy_memberships")
+}
+
+model Checklist {
+  id          String          @id @default(cuid())
+  title       String
+  description String?
+  eventId     String?         @map("event_id")
+  academyId   String?         @map("academy_id")
+  status      ChecklistStatus @default(DRAFT)
+  archiveFlag Boolean         @default(false) @map("archive_flag")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  event       Event?          @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  academy     Academy?        @relation(fields: [academyId], references: [id], onDelete: SetNull)
+  items       ChecklistItem[]
+
+  @@index([eventId])
+  @@index([academyId])
+  @@index([status])
+  @@map("checklists")
+}
+
+model ChecklistItem {
+  id          String                    @id @default(cuid())
+  checklistId String                    @map("checklist_id")
+  title       String
+  description String?
+  sortOrder   Int                       @default(0) @map("sort_order")
+  required    Boolean                   @default(true)
+  createdAt   DateTime                  @default(now()) @map("created_at")
+  updatedAt   DateTime                  @updatedAt @map("updated_at")
+  checklist   Checklist                 @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  completions ChecklistItemCompletion[]
+
+  @@index([checklistId])
+  @@map("checklist_items")
+}
+
+model ChecklistItemCompletion {
+  id          String        @id @default(cuid())
+  itemId      String        @map("item_id")
+  userId      String        @map("user_id") @db.Uuid
+  completedAt DateTime      @default(now()) @map("completed_at")
+  item        ChecklistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, userId])
+  @@index([userId])
+  @@map("checklist_item_completions")
+}
+
+model PortfolioItem {
+  id          String              @id @default(cuid())
+  userId      String              @map("user_id") @db.Uuid
+  title       String
+  description String?
+  type        PortfolioItemType
+  status      PortfolioItemStatus @default(DRAFT)
+  evidenceUrl String?             @map("evidence_url")
+  points      Int                 @default(0)
+  academyId   String?             @map("academy_id")
+  eventId     String?             @map("event_id")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  academy     Academy?            @relation(fields: [academyId], references: [id], onDelete: SetNull)
+  event       Event?              @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@map("portfolio_items")
+}
+
+model Ticket {
+  id           String         @id @default(cuid())
+  userId       String         @map("user_id") @db.Uuid
+  subject      String
+  description  String
+  category     TicketCategory @default(OTHER)
+  status       TicketStatus   @default(OPEN)
+  priority     TicketPriority @default(MEDIUM)
+  assignedToId String?        @map("assigned_to_id") @db.Uuid
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  user         User           @relation("TicketUser", fields: [userId], references: [id], onDelete: Cascade)
+  assignedTo   User?          @relation("TicketAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  comments     TicketComment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([assignedToId])
+  @@map("tickets")
+}
+
+model TicketComment {
+  id        String   @id @default(cuid())
+  ticketId  String   @map("ticket_id")
+  userId    String   @map("user_id") @db.Uuid
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@map("ticket_comments")
+}
+
+model KnowledgeArticle {
+  id        String                 @id @default(cuid())
+  title     String
+  slug      String                 @unique
+  content   String
+  category  String?
+  tags      String[]               @default([])
+  status    KnowledgeArticleStatus @default(DRAFT)
+  authorId  String                 @map("author_id") @db.Uuid
+  academyId String?                @map("academy_id")
+  createdAt DateTime               @default(now()) @map("created_at")
+  updatedAt DateTime               @updatedAt @map("updated_at")
+  author    User                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  academy   Academy?               @relation(fields: [academyId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([category])
+  @@map("knowledge_articles")
+}
+
+model Lab {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  title       String
+  description String?
+  academyId   String?       @map("academy_id")
+  difficulty  LabDifficulty @default(INTRODUCTORY)
+  status      LabStatus     @default(DRAFT)
+  equipment   String?
+  safetyNotes String?       @map("safety_notes")
+  launchUrl   String?       @map("launch_url")
+  archiveFlag Boolean       @default(false) @map("archive_flag")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  academy     Academy?      @relation(fields: [academyId], references: [id], onDelete: SetNull)
+  sessions    LabSession[]
+  moduleLinks ModuleLabLink[]
+  missions    Mission[]
+
+  @@index([status])
+  @@index([academyId])
+  @@map("labs")
+}
+
+model LabSession {
+  id          String           @id @default(cuid())
+  labId       String           @map("lab_id")
+  userId      String           @map("user_id") @db.Uuid
+  status      LabSessionStatus @default(REGISTERED)
+  reflection  String?
+  startedAt   DateTime?        @map("started_at")
+  completedAt DateTime?        @map("completed_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  lab         Lab              @relation(fields: [labId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([labId])
+  @@index([userId])
+  @@map("lab_sessions")
+}
+
+model Simulator {
+  id          String            @id @default(cuid())
+  slug        String            @unique
+  title       String
+  description String?
+  category    SimulatorCategory @default(GENERAL)
+  academyId   String?           @map("academy_id")
+  status      SimulatorStatus   @default(DRAFT)
+  launchUrl   String            @map("launch_url")
+  sortOrder   Int               @default(0) @map("sort_order")
+  archiveFlag Boolean           @default(false) @map("archive_flag")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  academy     Academy?          @relation(fields: [academyId], references: [id], onDelete: SetNull)
+  runs        SimulatorRun[]
+  moduleLinks ModuleSimulatorLink[]
+
+  @@index([status])
+  @@index([academyId])
+  @@map("simulators")
+}
+
+model SimulatorRun {
+  id          String    @id @default(cuid())
+  simulatorId String    @map("simulator_id")
+  userId      String    @map("user_id") @db.Uuid
+  score       Int?
+  durationMin Int?      @map("duration_min")
+  completedAt DateTime  @default(now()) @map("completed_at")
+  simulator   Simulator @relation(fields: [simulatorId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([simulatorId])
+  @@index([userId])
+  @@map("simulator_runs")
+}
+
+model ImpactFundProposal {
+  id              String                   @id @default(cuid())
+  title           String
+  description     String
+  amountRequested Int                      @map("amount_requested")
+  academyId       String?                  @map("academy_id")
+  submittedById   String                   @map("submitted_by_id") @db.Uuid
+  status          ImpactFundProposalStatus @default(DRAFT)
+  voteDeadline    DateTime?                @map("vote_deadline")
+  fundedAmount    Int?                     @map("funded_amount")
+  archiveFlag     Boolean                  @default(false) @map("archive_flag")
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+  submittedBy     User                     @relation("ImpactFundProposer", fields: [submittedById], references: [id], onDelete: Cascade)
+  academy         Academy?                 @relation(fields: [academyId], references: [id], onDelete: SetNull)
+  votes           ImpactFundVote[]
+
+  @@index([status])
+  @@index([submittedById])
+  @@map("impact_fund_proposals")
+}
+
+model ImpactFundVote {
+  id         String               @id @default(cuid())
+  proposalId String               @map("proposal_id")
+  userId     String               @map("user_id") @db.Uuid
+  choice     ImpactFundVoteChoice
+  createdAt  DateTime             @default(now()) @map("created_at")
+  proposal   ImpactFundProposal   @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([proposalId, userId])
+  @@index([proposalId])
+  @@map("impact_fund_votes")
+}
+
+model AcademyPathwayMapping {
+  id        String        @id @default(cuid())
+  academyId String        @map("academy_id")
+  pathway   CareerPathway
+  createdAt DateTime      @default(now()) @map("created_at")
+  academy   Academy       @relation(fields: [academyId], references: [id], onDelete: Cascade)
+
+  @@unique([academyId, pathway])
+  @@index([pathway])
+  @@map("academy_pathway_mappings")
+}
+
+model AcademyLevel {
+  id          String           @id @default(cuid())
+  academyId   String           @map("academy_id")
+  tier        AcademyLevelTier
+  title       String
+  description String?
+  sortOrder   Int              @default(0) @map("sort_order")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  academy     Academy          @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  modules     LearningModule[]
+
+  @@unique([academyId, tier])
+  @@index([academyId])
+  @@map("academy_levels")
+}
+
+model LearningModule {
+  id          String           @id @default(cuid())
+  academyId   String           @map("academy_id")
+  levelId     String?          @map("level_id")
+  slug        String
+  title       String
+  description String?
+  status      ModuleStatus     @default(DRAFT)
+  sortOrder   Int              @default(0) @map("sort_order")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  academy     Academy          @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  level       AcademyLevel?    @relation(fields: [levelId], references: [id], onDelete: SetNull)
+  lessons     Lesson[]
+  videos      Video[]
+  assessments Assessment[]
+  labLinks    ModuleLabLink[]
+  simulatorLinks ModuleSimulatorLink[]
+  progress    StudentModuleProgress[]
+
+  @@unique([academyId, slug])
+  @@index([academyId])
+  @@index([levelId])
+  @@index([status])
+  @@map("learning_modules")
+}
+
+model Lesson {
+  id          String           @id @default(cuid())
+  moduleId    String           @map("module_id")
+  title       String
+  content     String?
+  stepType    LearningStepType @map("step_type")
+  sortOrder   Int              @default(0) @map("sort_order")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  module      LearningModule   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([moduleId])
+  @@map("lessons")
+}
+
+model Video {
+  id          String          @id @default(cuid())
+  academyId   String?         @map("academy_id")
+  moduleId    String?         @map("module_id")
+  title       String
+  description String?
+  url         String?
+  durationMin Int?            @map("duration_min")
+  sortOrder   Int             @default(0) @map("sort_order")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  academy     Academy?        @relation(fields: [academyId], references: [id], onDelete: SetNull)
+  module      LearningModule? @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([academyId])
+  @@index([moduleId])
+  @@map("videos")
+}
+
+model ModuleLabLink {
+  id        String           @id @default(cuid())
+  moduleId  String           @map("module_id")
+  labId     String           @map("lab_id")
+  stepType  LearningStepType @map("step_type")
+  sortOrder Int              @default(0) @map("sort_order")
+  createdAt DateTime         @default(now()) @map("created_at")
+  module    LearningModule   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  lab       Lab              @relation(fields: [labId], references: [id], onDelete: Cascade)
+
+  @@unique([moduleId, labId, stepType])
+  @@index([moduleId])
+  @@index([labId])
+  @@map("module_lab_links")
+}
+
+model ModuleSimulatorLink {
+  id          String           @id @default(cuid())
+  moduleId    String           @map("module_id")
+  simulatorId String           @map("simulator_id")
+  stepType    LearningStepType @map("step_type")
+  sortOrder   Int              @default(0) @map("sort_order")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  module      LearningModule    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  simulator   Simulator        @relation(fields: [simulatorId], references: [id], onDelete: Cascade)
+
+  @@unique([moduleId, simulatorId, stepType])
+  @@index([moduleId])
+  @@index([simulatorId])
+  @@map("module_simulator_links")
+}
+
+model Assessment {
+  id           String         @id @default(cuid())
+  moduleId     String         @map("module_id")
+  title        String
+  description  String?
+  type         AssessmentType @default(KNOWLEDGE_CHECK)
+  passingScore Int            @default(70) @map("passing_score")
+  questions    Json?
+  sortOrder    Int            @default(0) @map("sort_order")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  module       LearningModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([moduleId])
+  @@map("assessments")
+}
+
+model Mission {
+  id          String            @id @default(cuid())
+  academyId   String            @map("academy_id")
+  slug        String
+  title       String
+  description String?
+  levelTier   AcademyLevelTier? @map("level_tier")
+  status      MissionStatus     @default(DRAFT)
+  objectives  String[]          @default([])
+  labId       String?           @map("lab_id")
+  sortOrder   Int               @default(0) @map("sort_order")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  academy     Academy           @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  lab         Lab?              @relation(fields: [labId], references: [id], onDelete: SetNull)
+
+  @@unique([academyId, slug])
+  @@index([academyId])
+  @@index([status])
+  @@map("missions")
+}
+
+model Certification {
+  id          String              @id @default(cuid())
+  academyId   String              @map("academy_id")
+  slug        String
+  title       String
+  description String?
+  levelTier   AcademyLevelTier?   @map("level_tier")
+  status      CertificationStatus @default(DRAFT)
+  requirements String?
+  sortOrder   Int                 @default(0) @map("sort_order")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+  academy     Academy             @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  earned      StudentCertification[]
+
+  @@unique([academyId, slug])
+  @@index([academyId])
+  @@index([status])
+  @@map("certifications")
+}
+
+model StudentModuleProgress {
+  id           String           @id @default(cuid())
+  userId       String           @map("user_id") @db.Uuid
+  moduleId     String           @map("module_id")
+  status       ProgressStatus   @default(NOT_STARTED)
+  progressPct  Float            @default(0) @map("progress_pct")
+  currentStep  LearningStepType? @map("current_step")
+  completedAt  DateTime?        @map("completed_at")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module       LearningModule   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId])
+  @@index([userId])
+  @@index([moduleId])
+  @@map("student_module_progress")
+}
+
+model StudentAcademyProgress {
+  id           String           @id @default(cuid())
+  userId       String           @map("user_id") @db.Uuid
+  academyId    String           @map("academy_id")
+  currentLevel AcademyLevelTier @default(EXPLORER) @map("current_level")
+  progressPct  Float            @default(0) @map("progress_pct")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  academy      Academy          @relation(fields: [academyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, academyId])
+  @@index([userId])
+  @@index([academyId])
+  @@map("student_academy_progress")
+}
+
+model StudentCertification {
+  id              String        @id @default(cuid())
+  userId          String        @map("user_id") @db.Uuid
+  certificationId String        @map("certification_id")
+  earnedAt        DateTime      @default(now()) @map("earned_at")
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  certification   Certification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, certificationId])
+  @@index([userId])
+  @@map("student_certifications")
+}
+
+model LeaderboardEntry {
+  id        String   @id @default(cuid())
+  academyId String   @map("academy_id")
+  userId    String   @map("user_id") @db.Uuid
+  points    Int      @default(0)
+  rank      Int?
+  period    String   @default("all-time")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([academyId, userId, period])
+  @@index([academyId, period])
+  @@map("leaderboard_entries")
+}

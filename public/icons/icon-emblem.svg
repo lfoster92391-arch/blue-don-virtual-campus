@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Blue Don emblem">
+  <defs>
+    <linearGradient id="silver" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8EEF5"/>
+      <stop offset="35%" stop-color="#B8C4D4"/>
+      <stop offset="65%" stop-color="#8A9BB0"/>
+      <stop offset="100%" stop-color="#D4DCE8"/>
+    </linearGradient>
+    <linearGradient id="shieldFill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#D8DEE8"/>
+    </linearGradient>
+    <linearGradient id="swordBlade" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F4F7FB"/>
+      <stop offset="50%" stop-color="#A8B8CC"/>
+      <stop offset="100%" stop-color="#D0DAE6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Navy background -->
+  <rect width="512" height="512" rx="72" fill="#0A2342"/>
+
+  <!-- Silver metallic border -->
+  <rect x="14" y="14" width="484" height="484" rx="60" fill="none" stroke="url(#silver)" stroke-width="10"/>
+
+  <!-- Knight helmet (profile left) -->
+  <g transform="translate(118, 72)">
+    <path
+      d="M88 18 C118 8 158 14 178 42 C188 58 192 78 188 98 L184 118 C180 132 168 142 152 146 L148 168 C142 196 118 214 88 218 C58 214 34 196 28 168 L24 146 C8 142 -4 132 -8 118 L-12 98 C-16 78 -12 58 -2 42 C18 14 58 8 88 18 Z"
+      fill="#FFFFFF"
+      transform="translate(12, 0)"
+    />
+    <path
+      d="M88 38 C108 32 128 38 138 56 C144 68 146 82 142 96 L138 112 C134 122 124 130 110 134 L106 152 C102 170 96 182 88 186 C80 182 74 170 70 152 L66 134 C52 130 42 122 38 112 L34 96 C30 82 32 68 38 56 C48 38 68 32 88 38 Z"
+      fill="#0A2342"
+      opacity="0.12"
+      transform="translate(12, 0)"
+    />
+    <!-- Visor slit -->
+    <path d="M52 108 C72 100 104 100 124 108 L118 118 C100 112 76 112 58 118 Z" fill="#0A2342" opacity="0.35" transform="translate(12, 0)"/>
+    <!-- Plume -->
+    <path d="M168 52 C196 36 224 40 236 62 C244 78 238 98 220 110 L200 118 C210 100 208 78 196 66 C186 56 176 52 168 52 Z" fill="#FFFFFF" opacity="0.92"/>
+  </g>
+
+  <!-- Shield with M -->
+  <g transform="translate(256, 248)">
+    <path
+      d="M0 -108 L88 -88 L88 42 C88 88 44 128 0 148 C-44 128 -88 88 -88 42 L-88 -88 Z"
+      fill="url(#shieldFill)"
+      stroke="url(#silver)"
+      stroke-width="5"
+    />
+    <!-- Navy M on shield -->
+    <text
+      x="0"
+      y="18"
+      font-family="Georgia, 'Times New Roman', serif"
+      font-size="96"
+      font-weight="700"
+      fill="#0A2342"
+      text-anchor="middle"
+      dominant-baseline="middle"
+    >M</text>
+  </g>
+
+  <!-- Silver sword behind shield -->
+  <g transform="translate(256, 230)">
+    <rect x="-6" y="-140" width="12" height="220" rx="4" fill="url(#swordBlade)" transform="rotate(-18)"/>
+    <path d="M-18 -148 L18 -148 L8 -168 L-8 -168 Z" fill="url(#silver)" transform="rotate(-18)"/>
+    <rect x="-22" y="72" width="44" height="14" rx="4" fill="url(#silver)" transform="rotate(-18)"/>
+    <circle cx="0" cy="86" r="10" fill="#C8D4E4" transform="rotate(-18) translate(0, 86)"/>
+  </g>
+
+  <!-- DONS banner -->
+  <g transform="translate(256, 392)">
+    <path d="M-108 -22 L108 -22 L96 22 L-96 22 Z" fill="#FFFFFF" stroke="url(#silver)" stroke-width="3"/>
+    <text
+      x="0"
+      y="4"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="34"
+      font-weight="800"
+      fill="#0A2342"
+      text-anchor="middle"
+      dominant-baseline="middle"
+      letter-spacing="6"
+    >DONS</text>
+  </g>
+</svg>
