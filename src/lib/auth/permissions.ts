@@ -5,25 +5,27 @@ import {
   type CampusRole,
   type OrgMembershipRole,
 } from "@/config/roles";
-import { prisma } from "@/lib/prisma";
+import { withDatabase } from "@/lib/prisma";
 
 export async function hasOrgPermission(
   userId: string,
   orgId: string,
   permission: string,
 ): Promise<boolean> {
-  const membership = await prisma.organizationMembership.findUnique({
-    where: {
-      organizationId_userId: {
-        organizationId: orgId,
-        userId,
+  const membership = await withDatabase((prisma) =>
+    prisma.organizationMembership.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId: orgId,
+          userId,
+        },
       },
-    },
-    select: {
-      orgRole: true,
-      status: true,
-    },
-  });
+      select: {
+        orgRole: true,
+        status: true,
+      },
+    }),
+  );
 
   if (!membership || membership.status !== "ACTIVE") {
     return false;
@@ -41,18 +43,20 @@ export async function getUserOrgMembership(
   userId: string,
   orgId: string,
 ): Promise<{ orgRole: OrgMembershipRole; status: string } | null> {
-  const membership = await prisma.organizationMembership.findUnique({
-    where: {
-      organizationId_userId: {
-        organizationId: orgId,
-        userId,
+  const membership = await withDatabase((prisma) =>
+    prisma.organizationMembership.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId: orgId,
+          userId,
+        },
       },
-    },
-    select: {
-      orgRole: true,
-      status: true,
-    },
-  });
+      select: {
+        orgRole: true,
+        status: true,
+      },
+    }),
+  );
 
   if (!membership) {
     return null;

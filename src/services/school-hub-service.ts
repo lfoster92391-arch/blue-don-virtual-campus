@@ -167,6 +167,59 @@ export type HubDigestUser = {
  * All live sources degrade gracefully to zero/seed values when the database or
  * weather API is unavailable, so the hub always renders.
  */
+async function safeHubSideData<T>(
+  label: string,
+  operation: () => Promise<T>,
+  fallback: T,
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    console.error(`[school-hub] ${label} failed:`, error);
+    return fallback;
+  }
+}
+
+function unavailableWeather(): CampusWeather {
+  return {
+    available: false,
+    locationName: CAMPUS_WEATHER_LOCATION.name,
+    message: "Weather data temporarily unavailable",
+    lastKnown: null,
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
+/** Offline / DB-down briefing shell so /home can still render. */
+export function buildEmptyHubDigest(date: Date = new Date()): HubDigest {
+  const { weekday, minutes } = campusLocalParts(date);
+
+  const dayName = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    timeZone: CAMPUS_WEATHER_LOCATION.timezone,
+  }).format(date);
+
+  const dateLabel = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    timeZone: CAMPUS_WEATHER_LOCATION.timezone,
+  }).format(date);
+
+  return {
+    today: date,
+    dayName,
+    dateLabel,
+    schoolYear: getSchoolYear(date),
+    isSchoolDay: isSchoolDay(weekday),
+    bell: buildBellSchedule(weekday, minutes),
+    lunch: buildLunch(weekday),
+    weather: unavailableWeather(),
+    eventCount: 0,
+    formsDueCount: 0,
+  };
+}
+
 export async function getTodayHubDigest(
   user: HubDigestUser = null,
   date: Date = new Date(),
@@ -174,9 +227,17 @@ export async function getTodayHubDigest(
   const { weekday, minutes } = campusLocalParts(date);
 
   const [weather, events, forms] = await Promise.all([
-    getCampusWeather(),
-    user ? listEventsForDay(user.id, date) : Promise.resolve([]),
-    user ? listFormsForUser(user.id, user.role) : Promise.resolve([]),
+    safeHubSideData("weather", () => getCampusWeather(), unavailableWeather()),
+    user
+      ? safeHubSideData("events", () => listEventsForDay(user.id, date), [])
+      : Promise.resolve([]),
+    user
+      ? safeHubSideData(
+          "forms",
+          () => listFormsForUser(user.id, user.role),
+          [],
+        )
+      : Promise.resolve([]),
   ]);
 
   const formsDueCount = forms.filter((form) => {

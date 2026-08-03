@@ -19,7 +19,13 @@ export async function ClubJoinRequestsAlert({ user }: { user: CampusUser }) {
     return null;
   }
 
-  const pending = await listPendingMembershipsForLedOrgs(user.id, user.role);
+  let pending: Awaited<ReturnType<typeof listPendingMembershipsForLedOrgs>> = [];
+  try {
+    pending = await listPendingMembershipsForLedOrgs(user.id, user.role);
+  } catch (error) {
+    console.error("[home] club join requests alert failed:", error);
+    return null;
+  }
 
   if (pending.length === 0) {
     return null;

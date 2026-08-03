@@ -374,7 +374,18 @@ const getCachedCampusWeather = unstable_cache(
 );
 
 export async function getCampusWeather(): Promise<CampusWeather> {
-  return getCachedCampusWeather();
+  try {
+    return await getCachedCampusWeather();
+  } catch (error) {
+    console.error("[weather] getCampusWeather failed:", error);
+    return {
+      available: false,
+      locationName: CAMPUS_WEATHER_LOCATION.name,
+      message: "Weather data temporarily unavailable",
+      lastKnown: lastKnownSnapshot,
+      fetchedAt: new Date().toISOString(),
+    };
+  }
 }
 
 export type CampusWeatherAlert = {

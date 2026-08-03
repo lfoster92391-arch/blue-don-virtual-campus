@@ -63,30 +63,35 @@ const announcementSelect = {
 } as const;
 
 export async function getTodaysBroadcastAnnouncement(): Promise<BroadcastAnnouncementView | null> {
-  if (!isDatabaseConfigured() || !isPrismaReady()) {
-    if (CLEAN_SLATE) {
-      return null;
+  try {
+    if (!isDatabaseConfigured() || !isPrismaReady()) {
+      if (CLEAN_SLATE) {
+        return null;
+      }
+      return {
+        id: DEMO_DAILY_ANNOUNCEMENT.id,
+        title: DEMO_DAILY_ANNOUNCEMENT.title,
+        body: DEMO_DAILY_ANNOUNCEMENT.body,
+        announcementDate: DEMO_DAILY_ANNOUNCEMENT.announcementDate,
+        authorName: DEMO_DAILY_ANNOUNCEMENT.authorName,
+        mediaItemId: DEMO_DAILY_ANNOUNCEMENT.mediaItemId,
+        updatedAt: new Date(),
+      };
     }
-    return {
-      id: DEMO_DAILY_ANNOUNCEMENT.id,
-      title: DEMO_DAILY_ANNOUNCEMENT.title,
-      body: DEMO_DAILY_ANNOUNCEMENT.body,
-      announcementDate: DEMO_DAILY_ANNOUNCEMENT.announcementDate,
-      authorName: DEMO_DAILY_ANNOUNCEMENT.authorName,
-      mediaItemId: DEMO_DAILY_ANNOUNCEMENT.mediaItemId,
-      updatedAt: new Date(),
-    };
+
+    const today = startOfUtcDay();
+    const row = await withDatabase((prisma) =>
+      prisma.broadcastAnnouncement.findUnique({
+        where: { announcementDate: today },
+        select: announcementSelect,
+      }),
+    );
+
+    return row ? mapAnnouncement(row) : null;
+  } catch (error) {
+    console.error("[broadcast] getTodaysBroadcastAnnouncement failed:", error);
+    return null;
   }
-
-  const today = startOfUtcDay();
-  const row = await withDatabase((prisma) =>
-    prisma.broadcastAnnouncement.findUnique({
-      where: { announcementDate: today },
-      select: announcementSelect,
-    }),
-  );
-
-  return row ? mapAnnouncement(row) : null;
 }
 
 export async function upsertTodaysBroadcastAnnouncement(input: {

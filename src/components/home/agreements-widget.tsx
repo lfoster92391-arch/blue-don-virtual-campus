@@ -24,10 +24,19 @@ const CLUB_CHIP: Record<StudentClubStatus["state"], { label: string; className: 
  * student's club-join approval status (Approved / Waiting for Parent / etc).
  */
 export async function AgreementsWidget({ user }: { user: CampusUser }) {
-  const [statuses, clubStatuses] = await Promise.all([
-    getAgreementStatusesForUser(user),
-    user.role === "student" ? listStudentClubStatuses(user.id) : Promise.resolve([]),
-  ]);
+  let statuses: Awaited<ReturnType<typeof getAgreementStatusesForUser>> = [];
+  let clubStatuses: StudentClubStatus[] = [];
+
+  try {
+    [statuses, clubStatuses] = await Promise.all([
+      getAgreementStatusesForUser(user),
+      user.role === "student"
+        ? listStudentClubStatuses(user.id)
+        : Promise.resolve([]),
+    ]);
+  } catch (error) {
+    console.error("[home] agreements widget failed:", error);
+  }
 
   const outstanding = statuses.filter(
     (status) => status.state === "outstanding" || status.state === "waiting_parent",

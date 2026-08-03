@@ -15,7 +15,7 @@ import {
   PARENT_FORM_TYPES,
   STUDENT_EXCLUDED_FORM_TYPES,
 } from "@/lib/forms/constants";
-import { isPrismaReady, prisma } from "@/lib/prisma";
+import { isPrismaReady, prisma, withDatabase } from "@/lib/prisma";
 
 export type FormListItem = {
   id: string;
@@ -149,19 +149,25 @@ export async function listFormsForUser(
     return [];
   }
 
-  const forms = await prisma.form.findMany({
-    where: {
-      status: "PUBLISHED",
-      archiveFlag: false,
-    },
-    include: {
-      submissions: {
-        where: { userId },
-        take: 1,
+  const forms = await withDatabase((client) =>
+    client.form.findMany({
+      where: {
+        status: "PUBLISHED",
+        archiveFlag: false,
       },
-    },
-    orderBy: [{ type: "asc" }, { title: "asc" }],
-  });
+      include: {
+        submissions: {
+          where: { userId },
+          take: 1,
+        },
+      },
+      orderBy: [{ type: "asc" }, { title: "asc" }],
+    }),
+  );
+
+  if (!forms) {
+    return [];
+  }
 
   return forms
     .filter(

@@ -2,19 +2,63 @@ import { AgreementsWidget } from "@/components/home/agreements-widget";
 import { ClubJoinRequestsAlert } from "@/components/home/club-join-requests-alert";
 import { BlueDonOS } from "@/components/home/blue-don-os";
 import { CampusVersionBanner } from "@/components/layout/campus-version-banner";
-import { getTodaysBroadcastAnnouncement } from "@/services/broadcast-announcement-service";
-import { getTodayDigest } from "@/services/campus-os-service";
-import { getTodayHubDigest } from "@/services/school-hub-service";
-import { getStudentContext } from "@/services/student-context-service";
+import {
+  getTodaysBroadcastAnnouncement,
+  type BroadcastAnnouncementView,
+} from "@/services/broadcast-announcement-service";
+import {
+  getTodayDigest,
+  type BlueDonOSViewModel,
+} from "@/services/campus-os-service";
+import {
+  buildEmptyHubDigest,
+  getTodayHubDigest,
+} from "@/services/school-hub-service";
+import {
+  getStudentContext,
+  type StudentContext,
+} from "@/services/student-context-service";
 import { requireCompleteProfile } from "@/lib/auth/session";
+
+const EMPTY_CONTEXT: StudentContext = { clubs: [], teams: [], classes: [] };
+
+function emptyDigest(date = new Date()): BlueDonOSViewModel {
+  return {
+    today: date,
+    items: [],
+    eventCount: 0,
+    assignmentCount: 0,
+  };
+}
+
+async function safeHomeData<T>(
+  label: string,
+  operation: () => Promise<T>,
+  fallback: T,
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    console.error(`[home] ${label} failed:`, error);
+    return fallback;
+  }
+}
 
 export default async function HomePage() {
   const user = await requireCompleteProfile();
   const [digest, context, dailyAnnouncement, hub] = await Promise.all([
-    getTodayDigest(user.id),
-    getStudentContext(user.id),
-    getTodaysBroadcastAnnouncement(),
-    getTodayHubDigest({ id: user.id, role: user.role }),
+    safeHomeData("digest", () => getTodayDigest(user.id), emptyDigest()),
+    safeHomeData("context", () => getStudentContext(user.id), EMPTY_CONTEXT),
+    safeHomeData(
+      "broadcast-announcement",
+      () => getTodaysBroadcastAnnouncement(),
+      null as BroadcastAnnouncementView | null,
+    ),
+    safeHomeData(
+      "hub",
+      () => getTodayHubDigest({ id: user.id, role: user.role }),
+      buildEmptyHubDigest(),
+    ),
   ]);
 
   const showAgreements = user.role === "student" || user.role === "parent";
