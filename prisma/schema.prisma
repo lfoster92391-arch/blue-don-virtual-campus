@@ -404,6 +404,7 @@ model User {
   clubFundraisersCreated ClubFundraiser[]        @relation("ClubFundraiserCreator")
   clubCalendarEvents     ClubCalendarEvent[]     @relation("ClubCalendarCreator")
   broadcastAnnouncements BroadcastAnnouncement[] @relation("BroadcastAnnouncementAuthor")
+  broadcastDailyScriptsUpdated BroadcastDailyScript[] @relation("BroadcastDailyScriptUpdater")
   clubInvoicesSubmitted  ClubInvoice[]           @relation("ClubInvoiceSubmitter")
   clubInvoicesReviewed   ClubInvoice[]           @relation("ClubInvoiceReviewer")
   cricutShopItems        CricutShopItem[]        @relation("CricutShopSeller")
@@ -454,6 +455,8 @@ model Organization {
   calendarEvents ClubCalendarEvent[]
   clubInvoices ClubInvoice[]
   cricutShopItems CricutShopItem[]
+  broadcastScriptTemplate BroadcastScriptTemplate?
+  broadcastDailyScripts BroadcastDailyScript[]
 
   @@index([type])
   @@map("organizations")
@@ -1580,6 +1583,44 @@ model BroadcastAnnouncement {
   @@index([authorId])
   @@index([mediaItemId])
   @@map("broadcast_announcements")
+}
+
+/**
+ * Org-level Show Script slot structure (advisor-editable).
+ * slots JSON: BroadcastScriptSlotDef[]
+ */
+model BroadcastScriptTemplate {
+  id             String       @id @default(cuid())
+  organizationId String       @unique @map("organization_id")
+  slots          Json
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("broadcast_script_templates")
+}
+
+/**
+ * Shared daily rundown for the broadcast team (one script per org per day).
+ * values JSON: Record<slotKey, string> for STUDENT_FILL slots.
+ * prayerText is the LOCKED_DAILY school prayer for that day.
+ */
+model BroadcastDailyScript {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  scriptDate     DateTime     @map("script_date") @db.Date
+  prayerText     String?      @map("prayer_text")
+  values         Json         @default("{}")
+  updatedById    String?      @map("updated_by_id") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  updatedBy      User?        @relation("BroadcastDailyScriptUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, scriptDate])
+  @@index([organizationId, scriptDate])
+  @@index([updatedById])
+  @@map("broadcast_daily_scripts")
 }
 
 enum CornerStoreStatus {

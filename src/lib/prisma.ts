@@ -29,26 +29,53 @@ function isPrismaClientComplete(client: PrismaClient): boolean {
   );
 }
 
-function resolveConnectionString(raw: string): string {
-  const poolerUrl = process.env.DATABASE_POOLER_URL?.trim();
-  if (poolerUrl) {
-    return poolerUrl;
+function supabaseProjectRefFromEnv(): string | null {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!supabaseUrl) {
+    return null;
   }
 
-  if (!process.env.VERCEL) {
-    return raw;
+  try {
+    const host = new URL(supabaseUrl).hostname;
+    const ref = host.split(".")[0];
+    return /^[a-z0-9]+$/i.test(ref) ? ref : null;
+  } catch {
+    return null;
   }
+}
+
+/**
+ * Normalize Supabase connection strings for Prisma:
+ * - On Vercel, direct `db.*.supabase.co` → transaction pooler with `postgres.<ref>`
+ * - Pooler URLs that still use bare `postgres` → `postgres.<ref>` (fixes P1000)
+ */
+function rewriteSupabaseConnectionString(raw: string): string {
+  const envRef = supabaseProjectRefFromEnv();
 
   const directMatch = raw.match(
     /^postgresql:\/\/postgres:([^@]+)@db\.([a-z0-9]+)\.supabase\.co:5432\/([^?]+)/i,
   );
-  if (!directMatch) {
-    return raw;
+  if (directMatch && process.env.VERCEL) {
+    const [, password, projectRef, database] = directMatch;
+    const region = process.env.SUPABASE_POOLER_REGION ?? "us-east-1";
+    return `postgresql://postgres.${projectRef}:${password}@aws-0-${region}.pooler.supabase.com:6543/${database}?pgbouncer=true`;
   }
 
-  const [, password, projectRef, database] = directMatch;
-  const region = process.env.SUPABASE_POOLER_REGION ?? "us-east-1";
-  return `postgresql://postgres.${projectRef}:${password}@aws-0-${region}.pooler.supabase.com:6543/${database}?pgbouncer=true`;
+  // Common misconfig: pooler host with bare user `postgres` (must be postgres.<ref>).
+  const barePoolerMatch = raw.match(
+    /^(postgresql:\/\/)postgres(:[^@]+)(@aws-0-[a-z0-9-]+\.pooler\.supabase\.com:\d+\/[^?]*)(\?.*)?$/i,
+  );
+  if (barePoolerMatch && envRef) {
+    const [, scheme, password, rest, query = ""] = barePoolerMatch;
+    return `${scheme}postgres.${envRef}${password}${rest}${query}`;
+  }
+
+  return raw;
+}
+
+function resolveConnectionString(raw: string): string {
+  const poolerUrl = process.env.DATABASE_POOLER_URL?.trim();
+  return rewriteSupabaseConnectionString(poolerUrl || raw);
 }
 
 function createPool(connectionString: string): Pool {

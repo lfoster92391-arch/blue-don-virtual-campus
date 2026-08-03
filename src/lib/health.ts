@@ -38,8 +38,14 @@ export async function getHealthStatus() {
     return null;
   });
 
+  const reachable = counts !== null;
+
   return {
     ...base,
+    checks: {
+      ...base.checks,
+      database: reachable ? ("reachable" as const) : ("unreachable" as const),
+    },
     content: counts ?? { academies: null, labs: null, simulators: null, modules: null },
   };
 }

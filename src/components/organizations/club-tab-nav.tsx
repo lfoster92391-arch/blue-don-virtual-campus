@@ -26,7 +26,8 @@ export const WORKSPACE_TAB_ID = "workspace" as const;
 
 export type ClubTabId =
   | (typeof CLUB_TABS)[number]["id"]
-  | typeof WORKSPACE_TAB_ID;
+  | typeof WORKSPACE_TAB_ID
+  | "script";
 
 function focusedTabsForSlug(slug: string): { id: string; label: string }[] {
   const byId = new Map(FOCUS_CLUB_TABS.map((t) => [t.id, t]));
@@ -44,7 +45,8 @@ function focusedTabsForSlug(slug: string): { id: string; label: string }[] {
   if (slug === "broadcasting") {
     return [
       byId.get("overview")!,
-      { id: "media", label: "Live / Media" },
+      { id: "script", label: "Daily Rundown" },
+      { id: "media", label: "Control Room" },
       byId.get("invoices")!,
       byId.get("calendar")!,
       byId.get("members")!,

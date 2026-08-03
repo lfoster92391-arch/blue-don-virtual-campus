@@ -6,6 +6,7 @@ import { BrandLogo } from "@/components/brand/brand-logo";
 import { NavMembershipSections } from "@/components/layout/nav-membership-sections";
 import { NavTree } from "@/components/layout/nav-tree";
 import { resolveGroupedNavigation } from "@/config/navigation";
+import type { CampusRole } from "@/config/roles";
 import { siteConfig } from "@/config/site";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -22,13 +23,21 @@ import type { CampusUser } from "@/types/auth";
 export function MobileSidebar({
   user,
   context,
+  navRole,
+  membershipSlugs: membershipSlugsProp,
 }: {
   user: CampusUser;
   context: StudentContext;
+  navRole?: CampusRole;
+  membershipSlugs?: string[];
 }) {
   const pathname = usePathname();
   const { mobileSidebarOpen, setMobileSidebarOpen } = useShellStore();
-  const navEntries = resolveGroupedNavigation(user.role);
+  const membershipSlugs =
+    membershipSlugsProp ?? context.clubs.map((club) => club.slug);
+  const navEntries = resolveGroupedNavigation(navRole ?? user.role, {
+    membershipSlugs,
+  });
 
   return (
     <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>

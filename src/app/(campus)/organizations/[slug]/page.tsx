@@ -18,7 +18,14 @@ import {
 } from "@/config/club-workspaces";
 import { ORGANIZATION_CATEGORY_META } from "@/config/madonna-organizations";
 import type { OrganizationCategory } from "@/config/madonna-organizations";
+import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
+import {
+  FOCUS_CLUB_SLUGS,
+  isFocusClubSlug,
+} from "@/config/focused-clubs";
 import { canRequestOrganizationMembership } from "@/config/roles";
+import { enforceFocusClubAccessBySlug } from "@/lib/auth/focus-club-guard";
+import { resolveAccessIdentity } from "@/lib/auth/preview";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { withDatabase } from "@/lib/prisma";
 import {
@@ -42,6 +49,12 @@ import {
   listOrganizationMedia,
 } from "@/services/media-service";
 import { getTodaysBroadcastAnnouncement } from "@/services/broadcast-announcement-service";
+import {
+  canEditBroadcastScriptPrayer,
+  canEditBroadcastScriptTemplate,
+  canEditBroadcastScriptValues,
+  getTodaysBroadcastScript,
+} from "@/services/broadcast-script-service";
 import { getBlueDonLiveRtmpConfig } from "@/config/broadcast-media";
 import {
   canManageClubCalendar,
@@ -59,11 +72,6 @@ import {
   listClubInvoices,
   listPendingInvoicesForFocusClubs,
 } from "@/services/club-invoice-service";
-import {
-  FOCUS_CLUB_SLUGS,
-  isFocusClubSlug,
-} from "@/config/focused-clubs";
-import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
 
 type OrganizationPageProps = {
   params: Promise<{ slug: string }>;
@@ -77,6 +85,17 @@ export default async function OrganizationPage({
   const { slug } = await params;
   const { tab: tabParam } = await searchParams;
   const user = await requireCompleteProfile();
+  const identity = await resolveAccessIdentity(user);
+  await enforceFocusClubAccessBySlug({
+    userId: user.id,
+    role: identity.navRole,
+    slug,
+    options: {
+      forceScoped: identity.isPreviewing,
+      membershipUserId: identity.membershipUserId,
+      forcedMembershipSlugs: identity.forcedMembershipSlugs,
+    },
+  });
   let detail = await getOrganizationDiscoveryDetail(slug);
 
   // Focus clubs (IT / Broadcasting / Cricut) must never 404 — even when
@@ -105,7 +124,7 @@ export default async function OrganizationPage({
 
   // Skip DB-backed panels when serving catalog fallback (broken DATABASE_URL /
   // circuit breaker) so we don't hammer Prisma or throw via the proxy.
-  const [match, items, canManage, canManageMedia, organizationMedia, academyMembership, canReview, joinPipeline, financeSnapshot, canManageFinances, clubCalendarEvents, canManageCalendar, activeLive, dailyAnnouncement, clubInvoices, canSubmitInvoices, canReviewInvoices] =
+  const [match, items, canManage, canManageMedia, organizationMedia, academyMembership, canReview, joinPipeline, financeSnapshot, canManageFinances, clubCalendarEvents, canManageCalendar, activeLive, dailyAnnouncement, clubInvoices, canSubmitInvoices, canReviewInvoices, dailyScript, canEditScriptValues, canEditScriptPrayer, canEditScriptTemplate] =
     isFallback
       ? [
           null,
@@ -123,6 +142,10 @@ export default async function OrganizationPage({
           null,
           null,
           [],
+          false,
+          false,
+          null,
+          false,
           false,
           false,
         ]
@@ -173,6 +196,18 @@ export default async function OrganizationPage({
           listClubInvoices({ organizationId: organization.id }),
           canSubmitClubInvoice(user.id, user.role, organization.id),
           canReviewClubInvoice(user.id, user.role, organization.id),
+          slug === "broadcasting"
+            ? getTodaysBroadcastScript(organization.id)
+            : Promise.resolve(null),
+          slug === "broadcasting"
+            ? canEditBroadcastScriptValues(user.id, user.role)
+            : Promise.resolve(false),
+          slug === "broadcasting"
+            ? canEditBroadcastScriptPrayer(user.id, user.role)
+            : Promise.resolve(false),
+          slug === "broadcasting"
+            ? canEditBroadcastScriptTemplate(user.role)
+            : Promise.resolve(false),
         ]);
 
   let focusClubSnapshots: Awaited<
@@ -242,6 +277,10 @@ export default async function OrganizationPage({
     pendingFocusInvoices,
     clubCalendarEvents,
     canManageClubCalendar: canManageCalendar,
+    dailyScript,
+    canEditScriptValues,
+    canEditScriptPrayer,
+    canEditScriptTemplate,
   };
 
   return (
@@ -308,6 +347,17 @@ export default async function OrganizationPage({
             render={
               <Link href="/organizations/it-club?tab=finances">
                 Club Finances
+              </Link>
+            }
+          />
+        ) : null}
+        {FOCUSED_CLUBS_MODE && organization.slug === "broadcasting" ? (
+          <Button
+            size="sm"
+            nativeButton={false}
+            render={
+              <Link href="/organizations/broadcasting?tab=script">
+                Daily Rundown
               </Link>
             }
           />

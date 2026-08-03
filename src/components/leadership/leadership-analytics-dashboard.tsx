@@ -98,6 +98,117 @@ export function LeadershipAnalyticsDashboard({
         </div>
       </div>
 
+      <DashboardCard
+        title="Focus clubs pulse"
+        description="IT, Broadcasting, and Cricut — fund balances, memberships, invoices, and media."
+        icon={<CircleDollarSign className="size-4" />}
+        status={
+          data.focusClubs.pendingInvoicesTotal > 0
+            ? {
+                label: `${data.focusClubs.pendingInvoicesTotal} invoices pending`,
+                variant: "warning",
+              }
+            : data.focusClubs.liveStreamActive
+              ? { label: "Live now", variant: "success" }
+              : undefined
+        }
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              nativeButton={false}
+              render={
+                <Link href={data.focusClubs.itFinancesHref}>IT Finances</Link>
+              }
+            />
+            <Button
+              size="sm"
+              variant="ghost"
+              nativeButton={false}
+              render={<Link href="/admin/students">Students</Link>}
+            />
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {data.focusClubs.clubs.map((club) => (
+              <div
+                key={club.slug}
+                className="rounded-lg border border-border px-3 py-3"
+              >
+                <p className="text-sm font-medium text-[#0A2342] dark:text-white">
+                  {club.name}
+                </p>
+                <p className="mt-1 text-xl font-semibold">{club.balanceLabel}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {club.memberCount} members
+                  {club.pendingInvoices > 0
+                    ? ` · ${club.pendingInvoices} pending invoices`
+                    : ""}
+                </p>
+                <Link
+                  href={`/organizations/${club.slug}`}
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#2F80ED] hover:underline"
+                >
+                  Open club <ArrowRight className="size-3" />
+                </Link>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+            <span>
+              Broadcast media items: {data.focusClubs.mediaUploadsBroadcast}
+            </span>
+            <span>·</span>
+            <span>
+              Live stream:{" "}
+              {data.focusClubs.liveStreamActive ? "Active" : "Off air"}
+            </span>
+          </div>
+
+          {data.focusClubs.recentLedger.length > 0 ? (
+            <ul className="space-y-2">
+              {data.focusClubs.recentLedger.slice(0, 5).map((entry) => (
+                <li
+                  key={entry.id}
+                  className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">
+                      {entry.memo || entry.type}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {entry.clubName} ·{" "}
+                      {new Date(entry.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <p
+                    className={
+                      entry.type === "DEPOSIT"
+                        ? "shrink-0 font-medium text-[#2E8B57]"
+                        : "shrink-0 font-medium text-foreground"
+                    }
+                  >
+                    {entry.type === "WITHDRAWAL" ? "−" : "+"}
+                    {(entry.amountCents / 100).toLocaleString("en-US", {
+                      style: "currency",
+                      currency: "USD",
+                    })}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyHint>
+              No recent club ledger activity yet. Approvals land in IT Finances.
+            </EmptyHint>
+          )}
+        </div>
+      </DashboardCard>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <DashboardCard
           title="Fundraising & Revenue"

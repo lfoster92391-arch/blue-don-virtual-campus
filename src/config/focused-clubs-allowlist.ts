@@ -57,6 +57,8 @@ export const FOCUSED_MODE_SOFT_REDIRECTS: Record<string, string> = {
   "/find-your-place": "/clubs",
   "/student-life": "/clubs",
   "/corner": "/cricut/shop",
+  "/rewards": "/home",
+  "/arcade": "/home",
 };
 
 function normalizePathname(pathname: string): string {

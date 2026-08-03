@@ -6,15 +6,26 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Menu } from "lucide-react";
 
 import { getMobileNavigation, isNavItemActive } from "@/config/navigation";
+import type { CampusRole } from "@/config/roles";
 import { useShellStore } from "@/stores/shell-store";
 import type { CampusUser } from "@/types/auth";
 import { cn } from "@/lib/utils";
 
-function MobileNavItems({ user }: { user: CampusUser }) {
+function MobileNavItems({
+  user,
+  membershipSlugs,
+  navRole,
+}: {
+  user: CampusUser;
+  membershipSlugs: string[];
+  navRole?: CampusRole;
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { setMobileSidebarOpen } = useShellStore();
-  const mobileItems = getMobileNavigation(user.role);
+  const mobileItems = getMobileNavigation(navRole ?? user.role, {
+    membershipSlugs,
+  });
 
   return (
     <>
@@ -61,13 +72,32 @@ function MobileNavItems({ user }: { user: CampusUser }) {
   );
 }
 
-export function MobileNav({ user }: { user: CampusUser }) {
+export function MobileNav({
+  user,
+  membershipSlugs = [],
+  navRole,
+}: {
+  user: CampusUser;
+  membershipSlugs?: string[];
+  navRole?: CampusRole;
+}) {
+  const tabCount = Math.min(
+    4,
+    Math.max(
+      1,
+      getMobileNavigation(navRole ?? user.role, { membershipSlugs }).length,
+    ),
+  );
+
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur lg:hidden"
       aria-label="Mobile navigation"
     >
-      <div className="mx-auto grid max-w-lg grid-cols-5 gap-1 px-2 py-2">
+      <div
+        className="mx-auto grid max-w-lg gap-1 px-2 py-2"
+        style={{ gridTemplateColumns: `repeat(${tabCount + 1}, minmax(0, 1fr))` }}
+      >
         <Suspense
           fallback={
             <button
@@ -79,7 +109,11 @@ export function MobileNav({ user }: { user: CampusUser }) {
             </button>
           }
         >
-          <MobileNavItems user={user} />
+          <MobileNavItems
+            user={user}
+            membershipSlugs={membershipSlugs}
+            navRole={navRole}
+          />
         </Suspense>
       </div>
       <div className="h-[env(safe-area-inset-bottom)]" />

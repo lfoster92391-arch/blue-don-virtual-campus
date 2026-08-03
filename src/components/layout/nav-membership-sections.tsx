@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
 import type { CampusRole } from "@/config/roles";
 import { isFacultyClubLookupRole } from "@/config/roles";
 import type { StudentContext, StudentOrgLink } from "@/services/student-context-service";
@@ -67,6 +68,11 @@ export function NavMembershipSections({
   role,
   onNavigate,
 }: NavMembershipSectionsProps) {
+  // Focused mode already scopes the primary tree by membership — skip the duplicate list.
+  if (FOCUSED_CLUBS_MODE) {
+    return null;
+  }
+
   const facultyLookup = isFacultyClubLookupRole(role);
   const hasAny =
     context.clubs.length > 0 ||

@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 
+import { AssignClubForm } from "@/components/admin/assign-club-form";
+import { ParentStudentLinkForm } from "@/components/admin/parent-student-link-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CAMPUS_ROLES, ROLE_LABELS, type CampusRole } from "@/config/roles";
@@ -10,7 +12,7 @@ import {
   updateUserRoleAction,
   type AdminUserActionState,
 } from "@/features/admin/user-actions";
-import { ParentStudentLinkForm } from "@/components/admin/parent-student-link-form";
+import type { FocusClubMembershipSummary } from "@/services/org-membership-service";
 
 const initialState: AdminUserActionState = {};
 
@@ -23,6 +25,7 @@ type AdminUserRowProps = {
   initials: string;
   passwordManagementEnabled: boolean;
   students?: Array<{ id: string; displayName: string; email: string }>;
+  clubMemberships?: FocusClubMembershipSummary[];
 };
 
 const statusStyles: Record<AdminUserRowProps["status"], string> = {
@@ -40,6 +43,7 @@ export function AdminUserRow({
   initials,
   passwordManagementEnabled,
   students = [],
+  clubMemberships = [],
 }: AdminUserRowProps) {
   const [passwordState, passwordAction, passwordPending] = useActionState(
     resetUserPasswordAction,
@@ -155,6 +159,12 @@ export function AdminUserRow({
           ) : null}
         </form>
       </div>
+
+      {role === "student" || role === "alumni" ? (
+        <div className="mt-4 border-t border-border pt-4">
+          <AssignClubForm userId={userId} memberships={clubMemberships} />
+        </div>
+      ) : null}
 
       {((role === "parent" || role === "admin") && status === "active") ? (
         <div className="mt-4 border-t border-border pt-4">

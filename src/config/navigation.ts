@@ -23,6 +23,7 @@ import {
   Package,
   Radio,
   Scissors,
+  ScrollText,
   Sparkles,
   Sun,
   Trophy,
@@ -31,7 +32,8 @@ import {
 } from "lucide-react";
 
 import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
-import { FOCUS_CLUBS } from "@/config/focused-clubs";
+import { canBrowseAllFocusClubs } from "@/config/focus-club-access";
+import { FOCUS_CLUBS, type FocusClubSlug } from "@/config/focused-clubs";
 import type { CampusRole } from "@/config/roles";
 import { canAccessAdmin, isFacultyClubLookupRole } from "@/config/roles";
 
@@ -44,6 +46,8 @@ export type NavItem = {
   roles?: CampusRole[] | "all";
   /** Stronger visual weight — used for the three focus clubs. */
   primary?: boolean;
+  /** When set, focused-mode nav hides this item unless the user belongs to the club. */
+  clubSlug?: FocusClubSlug;
 };
 
 
@@ -57,6 +61,13 @@ export type NavGroup = {
   defaultOpen?: boolean;
   /** Stronger visual weight — used for focus-club parents (e.g. IT Club). */
   primary?: boolean;
+  /** When set, focused-mode nav hides this group unless the user belongs to the club. */
+  clubSlug?: FocusClubSlug;
+};
+
+export type ResolveNavigationOptions = {
+  /** Active organization membership slugs (e.g. it-club, broadcasting). */
+  membershipSlugs?: readonly string[];
 };
 
 /** A top-level sidebar entry is either a direct link or a collapsible group. */
@@ -198,6 +209,7 @@ export const focusedClubsNavigation: NavEntry[] = [
     icon: Cpu,
     defaultOpen: true,
     primary: true,
+    clubSlug: FOCUS_CLUBS[0].slug,
     children: [
       {
         label: "Overview",
@@ -206,6 +218,7 @@ export const focusedClubsNavigation: NavEntry[] = [
         enabled: true,
         mobile: true,
         primary: true,
+        clubSlug: FOCUS_CLUBS[0].slug,
       },
       {
         label: "Finances",
@@ -213,28 +226,57 @@ export const focusedClubsNavigation: NavEntry[] = [
         icon: CircleDollarSign,
         enabled: true,
         primary: true,
+        clubSlug: FOCUS_CLUBS[0].slug,
       },
       {
         label: "IT Help Desk",
         href: "/service-desk",
         icon: Headphones,
         enabled: true,
+        clubSlug: FOCUS_CLUBS[0].slug,
       },
     ],
   },
   {
     label: FOCUS_CLUBS[1].name,
-    href: FOCUS_CLUBS[1].href,
     icon: Radio,
-    enabled: true,
-    mobile: true,
+    defaultOpen: true,
     primary: true,
+    clubSlug: FOCUS_CLUBS[1].slug,
+    children: [
+      {
+        label: "Overview",
+        href: FOCUS_CLUBS[1].href,
+        icon: Radio,
+        enabled: true,
+        mobile: true,
+        primary: true,
+        clubSlug: FOCUS_CLUBS[1].slug,
+      },
+      {
+        label: "Daily Rundown",
+        href: `${FOCUS_CLUBS[1].href}?tab=script`,
+        icon: ScrollText,
+        enabled: true,
+        primary: true,
+        clubSlug: FOCUS_CLUBS[1].slug,
+      },
+      {
+        label: "Control Room",
+        href: `${FOCUS_CLUBS[1].href}?tab=media`,
+        icon: Megaphone,
+        enabled: true,
+        primary: true,
+        clubSlug: FOCUS_CLUBS[1].slug,
+      },
+    ],
   },
   {
     label: FOCUS_CLUBS[2].name,
     icon: Scissors,
     defaultOpen: true,
     primary: true,
+    clubSlug: FOCUS_CLUBS[2].slug,
     children: [
       {
         label: "Overview",
@@ -243,6 +285,7 @@ export const focusedClubsNavigation: NavEntry[] = [
         enabled: true,
         mobile: true,
         primary: true,
+        clubSlug: FOCUS_CLUBS[2].slug,
       },
       {
         label: "Shop",
@@ -250,6 +293,7 @@ export const focusedClubsNavigation: NavEntry[] = [
         icon: CircleDollarSign,
         enabled: true,
         primary: true,
+        clubSlug: FOCUS_CLUBS[2].slug,
       },
     ],
   },
@@ -266,6 +310,13 @@ export const focusedClubsNavigation: NavEntry[] = [
         roles: ["admin", "advisor", "staff", "counselor"],
       },
       {
+        label: "Students",
+        href: "/admin/students",
+        icon: Users,
+        enabled: true,
+        roles: ["admin"],
+      },
+      {
         label: "Administration",
         href: "/admin",
         icon: LayoutGrid,
@@ -275,7 +326,22 @@ export const focusedClubsNavigation: NavEntry[] = [
     ],
   },
 ];
-/**
+
+function entryAllowedForMemberships(
+  clubSlug: FocusClubSlug | undefined,
+  role: CampusRole,
+  membershipSlugs: readonly string[] | undefined,
+): boolean {
+  if (!clubSlug) {
+    return true;
+  }
+
+  if (canBrowseAllFocusClubs(role)) {
+    return true;
+  }
+
+  return (membershipSlugs ?? []).includes(clubSlug);
+}/**
  * Phase 18 · Condensed grouped navigation.
  *
  * The sidebar renders this tree: a short set of top-level entries where most
@@ -451,15 +517,25 @@ export function resolveNavigationForRole(
  * Role-aware view of {@link groupedNavigation} (or {@link focusedClubsNavigation}
  * when focused clubs mode is on): filters top-level entries and group children
  * by role, drops empty groups, and applies the faculty club lookup relabel.
+ * In focused mode, club groups are also filtered by active memberships
+ * (admins/advisors/staff still see all three clubs).
  */
 export function resolveGroupedNavigation(
   role: CampusRole,
+  options?: ResolveNavigationOptions,
 ): NavEntry[] {
+  const membershipSlugs = options?.membershipSlugs;
   const source = FOCUSED_CLUBS_MODE ? focusedClubsNavigation : groupedNavigation;
   const entries: NavEntry[] = [];
 
   for (const entry of source) {
     if (!isNavGroup(entry)) {
+      if (
+        FOCUSED_CLUBS_MODE &&
+        !entryAllowedForMemberships(entry.clubSlug, role, membershipSlugs)
+      ) {
+        continue;
+      }
       const [item] = resolveNavigationForRole([entry], role);
       if (item) {
         entries.push(item);
@@ -471,7 +547,21 @@ export function resolveGroupedNavigation(
       continue;
     }
 
-    const children = resolveNavigationForRole(entry.children, role);
+    if (
+      FOCUSED_CLUBS_MODE &&
+      !entryAllowedForMemberships(entry.clubSlug, role, membershipSlugs)
+    ) {
+      continue;
+    }
+
+    const children = resolveNavigationForRole(
+      entry.children.filter(
+        (child) =>
+          !FOCUSED_CLUBS_MODE ||
+          entryAllowedForMemberships(child.clubSlug, role, membershipSlugs),
+      ),
+      role,
+    );
     if (children.length > 0) {
       entries.push({ ...entry, children });
     }
@@ -480,9 +570,21 @@ export function resolveGroupedNavigation(
   return entries;
 }
 
-export function getMobileNavigation(role: CampusRole): NavItem[] {
+export function getMobileNavigation(
+  role: CampusRole,
+  options?: ResolveNavigationOptions,
+): NavItem[] {
   if (FOCUSED_CLUBS_MODE) {
+    const membershipSlugs = options?.membershipSlugs;
     const focusedMobile: NavItem[] = [
+      {
+        label: "Home",
+        href: "/home",
+        icon: Home,
+        enabled: true,
+        mobile: true,
+        primary: true,
+      },
       {
         label: FOCUS_CLUBS[0].shortLabel,
         href: FOCUS_CLUBS[0].href,
@@ -490,6 +592,7 @@ export function getMobileNavigation(role: CampusRole): NavItem[] {
         enabled: true,
         mobile: true,
         primary: true,
+        clubSlug: FOCUS_CLUBS[0].slug,
       },
       {
         label: FOCUS_CLUBS[1].shortLabel,
@@ -498,6 +601,7 @@ export function getMobileNavigation(role: CampusRole): NavItem[] {
         enabled: true,
         mobile: true,
         primary: true,
+        clubSlug: FOCUS_CLUBS[1].slug,
       },
       {
         label: FOCUS_CLUBS[2].shortLabel,
@@ -506,8 +610,11 @@ export function getMobileNavigation(role: CampusRole): NavItem[] {
         enabled: true,
         mobile: true,
         primary: true,
+        clubSlug: FOCUS_CLUBS[2].slug,
       },
-    ];
+    ].filter((item) =>
+      entryAllowedForMemberships(item.clubSlug, role, membershipSlugs),
+    );
     return resolveNavigationForRole(focusedMobile, role);
   }
 

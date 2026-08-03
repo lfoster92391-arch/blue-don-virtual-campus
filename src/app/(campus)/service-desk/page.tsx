@@ -7,6 +7,8 @@ import { ItHelpDeskPanel } from "@/components/service-desk/it-help-desk-panel";
 import { Button } from "@/components/ui/button";
 import { buildItHelpDeskMailto } from "@/config/it-help-desk";
 import { canCreateTickets, canManageTickets, canManageUsers } from "@/config/roles";
+import { enforceFocusClubAccess } from "@/lib/auth/focus-club-guard";
+import { resolveAccessIdentity } from "@/lib/auth/preview";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import {
   TICKET_CATEGORY_LABELS,
@@ -19,6 +21,17 @@ const FACILITIES_CATEGORIES = ["FACILITIES"] as const;
 
 export default async function ServiceDeskPage() {
   const user = await requireCompleteProfile();
+  const identity = await resolveAccessIdentity(user);
+  await enforceFocusClubAccess({
+    userId: user.id,
+    role: identity.navRole,
+    clubSlug: "it-club",
+    options: {
+      forceScoped: identity.isPreviewing,
+      membershipUserId: identity.membershipUserId,
+      forcedMembershipSlugs: identity.forcedMembershipSlugs,
+    },
+  });
   const tickets = await listTicketsForUser(user.id, {
     includeAll: canManageTickets(user.role),
   });

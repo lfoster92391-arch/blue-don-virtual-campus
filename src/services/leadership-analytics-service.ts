@@ -1,4 +1,6 @@
 import { isDatabaseConfigured } from "@/config/env";
+import { FOCUS_CLUBS, FOCUS_CLUB_SLUGS } from "@/config/focused-clubs";
+import { formatCents } from "@/lib/club-finance";
 import { SUCCESS_ANALYTICS_GRADE_LABEL, SUCCESS_ANALYTICS_THRESHOLDS } from "@/config/success-analytics";
 import { isPrismaReady, withDatabase } from "@/lib/prisma";
 import { getEquipmentStats } from "@/services/equipment-service";
@@ -6,6 +8,13 @@ import { getComplianceIssues, listPendingApprovals } from "@/services/form-servi
 import { formatCurrency, getImpactFundSummary, listAllProposals } from "@/services/impact-fund-service";
 import { listPendingMemberships } from "@/services/academy-service";
 import { listPendingParents } from "@/services/parent-student-service";
+import {
+  listFocusClubFinanceSnapshots,
+} from "@/services/club-finance-service";
+import { listPendingInvoicesForFocusClubs } from "@/services/club-invoice-service";
+import { ensureAllFocusClubOrganizations } from "@/services/focus-club-org-service";
+import { getActiveLiveStream } from "@/services/media-service";
+import { countFocusClubMemberships } from "@/services/student-admin-service";
 
 export type LeadershipSummaryMetric = {
   label: string;
@@ -38,6 +47,15 @@ export type LeadershipDrillDown = {
   count?: number;
 };
 
+export type LeadershipFocusClubPulse = {
+  slug: string;
+  name: string;
+  balanceCents: number;
+  balanceLabel: string;
+  memberCount: number;
+  pendingInvoices: number;
+};
+
 export type LeadershipAnalyticsData = {
   summary: LeadershipSummaryMetric[];
   fundraising: {
@@ -51,6 +69,21 @@ export type LeadershipAnalyticsData = {
     balanceLabel: string;
     raisedLabel: string;
     availableLabel: string;
+  };
+  focusClubs: {
+    clubs: LeadershipFocusClubPulse[];
+    pendingInvoicesTotal: number;
+    liveStreamActive: boolean;
+    mediaUploadsBroadcast: number;
+    itFinancesHref: string;
+    recentLedger: Array<{
+      id: string;
+      type: string;
+      amountCents: number;
+      memo: string | null;
+      createdAt: Date;
+      clubName: string;
+    }>;
   };
   serviceHours: {
     schoolTotal: number;
@@ -110,6 +143,14 @@ function emptyData(): LeadershipAnalyticsData {
       balanceLabel: formatCurrency(0),
       raisedLabel: formatCurrency(0),
       availableLabel: formatCurrency(0),
+    },
+    focusClubs: {
+      clubs: [],
+      pendingInvoicesTotal: 0,
+      liveStreamActive: false,
+      mediaUploadsBroadcast: 0,
+      itFinancesHref: "/organizations/it-club?tab=finances",
+      recentLedger: [],
     },
     serviceHours: {
       schoolTotal: 0,
@@ -447,6 +488,70 @@ export async function getLeadershipAnalytics(): Promise<LeadershipAnalyticsData>
     pendingParents: pendingParents.length,
   });
 
+  await ensureAllFocusClubOrganizations();
+  const focusOrgs = await withDatabase((prisma) =>
+    prisma.organization.findMany({
+      where: { slug: { in: [...FOCUS_CLUB_SLUGS] } },
+      select: { id: true, slug: true, name: true },
+    }),
+  );
+  const focusOrgIds = (focusOrgs ?? []).map((o) => o.id);
+  const [focusSnapshots, pendingClubInvoices, memberCounts, liveStream, broadcastMediaCount] =
+    await Promise.all([
+      listFocusClubFinanceSnapshots(focusOrgIds),
+      listPendingInvoicesForFocusClubs(focusOrgIds),
+      countFocusClubMemberships(),
+      getActiveLiveStream(),
+      withDatabase((prisma) => {
+        const broadcasting = (focusOrgs ?? []).find((o) => o.slug === "broadcasting");
+        if (!broadcasting) {
+          return Promise.resolve(0);
+        }
+        return prisma.campusMediaItem.count({
+          where: { organizationId: broadcasting.id },
+        });
+      }),
+    ]);
+
+  const memberCountBySlug = new Map(
+    memberCounts.map((row) => [row.slug, row.count]),
+  );
+  const pendingByOrg = new Map<string, number>();
+  for (const invoice of pendingClubInvoices) {
+    pendingByOrg.set(
+      invoice.organizationId,
+      (pendingByOrg.get(invoice.organizationId) ?? 0) + 1,
+    );
+  }
+
+  const recentLedger = focusSnapshots
+    .flatMap((snap) =>
+      snap.entries.slice(0, 4).map((entry) => ({
+        id: entry.id,
+        type: entry.type,
+        amountCents: entry.amountCents,
+        memo: entry.memo,
+        createdAt: entry.createdAt,
+        clubName: snap.organizationName,
+      })),
+    )
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .slice(0, 8);
+
+  const focusClubPulse: LeadershipFocusClubPulse[] = FOCUS_CLUBS.map((club) => {
+    const snap = focusSnapshots.find((s) => s.organizationSlug === club.slug);
+    return {
+      slug: club.slug,
+      name: club.name,
+      balanceCents: snap?.balanceCents ?? 0,
+      balanceLabel: formatCents(snap?.balanceCents ?? 0),
+      memberCount: memberCountBySlug.get(club.slug) ?? 0,
+      pendingInvoices: snap
+        ? (pendingByOrg.get(snap.organizationId) ?? 0)
+        : 0,
+    };
+  });
+
   return {
     summary: [
       {
@@ -486,6 +591,14 @@ export async function getLeadershipAnalytics(): Promise<LeadershipAnalyticsData>
       balanceLabel: formatCurrency(impactSummary.balanceCents),
       raisedLabel: formatCurrency(impactSummary.allocatedCents),
       availableLabel: formatCurrency(impactSummary.availableCents),
+    },
+    focusClubs: {
+      clubs: focusClubPulse,
+      pendingInvoicesTotal: pendingClubInvoices.length,
+      liveStreamActive: Boolean(liveStream),
+      mediaUploadsBroadcast: broadcastMediaCount ?? 0,
+      itFinancesHref: "/organizations/it-club?tab=finances",
+      recentLedger,
     },
     serviceHours: {
       schoolTotal: Math.round(schoolTotal),
@@ -531,10 +644,15 @@ function buildDrillDown(counts: {
   pendingParents: number;
 }): LeadershipDrillDown[] {
   return [
+    { label: "Students control center", href: "/admin/students" },
     { label: "Governance Center", href: "/admin" },
     {
       label: "Success Analytics",
       href: "/counselor/analytics",
+    },
+    {
+      label: "IT Finances & approvals",
+      href: "/organizations/it-club?tab=finances",
     },
     { label: "Impact Fund admin", href: "/admin/impact-fund" },
     { label: "Service Center", href: "/service" },

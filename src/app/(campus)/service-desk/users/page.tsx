@@ -8,7 +8,10 @@ import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
 import { isSupabaseAdminConfigured } from "@/config/env";
 import { canManageUsers } from "@/config/roles";
+import { enforceFocusClubAccess } from "@/lib/auth/focus-club-guard";
+import { resolveAccessIdentity } from "@/lib/auth/preview";
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { listFocusClubMembershipsByUserIds } from "@/services/org-membership-service";
 import { listCampusUsers } from "@/services/user-service";
 import { listStudentOptions } from "@/services/parent-student-service";
 
@@ -19,16 +22,31 @@ export default async function ServiceDeskUsersPage() {
     redirect("/service-desk");
   }
 
+  const identity = await resolveAccessIdentity(user);
+  await enforceFocusClubAccess({
+    userId: user.id,
+    role: identity.navRole,
+    clubSlug: "it-club",
+    options: {
+      forceScoped: identity.isPreviewing,
+      membershipUserId: identity.membershipUserId,
+      forcedMembershipSlugs: identity.forcedMembershipSlugs,
+    },
+  });
+
   const [users, students] = await Promise.all([
     listCampusUsers(),
     listStudentOptions(),
   ]);
+  const membershipsByUser = await listFocusClubMembershipsByUserIds(
+    users.map((campusUser) => campusUser.id),
+  );
   const accountManagementEnabled = isSupabaseAdminConfigured();
 
   return (
     <ShellPage
       title="Account management"
-      description="Create campus logins and manage roles and passwords for students, staff, and families."
+      description="Create campus logins, assign students to clubs with roles, and manage passwords."
       actions={
         <Button
           variant="ghost"
@@ -50,8 +68,8 @@ export default async function ServiceDeskUsersPage() {
           </p>
           <p className="mt-1">
             Set <code>SUPABASE_SERVICE_ROLE_KEY</code> in the server environment
-            to enable creating accounts and resetting passwords. Role changes still
-            work without it.
+            to enable creating accounts and resetting passwords. Role changes and
+            club assignments still work without it.
           </p>
         </div>
       ) : null}
@@ -79,6 +97,7 @@ export default async function ServiceDeskUsersPage() {
                 initials={campusUser.initials}
                 passwordManagementEnabled={accountManagementEnabled}
                 students={students}
+                clubMemberships={membershipsByUser[campusUser.id] ?? []}
               />
             ))}
           </ul>

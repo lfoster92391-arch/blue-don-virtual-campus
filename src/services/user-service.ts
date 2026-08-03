@@ -250,6 +250,27 @@ export async function assignUserRole(
   return user ? mapCampusUser(user) : null;
 }
 
+export async function setUserAccountStatus(
+  userId: string,
+  status: "active" | "inactive" | "pending",
+): Promise<CampusUser | null> {
+  if (!isDatabaseConfigured()) {
+    return null;
+  }
+
+  const prismaStatus =
+    status === "active" ? "ACTIVE" : status === "inactive" ? "INACTIVE" : "PENDING";
+
+  const user = await withDatabase((prisma) =>
+    prisma.user.update({
+      where: { id: userId },
+      data: { status: prismaStatus },
+    }),
+  );
+
+  return user ? mapCampusUser(user) : null;
+}
+
 export type CampusUserSummary = CampusUser & {
   createdAt: Date;
 };

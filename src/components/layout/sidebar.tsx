@@ -7,6 +7,7 @@ import { BrandLogo } from "@/components/brand/brand-logo";
 import { NavMembershipSections } from "@/components/layout/nav-membership-sections";
 import { NavTree } from "@/components/layout/nav-tree";
 import { resolveGroupedNavigation } from "@/config/navigation";
+import type { CampusRole } from "@/config/roles";
 import { siteConfig } from "@/config/site";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,13 +19,21 @@ import { cn } from "@/lib/utils";
 export function Sidebar({
   user,
   context,
+  navRole,
+  membershipSlugs: membershipSlugsProp,
 }: {
   user: CampusUser;
   context: StudentContext;
+  navRole?: CampusRole;
+  membershipSlugs?: string[];
 }) {
   const pathname = usePathname();
   const { sidebarCollapsed, toggleSidebar } = useShellStore();
-  const navEntries = resolveGroupedNavigation(user.role);
+  const membershipSlugs =
+    membershipSlugsProp ?? context.clubs.map((club) => club.slug);
+  const navEntries = resolveGroupedNavigation(navRole ?? user.role, {
+    membershipSlugs,
+  });
 
   return (
     <aside

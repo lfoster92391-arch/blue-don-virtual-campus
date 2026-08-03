@@ -22,22 +22,24 @@ When focused mode is on, students no longer reach via nav (and most bounce to Ho
 
 ## Primary nav (focused mode)
 
+Scoped by **active organization membership** for students/parents:
+
 ```
-Home                         → /home  (Today at Madonna briefing)
-IT Club (group)
-  ├── Overview               → /organizations/it-club
-  ├── Finances               → /organizations/it-club?tab=finances
-  └── IT Help Desk           → /service-desk
-Broadcasting                 → /organizations/broadcasting
-Cricut Club (group)
-  ├── Overview               → /organizations/cricut-club
-  └── Shop                   → /cricut/shop
-Staff & Admin (roles)
-  ├── Principal Dashboard
-  └── Administration
+Home                         → /home
+IT Club (group)              → only if member of it-club
+  ├── Overview / Finances / IT Help Desk
+Broadcasting                 → only if member of broadcasting
+  ├── Overview / Daily Rundown / Control Room
+Cricut Club (group)          → only if member of cricut-club
+  ├── Overview / Shop
+Staff & Admin (roles)        → Principal Dashboard, Students, Administration
 ```
 
-Mobile: Home · IT · Broadcast · Cricut (+ Menu).
+Admins/advisors/staff/teachers/coaches/counselors see all three clubs. Soft-block redirects non-members hitting another club URL to their club or `/home`.
+
+Assign students: **Admin → Students control center** (`/admin/students`) — see `docs/ADMIN_STUDENTS.md`.
+
+Mobile: Home · (member clubs) · Menu.
 
 ## Home briefing (`/home`)
 

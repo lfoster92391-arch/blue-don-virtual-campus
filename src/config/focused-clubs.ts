@@ -59,11 +59,12 @@ export function isFocusClubSlug(slug: string): slug is FocusClubSlug {
 /** Slim club-page tabs when focused mode is on (per-club extras applied in ClubTabNav). */
 export const FOCUS_CLUB_TABS = [
   { id: "overview", label: "Overview" },
+  { id: "script", label: "Daily Rundown" },
   { id: "calendar", label: "Calendar" },
   { id: "finances", label: "Finances" },
   { id: "invoices", label: "Invoices" },
   { id: "fundraisers", label: "Fundraisers" },
-  { id: "media", label: "Media" },
+  { id: "media", label: "Control Room" },
   { id: "shop", label: "Shop" },
   { id: "members", label: "Members" },
 ] as const;

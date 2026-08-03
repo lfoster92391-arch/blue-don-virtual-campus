@@ -68,7 +68,7 @@ export default async function AdminPage() {
       ? [
           {
             title: "Principal Dashboard",
-            description: "Leadership command center — fundraising, service, and whole-school pulse",
+            description: "Leadership command center — club funds, invoices, memberships, and school pulse",
             href: "/admin/leadership",
             icon: BarChart3,
             count: null,
@@ -89,8 +89,15 @@ export default async function AdminPage() {
     ...(canManageAccounts
       ? [
           {
-            title: "User accounts",
-            description: "Manage roles and reset passwords",
+            title: "Students control center",
+            description: "Create students, assign clubs/roles, preview their view, reset passwords",
+            href: "/admin/students",
+            icon: Users,
+            count: null,
+          },
+          {
+            title: "All user accounts",
+            description: "Campus-wide roles, passwords, and parent links",
             href: "/service-desk/users",
             icon: Users,
             count: null,

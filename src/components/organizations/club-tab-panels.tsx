@@ -25,11 +25,14 @@ import {
 } from "@/components/organizations/club-workspace/workspace-panels";
 import { WishlistSection } from "@/components/wishlist/wishlist-section";
 import { DailyAnnouncement } from "@/components/media/daily-announcement";
+import { DailyRundownPanel } from "@/components/media/daily-rundown-panel";
 import { LiveBroadcastPanel } from "@/components/media/live-broadcast-panel";
 import { VideoLibrary } from "@/components/media/video-library";
 import { VideoUploadForm } from "@/components/media/video-upload-form";
 import { Button } from "@/components/ui/button";
 import type { BlueDonLiveRtmpConfig } from "@/config/broadcast-media";
+import type { BroadcastDailyScriptView } from "@/config/broadcast-script";
+import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
 import { getClubTheme, getClubType } from "@/config/club-workspaces";
 import type { OrganizationProfile } from "@/config/organization-profiles";
 import { getOrganizationHref } from "@/config/madonna-organizations";
@@ -88,6 +91,10 @@ export type ClubTabPanelsProps = {
   pendingFocusInvoices?: ClubInvoiceView[];
   clubCalendarEvents?: ClubCalendarEventView[];
   canManageClubCalendar?: boolean;
+  dailyScript?: BroadcastDailyScriptView | null;
+  canEditScriptValues?: boolean;
+  canEditScriptPrayer?: boolean;
+  canEditScriptTemplate?: boolean;
 };
 
 function memberLabel(member: MemberPreview): string {
@@ -223,7 +230,8 @@ function JoinSection({
 
 function OverviewPanel(props: ClubTabPanelsProps) {
   const { card, profile, showJoinSection = true } = props;
-  const showClubXp = props.organizationType === "CLUB";
+  const showClubXp =
+    props.organizationType === "CLUB" && !FOCUSED_CLUBS_MODE;
   const clubProgress = showClubXp ? getClubProgress(props.organizationSlug) : null;
   const isBroadcasting = props.organizationSlug === "broadcasting";
 
@@ -241,6 +249,30 @@ function OverviewPanel(props: ClubTabPanelsProps) {
             announcement={props.dailyAnnouncement ?? null}
             canManage={Boolean(props.canManageMedia)}
             compact
+          />
+        </DashboardCard>
+      ) : null}
+
+      {isBroadcasting ? (
+        <DashboardCard
+          title="Daily Rundown"
+          description="Shared show script for this morning’s broadcast."
+          icon={<Megaphone className="size-5" />}
+        >
+          <p className="text-sm text-muted-foreground">
+            Fill hosts, discussion, events, and lunch — then copy or print the
+            full script for the crew.
+          </p>
+          <Button
+            className="mt-3"
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={
+              <Link href={`/organizations/broadcasting?tab=script`}>
+                Open show script
+              </Link>
+            }
           />
         </DashboardCard>
       ) : null}
@@ -279,13 +311,15 @@ function OverviewPanel(props: ClubTabPanelsProps) {
           </div>
         </DashboardCard>
 
-        <DashboardCard title="XP opportunities">
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            {card.xpOpportunities.map((item) => (
-              <li key={item}>• {item}</li>
-            ))}
-          </ul>
-        </DashboardCard>
+        {!FOCUSED_CLUBS_MODE ? (
+          <DashboardCard title="XP opportunities">
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              {card.xpOpportunities.map((item) => (
+                <li key={item}>• {item}</li>
+              ))}
+            </ul>
+          </DashboardCard>
+        ) : null}
 
         {profile.careerConnections && profile.careerConnections.length > 0 ? (
           <DashboardCard title="Career connections" className="lg:col-span-2">
@@ -325,7 +359,7 @@ function AnnouncementsPanel({ card }: Pick<ClubTabPanelsProps, "card">) {
     {
       id: "3",
       title: "Volunteer opportunities",
-      body: "Earn service hours and XP by helping with club activities. See the Service Center for details.",
+      body: "Help with club activities and earn service hours. See the Service Center for details.",
       time: "Last week",
     },
   ];
@@ -579,8 +613,8 @@ function MediaPanel(props: ClubTabPanelsProps) {
         {canManageMedia && props.rtmpConfig ? (
           <div className="grid gap-6 lg:grid-cols-2">
             <DashboardCard
-              title="Upload Video"
-              description="New publishes land in the video library below."
+              title="Media archive"
+              description="Publish clips to the video library."
               icon={<Camera className="size-5" />}
             >
               <VideoUploadForm
@@ -641,6 +675,16 @@ function MediaPanel(props: ClubTabPanelsProps) {
               <Link href="/media">
                 <Camera className="size-4" />
                 Full Media Hub
+              </Link>
+            }
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={
+              <Link href="/organizations/broadcasting?tab=script">
+                Daily Rundown
               </Link>
             }
           />
@@ -822,6 +866,34 @@ function WorkspacePanel(props: ClubTabPanelsProps) {
   }
 }
 
+function ScriptPanel(props: ClubTabPanelsProps) {
+  if (props.organizationSlug !== "broadcasting" || !props.dailyScript) {
+    return (
+      <DashboardCard title="Daily Rundown">
+        <p className="text-sm text-muted-foreground">
+          Show script is available on the Broadcasting club page.
+        </p>
+      </DashboardCard>
+    );
+  }
+
+  return (
+    <DashboardCard
+      title="Daily Rundown"
+      description="Shared production sheet — fill slots, preview the script, then copy or print for air."
+      icon={<Megaphone className="size-5" />}
+    >
+      <DailyRundownPanel
+        script={props.dailyScript}
+        organizationId={props.organizationId}
+        canEditValues={Boolean(props.canEditScriptValues)}
+        canEditPrayer={Boolean(props.canEditScriptPrayer)}
+        canEditTemplate={Boolean(props.canEditScriptTemplate)}
+      />
+    </DashboardCard>
+  );
+}
+
 export function ClubTabPanels(props: ClubTabPanelsProps) {
   switch (props.activeTab) {
     case "workspace":
@@ -842,6 +914,8 @@ export function ClubTabPanels(props: ClubTabPanelsProps) {
       return <InvoicesPanel {...props} />;
     case "shop":
       return <ShopPanel />;
+    case "script":
+      return <ScriptPanel {...props} />;
     case "media":
       return <MediaPanel {...props} />;
     case "fundraisers":
@@ -867,6 +941,7 @@ export const CLUB_TAB_IDS = [
   "finances",
   "invoices",
   "shop",
+  "script",
   "media",
   "fundraisers",
   "leadership",

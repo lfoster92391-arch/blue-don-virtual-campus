@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, ClipboardList } from "lucide-react";
 
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
-import { CLEAN_SLATE } from "@/config/app-mode";
+import { CLEAN_SLATE, FOCUSED_CLUBS_MODE } from "@/config/app-mode";
 import { CURRENT_CAMPUS_CHALLENGE } from "@/config/campus-challenge";
 import type { BlueDonOSViewModel, TodayDigestItem } from "@/services/campus-os-service";
 import type { StudentContext } from "@/services/student-context-service";
@@ -71,6 +71,7 @@ export function TodayPanel({
         )}
       </DashboardCard>
 
+      {!FOCUSED_CLUBS_MODE ? (
       <DashboardCard title="⭐ XP & Rewards">
         <div className="space-y-3 text-sm">
           <div className="flex items-center justify-between">
@@ -93,7 +94,7 @@ export function TodayPanel({
           </Link>
         </div>
       </DashboardCard>
-
+      ) : null}
       {hasClubs ? (
         <DashboardCard title="📈 Club Fundraiser">
           <div className="space-y-2">

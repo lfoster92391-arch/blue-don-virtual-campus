@@ -12,6 +12,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
 import { MADONNA_ORGANIZATIONS } from "../src/config/madonna-organizations";
+import { DEFAULT_BROADCAST_SCRIPT_SLOTS } from "../src/config/broadcast-script";
 import { FOCUS_CLUB_SLUGS } from "../src/config/focused-clubs";
 import { PrismaClient } from "../src/generated/prisma/client";
 
@@ -21,13 +22,22 @@ async function main() {
     throw new Error("DATABASE_URL is required to seed focus clubs.");
   }
 
+  // Node pg v8+ treats sslmode=require as verify-full; force app-level SSL skip.
+  let normalized = connectionString;
+  try {
+    const url = new URL(connectionString);
+    url.searchParams.delete("sslmode");
+    url.searchParams.set("uselibpqcompat", "true");
+    url.searchParams.set("sslmode", "require");
+    normalized = url.toString();
+  } catch {
+    // keep raw
+  }
+
   const pool = new Pool({
-    connectionString,
+    connectionString: normalized,
     max: 1,
-    ...(connectionString.includes("supabase.co") ||
-    connectionString.includes("sslmode=require")
-      ? { ssl: { rejectUnauthorized: false } }
-      : {}),
+    ssl: { rejectUnauthorized: false },
   });
   const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
@@ -57,6 +67,31 @@ async function main() {
           description: seed.description,
         },
       });
+
+      if (seed.slug === "broadcasting") {
+        const org = await prisma.organization.findUnique({
+          where: { slug: "broadcasting" },
+          select: { id: true },
+        });
+        if (org && typeof prisma.broadcastScriptTemplate?.upsert === "function") {
+          try {
+            await prisma.broadcastScriptTemplate.upsert({
+              where: { organizationId: org.id },
+              create: {
+                organizationId: org.id,
+                slots: DEFAULT_BROADCAST_SCRIPT_SLOTS,
+              },
+              update: {},
+            });
+            console.log("Seeded Broadcasting Daily Rundown template");
+          } catch (error) {
+            console.warn(
+              "Skipped BroadcastScriptTemplate seed (table may be missing):",
+              error instanceof Error ? error.message : error,
+            );
+          }
+        }
+      }
 
       console.log(`Upserted focus club: ${seed.slug}`);
     }
