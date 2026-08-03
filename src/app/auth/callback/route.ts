@@ -3,6 +3,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 
 import { isSupabaseConfigured } from "@/config/env";
 import { normalizeRole } from "@/config/roles";
+import { validateEmailForRole } from "@/lib/auth/email-domain";
 import { createClient } from "@/lib/supabase/server";
 import { ensureUserProfile } from "@/services/user-service";
 
@@ -17,8 +18,6 @@ export async function GET(request: Request) {
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const requestedNext = searchParams.get("next") ?? "/home";
-  // Recovery links must land on the password reset screen even if a stale
-  // "next" points elsewhere.
   const next = type === "recovery" ? "/reset-password" : requestedNext;
   const role = normalizeRole(searchParams.get("role"));
 
@@ -38,17 +37,37 @@ export async function GET(request: Request) {
       } = await supabase.auth.getUser();
 
       if (user?.email) {
+        const resolvedRole =
+          role ?? normalizeRole(user.user_metadata?.role as string | undefined) ?? "student";
+        const emailCheck = validateEmailForRole(user.email, resolvedRole);
+
+        if (!emailCheck.valid) {
+          await supabase.auth.signOut();
+          return NextResponse.redirect(
+            `${origin}/login?error=email_not_allowed&message=${encodeURIComponent(emailCheck.message)}`,
+          );
+        }
+
         try {
           await ensureUserProfile({
             id: user.id,
             email: user.email,
             displayName: user.user_metadata?.display_name as string | undefined,
             profileImage: user.user_metadata?.avatar_url as string | undefined,
-            role:
-              role ?? normalizeRole(user.user_metadata?.role as string | undefined),
+            role: resolvedRole,
+            relationshipNote:
+              (user.user_metadata?.relationship_note as string | undefined) ?? null,
           });
-        } catch (error) {
-          console.error("[auth/callback] Failed to sync user profile:", error);
+        } catch (profileError) {
+          console.error("[auth/callback] Failed to sync user profile:", profileError);
+          await supabase.auth.signOut();
+          const message =
+            profileError instanceof Error
+              ? profileError.message
+              : "Account setup failed.";
+          return NextResponse.redirect(
+            `${origin}/login?error=email_not_allowed&message=${encodeURIComponent(message)}`,
+          );
         }
       }
 

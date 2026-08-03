@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Trophy } from "lucide-react";
+import { Link2, Plus, Trophy } from "lucide-react";
 
 import { PortfolioCreateForm } from "@/components/portfolio/portfolio-create-form";
 import { ShellPage } from "@/components/layout/shell-page";
@@ -23,6 +23,19 @@ export default async function PortfolioPage() {
     <ShellPage
       title="Portfolio"
       description="Showcase projects, certifications, service work, and leadership evidence."
+      actions={
+        <Button
+          variant="outline"
+          size="sm"
+          nativeButton={false}
+          render={
+            <Link href="/career-portfolio">
+              Career Portfolio
+              <Link2 className="size-3.5" />
+            </Link>
+          }
+        />
+      }
     >
       <div className="grid gap-4 sm:grid-cols-4">
         <Metric label="Items" value={String(summary.totalItems)} />

@@ -37,7 +37,10 @@ export function getInitials(input: {
 export function isProfileComplete(input: {
   firstName?: string | null;
   lastName?: string | null;
-  status: UserStatus;
 }): boolean {
-  return Boolean(input.firstName && input.lastName && input.status === "ACTIVE");
+  return Boolean(input.firstName && input.lastName);
+}
+
+export function hasCampusAccess(status: UserStatus): boolean {
+  return status === "ACTIVE";
 }

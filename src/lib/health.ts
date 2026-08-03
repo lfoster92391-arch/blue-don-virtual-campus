@@ -2,7 +2,7 @@ import {
   isDatabaseConfigured,
   isSupabaseConfigured,
 } from "@/config/env";
-import { siteConfig } from "@/config/site";
+import { getCurrentWave, siteConfig } from "@/config/site";
 import { withDatabase } from "@/lib/prisma";
 
 export async function getHealthStatus() {
@@ -11,6 +11,7 @@ export async function getHealthStatus() {
     service: "blue-don-virtual-campus",
     version: siteConfig.version,
     phase: siteConfig.phase,
+    wave: getCurrentWave().id,
     timestamp: new Date().toISOString(),
     checks: {
       app: "healthy" as const,

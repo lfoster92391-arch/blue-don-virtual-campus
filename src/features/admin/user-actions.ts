@@ -9,13 +9,16 @@ import {
   type CampusRole,
 } from "@/config/roles";
 import { isSupabaseAdminConfigured } from "@/config/env";
+import { validateEmailForRole } from "@/lib/auth/email-domain";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  approveUserAccount,
   assignUserRole,
   createCampusUser,
   getUserById,
 } from "@/services/user-service";
+import { linkParentToStudent } from "@/services/parent-student-service";
 
 export type AdminUserActionState = {
   error?: string;
@@ -25,6 +28,7 @@ export type AdminUserActionState = {
 function revalidateUserPaths() {
   revalidatePath("/service-desk/users");
   revalidatePath("/admin/users");
+  revalidatePath("/admin/parent-approvals");
   revalidatePath("/service-desk");
 }
 
@@ -64,6 +68,18 @@ const roleSchema = z.object({
   role: z.enum(
     CAMPUS_ROLES as [CampusRole, ...CampusRole[]],
   ),
+});
+
+const approveParentSchema = z.object({
+  parentId: z.string().uuid("Invalid parent."),
+  studentId: z.string().uuid("Select a student to link."),
+  relationship: z.string().trim().optional(),
+});
+
+const linkParentSchema = z.object({
+  parentId: z.string().uuid("Invalid parent."),
+  studentId: z.string().uuid("Select a student to link."),
+  relationship: z.string().trim().optional(),
 });
 
 export async function resetUserPasswordAction(
@@ -148,6 +164,11 @@ export async function createCampusUserAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid account data." };
   }
 
+  const emailCheck = validateEmailForRole(parsed.data.email, parsed.data.role);
+  if (!emailCheck.valid) {
+    return { error: emailCheck.message };
+  }
+
   const client = createAdminClient();
   if (!client) {
     return { error: "Unable to connect to the authentication service." };
@@ -227,4 +248,101 @@ export async function updateUserRoleAction(
 
   revalidateUserPaths();
   return { success: `Role updated to ${updated.role} for ${updated.displayName}.` };
+}
+
+export async function approveParentAccountAction(
+  _prevState: AdminUserActionState,
+  formData: FormData,
+): Promise<AdminUserActionState> {
+  const admin = await requireCompleteProfile();
+
+  if (!hasPermission(admin.role, "users:manage")) {
+    return { error: "You do not have permission to manage user accounts." };
+  }
+
+  const parsed = approveParentSchema.safeParse({
+    parentId: formData.get("parentId"),
+    studentId: formData.get("studentId"),
+    relationship: formData.get("relationship") || undefined,
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid approval request." };
+  }
+
+  const parent = await getUserById(parsed.data.parentId);
+  if (!parent || parent.role === "student") {
+    return { error: "Parent account not found." };
+  }
+
+  const student = await getUserById(parsed.data.studentId);
+  if (!student || student.role !== "student") {
+    return { error: "Student account not found." };
+  }
+
+  const approved = await approveUserAccount(parsed.data.parentId);
+  if (!approved) {
+    return { error: "Unable to approve account. Check database configuration." };
+  }
+
+  const link = await linkParentToStudent({
+    parentId: parsed.data.parentId,
+    studentId: parsed.data.studentId,
+    relationship: parsed.data.relationship,
+  });
+
+  if (!link) {
+    return {
+      error: "Account approved but student link failed. Link the student from account management.",
+    };
+  }
+
+  revalidateUserPaths();
+  return {
+    success: `Approved ${approved.displayName} and linked to ${link.displayName}.`,
+  };
+}
+
+export async function linkParentStudentAction(
+  _prevState: AdminUserActionState,
+  formData: FormData,
+): Promise<AdminUserActionState> {
+  const admin = await requireCompleteProfile();
+
+  if (!hasPermission(admin.role, "users:manage")) {
+    return { error: "You do not have permission to manage user accounts." };
+  }
+
+  const parsed = linkParentSchema.safeParse({
+    parentId: formData.get("parentId"),
+    studentId: formData.get("studentId"),
+    relationship: formData.get("relationship") || undefined,
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid link request." };
+  }
+
+  const parent = await getUserById(parsed.data.parentId);
+  if (!parent || parent.role === "student") {
+    return { error: "Parent account not found." };
+  }
+
+  const student = await getUserById(parsed.data.studentId);
+  if (!student || student.role !== "student") {
+    return { error: "Student account not found." };
+  }
+
+  const link = await linkParentToStudent({
+    parentId: parsed.data.parentId,
+    studentId: parsed.data.studentId,
+    relationship: parsed.data.relationship,
+  });
+
+  if (!link) {
+    return { error: "Unable to link parent and student." };
+  }
+
+  revalidateUserPaths();
+  return { success: `Linked ${parent.displayName} to ${link.displayName}.` };
 }

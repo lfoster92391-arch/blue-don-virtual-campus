@@ -1,16 +1,21 @@
 import Link from "next/link";
 import {
   Archive,
+  BarChart3,
   BookOpen,
+  Building2,
   CircleDollarSign,
   ClipboardCheck,
+  FileCheck,
   FileText,
   FlaskConical,
   Gamepad2,
   GraduationCap,
+  Handshake,
   Layers,
   Scale,
   ShieldCheck,
+  UserCheck,
   Users,
 } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -18,14 +23,20 @@ import { redirect } from "next/navigation";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
-import { canAccessAdmin, canApproveForms, canManageUsers } from "@/config/roles";
+import { canAccessAdmin, canApproveForms, canManageUsers, canViewLeadershipAnalytics, canViewSuccessAnalytics } from "@/config/roles";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import {
   getComplianceIssues,
   listArchivedForms,
   listPendingApprovals,
 } from "@/services/form-service";
-import { listPendingMemberships } from "@/services/academy-service";
+import {
+  listPendingMemberships,
+} from "@/services/academy-service";
+import { countPendingPartners } from "@/services/business-partner-service";
+import { countPendingCommunityPartners } from "@/services/partner-service";
+import { countPendingMentorItems } from "@/services/mentor-network-service";
+import { listPendingParents } from "@/services/parent-student-service";
 
 export default async function AdminPage() {
   const user = await requireCompleteProfile();
@@ -34,17 +45,47 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
-  const [pendingApprovals, complianceIssues, archivedForms, pendingMemberships] =
+  const [pendingApprovals, complianceIssues, archivedForms, pendingMemberships, pendingParents, pendingBusinessPartners, pendingCommunityPartners, pendingMentors] =
     await Promise.all([
       listPendingApprovals(),
       getComplianceIssues(),
       listArchivedForms(),
       listPendingMemberships(),
+      listPendingParents(),
+      countPendingPartners(),
+      countPendingCommunityPartners(),
+      countPendingMentorItems(),
     ]);
 
+  const pendingPartners = pendingBusinessPartners + pendingCommunityPartners;
+
   const canManageAccounts = canManageUsers(user.role);
+  const showSuccessAnalytics = canViewSuccessAnalytics(user.role);
+  const showLeadershipDashboard = canViewLeadershipAnalytics(user.role);
 
   const sections = [
+    ...(showLeadershipDashboard
+      ? [
+          {
+            title: "Principal Dashboard",
+            description: "Leadership command center — fundraising, service, and whole-school pulse",
+            href: "/admin/leadership",
+            icon: BarChart3,
+            count: null,
+          },
+        ]
+      : []),
+    ...(showSuccessAnalytics
+      ? [
+          {
+            title: "Success Analytics",
+            description: "Support students — celebrate wins and close opportunity gaps",
+            href: "/counselor/analytics",
+            icon: BarChart3,
+            count: null,
+          },
+        ]
+      : []),
     ...(canManageAccounts
       ? [
           {
@@ -53,6 +94,13 @@ export default async function AdminPage() {
             href: "/service-desk/users",
             icon: Users,
             count: null,
+          },
+          {
+            title: "Parent approvals",
+            description: "Approve parent accounts and link students",
+            href: "/admin/parent-approvals",
+            icon: UserCheck,
+            count: pendingParents.length,
           },
         ]
       : []),
@@ -71,6 +119,13 @@ export default async function AdminPage() {
       count: pendingApprovals.length,
     },
     {
+      title: "Forms Center",
+      description: "Agreement completion rates and approval queues",
+      href: "/admin/forms-center",
+      icon: FileCheck,
+      count: null,
+    },
+    {
       title: "Compliance",
       description: "Missing, unsigned, and expired form tracking",
       href: "/admin/compliance",
@@ -83,6 +138,20 @@ export default async function AdminPage() {
       href: "/admin/academies",
       icon: GraduationCap,
       count: pendingMemberships.length,
+    },
+    {
+      title: "Partners",
+      description: "Approve business and community partner applications",
+      href: "/admin/partners",
+      icon: Building2,
+      count: pendingPartners,
+    },
+    {
+      title: "Mentor Network",
+      description: "Approve mentor profiles and student connection requests",
+      href: "/admin/mentors",
+      icon: Handshake,
+      count: pendingMentors.profiles + pendingMentors.connections,
     },
     {
       title: "Learning modules",

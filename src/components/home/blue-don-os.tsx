@@ -1,133 +1,62 @@
-import Link from "next/link";
-import {
-  ArrowRight,
-  CalendarDays,
-  ClipboardList,
-  GraduationCap,
-  Map,
-} from "lucide-react";
-
-import { DashboardCard } from "@/components/dashboard/dashboard-card";
+import { CampusFeed } from "@/components/home/campus-feed";
+import { CommandStrip } from "@/components/home/command-strip";
+import { DailyDiscovery } from "@/components/home/daily-discovery";
+import { QuickActions } from "@/components/home/quick-actions";
+import { TodayAtMadonna } from "@/components/home/today-at-madonna";
+import { TodayPanel } from "@/components/home/today-panel";
+import { TodayInMadonnaHistoryWidget } from "@/components/culture/today-in-history-widget";
 import { DashboardHero } from "@/components/dashboard/dashboard-hero";
-import { Button } from "@/components/ui/button";
-import type { BlueDonOSViewModel, TodayDigestItem } from "@/services/campus-os-service";
+import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
+import { CAMPUS_FEED } from "@/config/campus-feed";
+import type { BroadcastAnnouncementView } from "@/services/broadcast-announcement-service";
+import type { BlueDonOSViewModel } from "@/services/campus-os-service";
+import type { HubDigest } from "@/services/school-hub-service";
+import type { StudentContext } from "@/services/student-context-service";
 import type { CampusUser } from "@/types/auth";
 
 type BlueDonOSProps = {
   user: CampusUser;
   digest: BlueDonOSViewModel;
+  context: StudentContext;
+  hub: HubDigest;
+  announcement: BroadcastAnnouncementView | null;
 };
 
-const quickDestinations = [
-  { label: "My Journey", href: "/my-journey", icon: Map },
-  { label: "Academies", href: "/academies", icon: GraduationCap },
-  { label: "Calendar", href: "/calendar", icon: CalendarDays },
-  { label: "Forms", href: "/forms", icon: ClipboardList },
-] as const;
-
-function DigestItemIcon({ type }: { type: TodayDigestItem["type"] }) {
-  if (type === "event") {
-    return <CalendarDays className="size-4 text-[#2F80ED]" aria-hidden="true" />;
+export function BlueDonOS({
+  user,
+  digest,
+  context,
+  hub,
+  announcement,
+}: BlueDonOSProps) {
+  if (FOCUSED_CLUBS_MODE) {
+    return (
+      <TodayAtMadonna user={user} hub={hub} announcement={announcement} />
+    );
   }
-
-  if (type === "assignment") {
-    return <ClipboardList className="size-4 text-[#C9A227]" aria-hidden="true" />;
-  }
-
-  return <ArrowRight className="size-4 text-muted-foreground" aria-hidden="true" />;
-}
-
-export function BlueDonOS({ user, digest }: BlueDonOSProps) {
-  const headlineItems = digest.items.filter((item) => item.type !== "campus");
 
   return (
     <div className="flex flex-1 flex-col gap-6">
       <DashboardHero user={user} />
 
-      <section aria-labelledby="today-heading" className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <DashboardCard
-            title="Today at Madonna"
-            description={`${digest.eventCount} event${digest.eventCount === 1 ? "" : "s"} · ${digest.assignmentCount} due today`}
-          >
-            {headlineItems.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No events or deadlines on your schedule today. Check the calendar or
-                explore academies for what&apos;s next.
-              </p>
-            ) : (
-              <ul className="divide-y divide-border">
-                {headlineItems.map((item) => (
-                  <li key={item.id}>
-                    {item.href ? (
-                      <Link
-                        href={item.href}
-                        className="flex items-start gap-3 py-3 transition-colors hover:text-[#0A2342] dark:hover:text-white"
-                      >
-                        <DigestItemIcon type={item.type} />
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium">{item.title}</p>
-                          {item.subtitle ? (
-                            <p className="text-sm text-muted-foreground">
-                              {item.subtitle}
-                            </p>
-                          ) : null}
-                        </div>
-                        {item.timeLabel ? (
-                          <span className="shrink-0 text-sm text-muted-foreground">
-                            {item.timeLabel}
-                          </span>
-                        ) : null}
-                      </Link>
-                    ) : (
-                      <div className="flex items-start gap-3 py-3">
-                        <DigestItemIcon type={item.type} />
-                        <div>
-                          <p className="font-medium">{item.title}</p>
-                          {item.subtitle ? (
-                            <p className="text-sm text-muted-foreground">
-                              {item.subtitle}
-                            </p>
-                          ) : null}
-                        </div>
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <Button variant="outline" size="sm" className="mt-4" nativeButton={false} render={
-              <Link href="/calendar">
-                Open calendar
-                <ArrowRight className="size-4" />
-              </Link>
-            } />
-          </DashboardCard>
+      <CommandStrip
+        digest={digest}
+        context={context}
+        announcementCount={CAMPUS_FEED.length}
+      />
+
+      <div className="grid gap-6 xl:grid-cols-3">
+        <div className="space-y-8 xl:col-span-2">
+          <QuickActions context={context} role={user.role} />
+          <TodayInMadonnaHistoryWidget date={digest.today} />
+          <DailyDiscovery date={digest.today} />
+          <CampusFeed />
         </div>
 
-        <DashboardCard title="Quick destinations" description="Jump into your campus">
-          <div className="grid gap-2">
-            {quickDestinations.map((destination) => {
-              const Icon = destination.icon;
-
-              return (
-                <Button
-                  key={destination.href}
-                  variant="secondary"
-                  className="justify-start gap-2"
-                  nativeButton={false}
-                  render={
-                    <Link href={destination.href}>
-                      <Icon className="size-4" aria-hidden="true" />
-                      {destination.label}
-                    </Link>
-                  }
-                />
-              );
-            })}
-          </div>
-        </DashboardCard>
-      </section>
+        <aside aria-label="Today panel">
+          <TodayPanel digest={digest} context={context} />
+        </aside>
+      </div>
     </div>
   );
 }

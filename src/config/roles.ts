@@ -84,6 +84,10 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "impact_fund:propose",
     "impact_fund:vote",
     "impact_fund:view",
+    "partners:approve",
+    "partners:view",
+    "mentors:approve",
+    "mentors:manage",
     "journey:view_students",
     "future:explore",
     "rewards:grant",
@@ -122,6 +126,9 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "impact_fund:propose",
     "impact_fund:vote",
     "impact_fund:view",
+    "partners:approve",
+    "partners:view",
+    "mentors:manage",
     "journey:view_students",
     "future:explore",
     "rewards:grant",
@@ -146,6 +153,7 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "labs:use",
     "simulators:use",
     "impact_fund:view",
+    "partners:view",
     "journey:view_students",
     "future:explore",
     "rewards:grant",
@@ -167,8 +175,10 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "impact_fund:propose",
     "impact_fund:vote",
     "impact_fund:view",
+    "partners:view",
     "journey:edit_self",
     "future:explore",
+    "mentors:request",
     "rewards:earn",
     "feed:post",
     "athletics:view",
@@ -183,6 +193,7 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "events:participate",
     "knowledge:view",
     "impact_fund:view",
+    "partners:view",
     "portfolio:view_linked",
     "journey:view_students",
     "future:explore",
@@ -195,6 +206,7 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "events:participate",
     "knowledge:view",
     "impact_fund:view",
+    "partners:view",
     "impact_fund:vote",
   ],
   alumni: [
@@ -208,6 +220,7 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "future:explore",
     "feed:post",
     "athletics:view",
+    "partners:view",
     "ai:use",
   ],
   staff: [
@@ -224,6 +237,8 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "tickets:create",
     "tickets:manage",
     "impact_fund:view",
+    "partners:view",
+    "mentors:manage",
     "feed:post",
     "feed:moderate",
     "athletics:view",
@@ -244,6 +259,7 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "feed:post",
     "athletics:manage_team",
     "athletics:view",
+    "partners:view",
   ],
   counselor: [
     ...CORE,
@@ -252,6 +268,9 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "portfolio:view_linked",
     "journey:view_students",
     "future:explore",
+    "partners:approve",
+    "partners:view",
+    "mentors:manage",
     "athletics:view",
   ],
 };
@@ -265,6 +284,7 @@ export const ORG_ROLE_PERMISSIONS: Record<OrgMembershipRole, string[]> = {
     "org:feed:moderate",
     "org:store:manage",
     "org:resources:edit",
+    "org:finances:manage",
     "org:view",
   ],
   officer: [
@@ -273,7 +293,9 @@ export const ORG_ROLE_PERMISSIONS: Record<OrgMembershipRole, string[]> = {
     "org:members:manage",
     "org:media:manage",
     "org:feed:moderate",
+    "org:store:manage",
     "org:resources:edit",
+    "org:finances:manage",
     "org:view",
   ],
   moderator: [
@@ -353,6 +375,24 @@ export function canJoinAcademy(role: CampusRole): boolean {
   return hasPermission(role, "academy:join");
 }
 
+/** Faculty browse every club for student co-browsing — no membership join flow */
+export const FACULTY_CLUB_LOOKUP_ROLES: CampusRole[] = [
+  "admin",
+  "teacher",
+  "advisor",
+  "coach",
+  "counselor",
+  "staff",
+];
+
+export function isFacultyClubLookupRole(role: CampusRole): boolean {
+  return FACULTY_CLUB_LOOKUP_ROLES.includes(role);
+}
+
+export function canRequestOrganizationMembership(role: CampusRole): boolean {
+  return canJoinAcademy(role);
+}
+
 export function canManageAcademy(role: CampusRole): boolean {
   return hasPermission(role, "academy:manage");
 }
@@ -430,4 +470,38 @@ export function canVoteImpactFund(role: CampusRole): boolean {
 
 export function canManageImpactFund(role: CampusRole): boolean {
   return hasPermission(role, "impact_fund:manage");
+}
+
+export function canApproveMentorProfiles(role: CampusRole): boolean {
+  return hasPermission(role, "mentors:approve");
+}
+
+export function canApprovePartners(role: CampusRole): boolean {
+  return hasPermission(role, "partners:approve");
+}
+
+export function canReviewMentorConnections(role: CampusRole): boolean {
+  return hasPermission(role, "mentors:manage");
+}
+
+export function canRequestMentorConnection(role: CampusRole): boolean {
+  return hasPermission(role, "mentors:request");
+}
+
+const SUCCESS_ANALYTICS_ROLES: CampusRole[] = ["admin", "advisor", "counselor"];
+
+export function canViewSuccessAnalytics(role: CampusRole): boolean {
+  return SUCCESS_ANALYTICS_ROLES.includes(role);
+}
+
+/** Principal / leadership command center — broader than counselor success analytics. */
+const LEADERSHIP_ANALYTICS_ROLES: CampusRole[] = [
+  "admin",
+  "advisor",
+  "counselor",
+  "staff",
+];
+
+export function canViewLeadershipAnalytics(role: CampusRole): boolean {
+  return LEADERSHIP_ANALYTICS_ROLES.includes(role);
 }

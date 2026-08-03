@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
+import { ArticleContent } from "@/components/knowledge/article-content";
 import { canManageKnowledge } from "@/config/roles";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { getArticleBySlug } from "@/services/knowledge-service";
@@ -42,10 +43,8 @@ export default async function KnowledgeArticlePage({
         </div>
       ) : null}
 
-      <article className="prose prose-sm mt-8 max-w-none dark:prose-invert">
-        <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-          {article.content}
-        </div>
+      <article className="mt-8 max-w-none">
+        <ArticleContent content={article.content} />
       </article>
     </ShellPage>
   );

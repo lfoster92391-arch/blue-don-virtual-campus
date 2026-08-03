@@ -21,18 +21,22 @@ type DashboardWidgetRendererProps = {
   widgetId: WidgetId;
   user: CampusUser;
   data: DashboardWidgetData;
+  hasLinkedStudents?: boolean;
 };
 
 export function DashboardWidgetRenderer({
   widgetId,
   user,
   data,
+  hasLinkedStudents = false,
 }: DashboardWidgetRendererProps) {
   switch (widgetId) {
     case "hero_greeting":
       return <DashboardHero user={user} />;
     case "quick_actions":
-      return <DashboardQuickActions user={user} />;
+      return (
+        <DashboardQuickActions user={user} hasLinkedStudents={hasLinkedStudents} />
+      );
     case "metrics_strip":
       return <DashboardMetrics metrics={data.metrics} />;
     case "assignments_due":

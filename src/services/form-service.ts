@@ -1,9 +1,15 @@
+import {
+  CLUB_MEMBERSHIP_COMMITMENT_FORM_ID,
+  getClubCommitmentContextKey,
+} from "@/config/club-commitment";
 import type { CampusRole } from "@/config/roles";
 import { isDatabaseConfigured } from "@/config/env";
+import { getSchoolYear } from "@/config/school-year";
 import type {
   ApprovalType,
   FormStatus,
   FormType,
+  Prisma,
 } from "@/generated/prisma/client";
 import {
   PARENT_FORM_TYPES,
@@ -46,11 +52,31 @@ export type CreateFormInput = {
   approvalType?: ApprovalType;
 };
 
+/** Audit metadata captured on every digital signature event (agreement #13). */
+export type SubmissionAuditMeta = {
+  ip?: string | null;
+  userAgent?: string | null;
+  signerRole?: string | null;
+  schoolYear?: string;
+};
+
 export type SubmitFormInput = {
   formId: string;
   userId: string;
   signatureName: string;
-  responseData?: Record<string, string>;
+  contextKey?: string;
+  responseData?: Record<string, unknown>;
+  /** Student the form is about, when a parent signs on behalf of a child. */
+  subjectUserId?: string;
+  /** Defaults to the current school year when omitted. */
+  schoolYear?: string;
+  /** Full digital-signature audit metadata (IP, user agent, role). */
+  auditMeta?: SubmissionAuditMeta;
+  /**
+   * Parent approval state for chained agreements (e.g. club participation).
+   * `null` = awaiting parent, `true`/`false` = decided, `undefined` = n/a.
+   */
+  parentApproved?: boolean | null;
 };
 
 function isFormVisibleToRole(type: FormType, role: CampusRole): boolean {
@@ -138,8 +164,19 @@ export async function listFormsForUser(
   });
 
   return forms
-    .filter((form) => isFormVisibleToRole(form.type, role))
-    .map(mapFormListItem);
+    .filter(
+      (form) =>
+        form.id !== CLUB_MEMBERSHIP_COMMITMENT_FORM_ID &&
+        isFormVisibleToRole(form.type, role),
+    )
+    .map((form) =>
+      mapFormListItem({
+        ...form,
+        submissions: form.submissions.filter(
+          (submission) => submission.contextKey === "",
+        ),
+      }),
+    );
 }
 
 export async function listAllForms(): Promise<FormListItem[]> {
@@ -257,32 +294,54 @@ export async function submitForm(input: SubmitFormInput) {
   const expiresAt = new Date(now);
   expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
+  const contextKey = input.contextKey ?? "";
+  const schoolYear = input.schoolYear ?? getSchoolYear(now);
+  const auditMeta = {
+    ...(input.auditMeta ?? {}),
+    schoolYear,
+  } as unknown as Prisma.InputJsonValue;
+  const responseData = input.responseData as unknown as
+    | Prisma.InputJsonValue
+    | undefined;
+  const parentApproved =
+    input.parentApproved === undefined ? undefined : input.parentApproved;
+
   return prisma.formSubmission.upsert({
     where: {
-      formId_userId: {
+      formId_userId_contextKey: {
         formId: input.formId,
         userId: input.userId,
+        contextKey,
       },
     },
     create: {
       formId: input.formId,
       userId: input.userId,
+      contextKey,
+      subjectUserId: input.subjectUserId ?? null,
+      schoolYear,
+      auditMeta,
       signed: true,
       signatureName: input.signatureName,
-      responseData: input.responseData,
+      responseData,
       submittedAt: now,
       expiresAt,
       approved: form.approvalRequired ? null : true,
       approvedAt: form.approvalRequired ? null : now,
+      parentApproved: parentApproved ?? null,
     },
     update: {
+      subjectUserId: input.subjectUserId ?? undefined,
+      schoolYear,
+      auditMeta,
       signed: true,
       signatureName: input.signatureName,
-      responseData: input.responseData,
+      responseData,
       submittedAt: now,
       expiresAt,
       approved: form.approvalRequired ? null : true,
       approvedAt: form.approvalRequired ? null : now,
+      ...(parentApproved !== undefined ? { parentApproved } : {}),
     },
   });
 }
@@ -373,13 +432,18 @@ export async function getComplianceIssues(): Promise<ComplianceIssue[]> {
 
   for (const user of users) {
     const role = user.role.toLowerCase() as CampusRole;
-    const applicableForms = publishedForms.filter((form) =>
-      isFormVisibleToRole(form.type, role),
+    const applicableForms = publishedForms.filter(
+      (form) =>
+        form.id !== CLUB_MEMBERSHIP_COMMITMENT_FORM_ID &&
+        isFormVisibleToRole(form.type, role),
     );
 
     for (const form of applicableForms) {
       const submission = submissions.find(
-        (entry) => entry.formId === form.id && entry.userId === user.id,
+        (entry) =>
+          entry.formId === form.id &&
+          entry.userId === user.id &&
+          entry.contextKey === "",
       );
 
       if (!submission) {
@@ -451,4 +515,53 @@ export async function getParentFormSummary(userId: string) {
     pending: forms.length - completed.length,
     forms,
   };
+}
+
+export async function hasClubMembershipCommitment(
+  userId: string,
+  academyId: string,
+): Promise<boolean> {
+  if (!isDatabaseConfigured() || !isPrismaReady()) {
+    return false;
+  }
+
+  const submission = await prisma.formSubmission.findUnique({
+    where: {
+      formId_userId_contextKey: {
+        formId: CLUB_MEMBERSHIP_COMMITMENT_FORM_ID,
+        userId,
+        contextKey: getClubCommitmentContextKey(academyId),
+      },
+    },
+    select: { signed: true },
+  });
+
+  return submission?.signed === true;
+}
+
+export async function submitClubMembershipCommitment(input: {
+  userId: string;
+  academyId: string;
+  academyName: string;
+  academySlug: string;
+  signatureName: string;
+  /** When the student has a linked parent, the request awaits parent approval. */
+  requiresParentApproval?: boolean;
+  auditMeta?: SubmissionAuditMeta;
+}) {
+  return submitForm({
+    formId: CLUB_MEMBERSHIP_COMMITMENT_FORM_ID,
+    userId: input.userId,
+    signatureName: input.signatureName,
+    contextKey: getClubCommitmentContextKey(input.academyId),
+    subjectUserId: input.userId,
+    auditMeta: input.auditMeta,
+    parentApproved: input.requiresParentApproval ? null : true,
+    responseData: {
+      academyId: input.academyId,
+      academyName: input.academyName,
+      academySlug: input.academySlug,
+      commitmentType: "club_membership",
+    },
+  });
 }

@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { QrCode } from "lucide-react";
 
 import { ShellPage } from "@/components/layout/shell-page";
+import { Button } from "@/components/ui/button";
 import { ROLE_LABELS } from "@/config/roles";
 import { LEVEL_TIER_LABELS } from "@/lib/academy-engine/constants";
 import { requireCompleteProfile } from "@/lib/auth/session";
@@ -14,6 +16,19 @@ export default async function ProfilePage() {
     <ShellPage
       title="Profile"
       description="Your campus identity, academy progress, and achievements."
+      actions={
+        <Button
+          variant="outline"
+          size="sm"
+          nativeButton={false}
+          render={
+            <Link href="/pass">
+              <QrCode className="size-3.5" />
+              Blue Don Pass
+            </Link>
+          }
+        />
+      }
     >
       <div className="grid gap-4 md:grid-cols-2">
         <ProfileField label="Display name" value={user.displayName} />

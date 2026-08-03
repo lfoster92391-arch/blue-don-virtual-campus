@@ -11,14 +11,16 @@ import {
   Headphones,
   Scale,
   Settings,
+  Sparkles,
   Trophy,
   User,
 } from "lucide-react";
 
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { Button } from "@/components/ui/button";
-import { canAccessAdmin, canApproveForms } from "@/config/roles";
+import { canAccessAdmin, canApproveForms, isFacultyClubLookupRole } from "@/config/roles";
 import type { CampusUser } from "@/types/auth";
+import { canAccessParentPortal } from "@/services/parent-student-service";
 import { cn } from "@/lib/utils";
 
 type QuickAction = {
@@ -32,9 +34,13 @@ type QuickAction = {
 
 type DashboardQuickActionsProps = {
   user: CampusUser;
+  hasLinkedStudents?: boolean;
 };
 
-export function DashboardQuickActions({ user }: DashboardQuickActionsProps) {
+export function DashboardQuickActions({
+  user,
+  hasLinkedStudents = false,
+}: DashboardQuickActionsProps) {
   const actions: QuickAction[] = [
     {
       label: "My Profile",
@@ -55,6 +61,13 @@ export function DashboardQuickActions({ user }: DashboardQuickActionsProps) {
       description: "Explore destinations and recommended labs",
       href: "/pathways",
       icon: Compass,
+      enabled: true,
+    },
+    {
+      label: "Scholarships",
+      description: "Matched awards you may qualify for",
+      href: "/scholarships",
+      icon: Sparkles,
       enabled: true,
     },
     {
@@ -154,12 +167,32 @@ export function DashboardQuickActions({ user }: DashboardQuickActionsProps) {
     });
   }
 
-  if (user.role === "parent") {
+  if (canAccessParentPortal(user.role, hasLinkedStudents)) {
     actions.splice(1, 0, {
       label: "Parent Portal",
       description: "Family form status",
       href: "/parent",
       icon: User,
+      enabled: true,
+    });
+  }
+
+  if (isFacultyClubLookupRole(user.role)) {
+    actions.splice(1, 0, {
+      label: "Clubs & Organizations",
+      description: "Browse every club to answer student questions",
+      href: "/find-your-place",
+      icon: GraduationCap,
+      enabled: true,
+    });
+  }
+
+  if (user.role === "teacher") {
+    actions.splice(2, 0, {
+      label: "Class wishlists",
+      description: "Manage classroom supply requests",
+      href: "/teacher/wishlists",
+      icon: ClipboardList,
       enabled: true,
     });
   }

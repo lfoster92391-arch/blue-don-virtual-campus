@@ -17,7 +17,7 @@ export default async function NewTicketPage() {
   return (
     <ShellPage
       title="New Support Ticket"
-      description="Describe your issue and the campus support team will respond."
+      description="Facilities and academic requests use the in-app form. IT issues are emailed to the help desk."
     >
       <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/service-desk">Back to service desk</Link>} />
       <div className="mt-6 max-w-xl">

@@ -79,8 +79,10 @@ export default async function AcademiesPage() {
               )}
               <AcademyJoinButton
                 academyId={academy.id}
+                academyName={academy.name}
                 slug={academy.slug}
                 membershipStatus={academy.membership?.status ?? null}
+                defaultSignatureName={user.displayName}
               />
             </div>
           </li>

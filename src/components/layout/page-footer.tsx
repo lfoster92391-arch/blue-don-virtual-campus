@@ -1,13 +1,15 @@
 import { PartnerBackLink } from "@/components/layout/partner-back-link";
 import { isPartnerLinked } from "@/config/partner";
-import { siteConfig } from "@/config/site";
+import { getCurrentWave, siteConfig } from "@/config/site";
 
 export function PageFooter() {
+  const wave = getCurrentWave();
+
   return (
     <footer className="mt-auto border-t border-border bg-muted/30">
       <div className="mx-auto flex w-full max-w-[1440px] flex-col items-center gap-2 px-4 py-3 text-center text-xs text-muted-foreground lg:px-6">
         <p>
-          Blue Don Virtual Campus · Phase {siteConfig.phase} · 14 Academies · v
+          Blue Don Virtual Campus · {wave.id} · {wave.label} · 14 Academies · v
           {siteConfig.version}
         </p>
         {isPartnerLinked() ? <PartnerBackLink variant="footer" /> : null}

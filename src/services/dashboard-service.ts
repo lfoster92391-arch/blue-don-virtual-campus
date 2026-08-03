@@ -15,6 +15,7 @@ import {
 } from "@/lib/dashboard/data";
 import { placeholderNotifications } from "@/lib/dashboard/mock-data";
 import { getStudentProgressProfile } from "@/services/academy-engine-service";
+import { parentHasLinkedStudents } from "@/services/parent-student-service";
 import type { CampusUser } from "@/types/auth";
 
 export type DashboardWidgetData = {
@@ -32,6 +33,7 @@ export type DashboardViewModel = {
   layout: ReturnType<typeof getDashboardLayout>;
   widgets: WidgetPlacement[];
   data: DashboardWidgetData;
+  hasLinkedStudents: boolean;
 };
 
 const WIDGET_DATA_DEPENDENCIES: Record<WidgetId, (keyof DashboardWidgetData)[]> = {
@@ -78,6 +80,7 @@ export async function getDashboardViewModel(
     calendarEntries,
     portfolioSummary,
     progressProfile,
+    hasLinkedStudents,
   ] = await Promise.all([
     dataKeys.has("metrics") ? getDashboardMetrics(user.id) : Promise.resolve([]),
     dataKeys.has("assignments")
@@ -93,12 +96,14 @@ export async function getDashboardViewModel(
     dataKeys.has("progressProfile")
       ? getStudentProgressProfile(user.id)
       : Promise.resolve(null),
+    parentHasLinkedStudents(user.id),
   ]);
 
   return {
     persona,
     layout,
     widgets,
+    hasLinkedStudents,
     data: {
       metrics,
       assignments,

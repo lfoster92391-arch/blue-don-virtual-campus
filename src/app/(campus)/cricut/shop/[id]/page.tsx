@@ -1,0 +1,76 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ImageIcon } from "lucide-react";
+
+import { CricutBuyActions } from "@/components/cricut/cricut-buy-actions";
+import { ShellPage } from "@/components/layout/shell-page";
+import { Button } from "@/components/ui/button";
+import { requireCompleteProfile } from "@/lib/auth/session";
+import { getCricutShopItem } from "@/services/cricut-shop-service";
+
+type PageProps = {
+  params: Promise<{ id: string }>;
+};
+
+export default async function CricutProductPage({ params }: PageProps) {
+  await requireCompleteProfile();
+  const { id } = await params;
+  const item = await getCricutShopItem(id);
+
+  if (!item) {
+    notFound();
+  }
+
+  return (
+    <ShellPage
+      title={item.title}
+      description="Cricut Club Shop"
+      actions={
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/cricut/shop">All items</Link>}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/cricut/cart">Cart</Link>}
+          />
+        </div>
+      }
+    >
+      <div className="grid gap-8 lg:grid-cols-2">
+        <div className="overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-[#DB2777]/10 to-[#0A2342]/5">
+          <div className="relative aspect-square">
+            {item.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={item.imageUrl}
+                alt={item.title}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-muted-foreground">
+                <ImageIcon className="size-16 opacity-40" />
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="space-y-6">
+          {item.description ? (
+            <p className="text-base leading-relaxed text-muted-foreground whitespace-pre-wrap">
+              {item.description}
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">No description yet.</p>
+          )}
+          <p className="text-sm text-muted-foreground">Sold by {item.sellerName}</p>
+          <CricutBuyActions item={item} />
+        </div>
+      </div>
+    </ShellPage>
+  );
+}

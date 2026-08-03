@@ -19,17 +19,20 @@ function formatTime(date: Date) {
 }
 
 export function CampusClock() {
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
+    setNow(new Date());
     const interval = window.setInterval(() => setNow(new Date()), 30_000);
     return () => window.clearInterval(interval);
   }, []);
 
   return (
     <div className="hidden min-w-[9rem] text-right text-sm lg:block">
-      <p className="font-medium text-foreground">{formatDate(now)}</p>
-      <p className="text-muted-foreground">{formatTime(now)}</p>
+      <p className="font-medium text-foreground">
+        {now ? formatDate(now) : "\u00A0"}
+      </p>
+      <p className="text-muted-foreground">{now ? formatTime(now) : "\u00A0"}</p>
     </div>
   );
 }

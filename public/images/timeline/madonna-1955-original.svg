@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="Original Weirton Madonna High School building, 1955 placeholder">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0A2342"/>
+      <stop offset="1" stop-color="#264a73"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="320" fill="url(#sky)"/>
+  <g fill="#D4A017" opacity="0.95">
+    <rect x="70" y="150" width="180" height="110"/>
+    <polygon points="60,150 160,96 260,150"/>
+    <rect x="150" y="120" width="20" height="40"/>
+    <polygon points="160,104 150,120 170,120"/>
+  </g>
+  <g fill="#0A2342">
+    <rect x="92" y="172" width="24" height="30"/>
+    <rect x="132" y="172" width="24" height="30"/>
+    <rect x="204" y="172" width="24" height="30"/>
+    <rect x="150" y="210" width="20" height="50"/>
+  </g>
+  <text x="160" y="42" text-anchor="middle" fill="#ffffff" font-family="Georgia, serif" font-size="20" font-weight="bold" letter-spacing="1">1955</text>
+  <text x="160" y="288" text-anchor="middle" fill="#ffffff" font-family="Georgia, serif" font-size="14" letter-spacing="1.5">WEIRTON MADONNA</text>
+  <text x="160" y="308" text-anchor="middle" fill="#C6CCD6" font-family="Arial, sans-serif" font-size="10" letter-spacing="1">Original building � photo placeholder</text>
+</svg>

@@ -1,19 +1,28 @@
 import {
   BookOpen,
+  BarChart3,
+  Briefcase,
   Calendar,
   CircleDollarSign,
+  ClipboardCheck,
   ClipboardList,
+  CloudSun,
   Compass,
-  FlaskConical,
-  Gamepad2,
+  Cpu,
   GraduationCap,
+  Handshake,
   Headphones,
+  Flame,
+  Gamepad2,
   Heart,
   Home,
   Landmark,
   LayoutGrid,
   Map,
   Megaphone,
+  Package,
+  Radio,
+  Scissors,
   Sparkles,
   Sun,
   Trophy,
@@ -21,8 +30,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
+import { FOCUS_CLUBS } from "@/config/focused-clubs";
 import type { CampusRole } from "@/config/roles";
-import { canAccessAdmin } from "@/config/roles";
+import { canAccessAdmin, isFacultyClubLookupRole } from "@/config/roles";
 
 export type NavItem = {
   label: string;
@@ -31,7 +42,29 @@ export type NavItem = {
   enabled: boolean;
   mobile?: boolean;
   roles?: CampusRole[] | "all";
+  /** Stronger visual weight — used for the three focus clubs. */
+  primary?: boolean;
 };
+
+
+/** A collapsible parent category that nests {@link NavItem} children. */
+export type NavGroup = {
+  label: string;
+  icon: LucideIcon;
+  children: NavItem[];
+  roles?: CampusRole[] | "all";
+  /** When true the group starts expanded in the sidebar. */
+  defaultOpen?: boolean;
+  /** Stronger visual weight — used for focus-club parents (e.g. IT Club). */
+  primary?: boolean;
+};
+
+/** A top-level sidebar entry is either a direct link or a collapsible group. */
+export type NavEntry = NavItem | NavGroup;
+
+export function isNavGroup(entry: NavEntry): entry is NavGroup {
+  return "children" in entry;
+}
 
 /** Phase 17 enterprise primary navigation — see docs/BLUE_DON_DIGITAL_CAMPUS.md */
 export const primaryNavigation: NavItem[] = [
@@ -45,8 +78,8 @@ export const primaryNavigation: NavItem[] = [
   },
   { label: "School Hub", href: "/hub", icon: Landmark, enabled: true },
   {
-    label: "Student Life",
-    href: "/student-life",
+    label: "Find Your Place",
+    href: "/find-your-place",
     icon: Users,
     enabled: true,
   },
@@ -71,6 +104,7 @@ export const primaryNavigation: NavItem[] = [
     icon: CircleDollarSign,
     enabled: true,
   },
+  { label: "Traditions", href: "/traditions", icon: Flame, enabled: true },
   { label: "Community", href: "/community", icon: Megaphone, enabled: true },
   { label: "Media", href: "/media", icon: Headphones, enabled: true },
   { label: "Rewards", href: "/rewards", icon: Sparkles, enabled: true },
@@ -82,17 +116,30 @@ export const primaryNavigation: NavItem[] = [
     enabled: true,
     roles: ["admin", "advisor", "staff"],
   },
+  {
+    label: "Success Analytics",
+    href: "/counselor/analytics",
+    icon: BarChart3,
+    enabled: true,
+    roles: ["counselor", "advisor", "admin"],
+  },
 ];
 
 /** Pre-migration campus tools — still available during Phase 17 */
 export const legacyNavigation: NavItem[] = [
   { label: "Calendar", href: "/calendar", icon: Calendar, enabled: true },
+  { label: "Forms Center", href: "/forms-center", icon: ClipboardCheck, enabled: true },
   { label: "Forms", href: "/forms", icon: ClipboardList, enabled: true },
   { label: "Events", href: "/events", icon: Landmark, enabled: true },
-  { label: "Labs", href: "/labs", icon: FlaskConical, enabled: true },
-  { label: "Simulators", href: "/simulators", icon: Gamepad2, enabled: true },
   { label: "Portfolio", href: "/portfolio", icon: Trophy, enabled: true },
+  {
+    label: "Career Portfolio",
+    href: "/career-portfolio",
+    icon: GraduationCap,
+    enabled: true,
+  },
   { label: "Service Desk", href: "/service-desk", icon: Headphones, enabled: true },
+  { label: "Equipment", href: "/equipment", icon: Package, enabled: true },
   { label: "Impact Fund", href: "/impact-fund", icon: CircleDollarSign, enabled: true },
   { label: "Knowledge Vault", href: "/knowledge", icon: BookOpen, enabled: true },
   {
@@ -101,18 +148,267 @@ export const legacyNavigation: NavItem[] = [
     icon: Sparkles,
     enabled: true,
   },
-  { label: "Discover", href: "/discover", icon: Sun, enabled: true },
+  {
+    label: "Business Partners",
+    href: "/business-partners",
+    icon: Handshake,
+    enabled: true,
+  },
+  {
+    label: "Professional Skills",
+    href: "/professional-skills",
+    icon: Briefcase,
+    enabled: true,
+  },
+  { label: "Daily Discovery", href: "/discover", icon: Sun, enabled: true },
   {
     label: "Campus Life",
     href: "/campus-life",
     icon: Megaphone,
     enabled: true,
   },
+  {
+    label: "Weather Station",
+    href: "/weather",
+    icon: CloudSun,
+    enabled: true,
+  },
   { label: "Arcade", href: "/arcade", icon: Gamepad2, enabled: true },
+  { label: "Faculty", href: "/faculty", icon: GraduationCap, enabled: true },
+  { label: "Why Madonna?", href: "/why-madonna", icon: Heart, enabled: true },
+  { label: "Madonna Archive", href: "/archive", icon: BookOpen, enabled: true },
+];
+
+/**
+ * Club-focus pivot navigation — Home + three clubs (+ Staff for admin roles).
+ * Club finances and IT Help live under IT Club only.
+ * Used when {@link FOCUSED_CLUBS_MODE} is on. Soft-wiped routes redirect via middleware.
+ */
+export const focusedClubsNavigation: NavEntry[] = [
+  {
+    label: "Home",
+    href: "/home",
+    icon: Home,
+    enabled: true,
+    mobile: true,
+    primary: true,
+  },
+  {
+    label: FOCUS_CLUBS[0].name,
+    icon: Cpu,
+    defaultOpen: true,
+    primary: true,
+    children: [
+      {
+        label: "Overview",
+        href: FOCUS_CLUBS[0].href,
+        icon: Cpu,
+        enabled: true,
+        mobile: true,
+        primary: true,
+      },
+      {
+        label: "Finances",
+        href: `${FOCUS_CLUBS[0].href}?tab=finances`,
+        icon: CircleDollarSign,
+        enabled: true,
+        primary: true,
+      },
+      {
+        label: "IT Help Desk",
+        href: "/service-desk",
+        icon: Headphones,
+        enabled: true,
+      },
+    ],
+  },
+  {
+    label: FOCUS_CLUBS[1].name,
+    href: FOCUS_CLUBS[1].href,
+    icon: Radio,
+    enabled: true,
+    mobile: true,
+    primary: true,
+  },
+  {
+    label: FOCUS_CLUBS[2].name,
+    icon: Scissors,
+    defaultOpen: true,
+    primary: true,
+    children: [
+      {
+        label: "Overview",
+        href: FOCUS_CLUBS[2].href,
+        icon: Scissors,
+        enabled: true,
+        mobile: true,
+        primary: true,
+      },
+      {
+        label: "Shop",
+        href: "/cricut/shop",
+        icon: CircleDollarSign,
+        enabled: true,
+        primary: true,
+      },
+    ],
+  },
+  {
+    label: "Staff & Admin",
+    icon: LayoutGrid,
+    roles: ["admin", "advisor", "staff", "counselor"],
+    children: [
+      {
+        label: "Principal Dashboard",
+        href: "/admin/leadership",
+        icon: BarChart3,
+        enabled: true,
+        roles: ["admin", "advisor", "staff", "counselor"],
+      },
+      {
+        label: "Administration",
+        href: "/admin",
+        icon: LayoutGrid,
+        enabled: true,
+        roles: ["admin", "advisor", "staff"],
+      },
+    ],
+  },
+];
+/**
+ * Phase 18 · Condensed grouped navigation.
+ *
+ * The sidebar renders this tree: a short set of top-level entries where most
+ * destinations are nested under collapsible parent categories. Every route from
+ * {@link primaryNavigation} and {@link legacyNavigation} remains reachable here.
+ * IT-specific tooling (Labs, Simulators, Repair Center) intentionally lives
+ * under the IT Club org experience, not in this global tree.
+ *
+ * When {@link FOCUSED_CLUBS_MODE} is on, {@link focusedClubsNavigation} is used instead.
+ */
+export const groupedNavigation: NavEntry[] = [
+  { label: "Home", href: "/home", icon: Home, enabled: true, mobile: true },
+  {
+    label: "Discover",
+    icon: Compass,
+    defaultOpen: true,
+    children: [
+      { label: "Find Your Place", href: "/find-your-place", icon: Users, enabled: true },
+      { label: "Academies", href: "/academies", icon: GraduationCap, enabled: true },
+      { label: "Athletics", href: "/athletics", icon: Trophy, enabled: true },
+      { label: "Community", href: "/community", icon: Megaphone, enabled: true },
+      { label: "Daily Discovery", href: "/discover", icon: Sun, enabled: true },
+    ],
+  },
+  {
+    label: "My Campus",
+    icon: Landmark,
+    children: [
+      { label: "My Journey", href: "/my-journey", icon: Map, enabled: true },
+      { label: "School Hub", href: "/hub", icon: Landmark, enabled: true },
+      { label: "Calendar", href: "/calendar", icon: Calendar, enabled: true },
+      { label: "Events", href: "/events", icon: Landmark, enabled: true },
+      { label: "Campus Life", href: "/campus-life", icon: Megaphone, enabled: true },
+      { label: "Media", href: "/media", icon: Headphones, enabled: true },
+    ],
+  },
+  {
+    label: "Tools & Resources",
+    icon: Briefcase,
+    children: [
+      { label: "Forms Center", href: "/forms-center", icon: ClipboardCheck, enabled: true },
+      { label: "Forms", href: "/forms", icon: ClipboardList, enabled: true },
+      { label: "Equipment", href: "/equipment", icon: Package, enabled: true },
+      { label: "Service Desk", href: "/service-desk", icon: Headphones, enabled: true },
+      { label: "Knowledge Vault", href: "/knowledge", icon: BookOpen, enabled: true },
+      { label: "Portfolio", href: "/portfolio", icon: Trophy, enabled: true },
+      { label: "Career Portfolio", href: "/career-portfolio", icon: GraduationCap, enabled: true },
+      { label: "Business Partners", href: "/business-partners", icon: Handshake, enabled: true },
+      { label: "Professional Skills", href: "/professional-skills", icon: Briefcase, enabled: true },
+      { label: "Blue Don AI", href: "/ai", icon: BookOpen, enabled: true },
+    ],
+  },
+  {
+    label: "Future Center",
+    icon: Compass,
+    children: [
+      { label: "Career Pathways", href: "/pathways", icon: Compass, enabled: true },
+      { label: "College Passport", href: "/college-passport", icon: GraduationCap, enabled: true },
+      { label: "Opportunities", href: "/opportunities", icon: Sparkles, enabled: true },
+      { label: "Impact Fund", href: "/impact-fund", icon: CircleDollarSign, enabled: true },
+      { label: "Blue Don Corner", href: "/corner", icon: CircleDollarSign, enabled: true },
+    ],
+  },
+  {
+    label: "Spirit & Traditions",
+    icon: Flame,
+    children: [
+      { label: "Traditions", href: "/traditions", icon: Flame, enabled: true },
+      { label: "Service Center", href: "/service", icon: Heart, enabled: true },
+      { label: "Rewards", href: "/rewards", icon: Sparkles, enabled: true },
+      { label: "Arcade", href: "/arcade", icon: Gamepad2, enabled: true },
+      { label: "Why Madonna?", href: "/why-madonna", icon: Heart, enabled: true },
+      { label: "Madonna Archive", href: "/archive", icon: BookOpen, enabled: true },
+    ],
+  },
+  {
+    label: "Staff & Admin",
+    icon: LayoutGrid,
+    roles: ["admin", "advisor", "staff", "counselor"],
+    children: [
+      {
+        label: "Principal Dashboard",
+        href: "/admin/leadership",
+        icon: BarChart3,
+        enabled: true,
+        roles: ["admin", "advisor", "staff", "counselor"],
+      },
+      {
+        label: "Administration",
+        href: "/admin",
+        icon: LayoutGrid,
+        enabled: true,
+        roles: ["admin", "advisor", "staff"],
+      },
+      {
+        label: "Success Analytics",
+        href: "/counselor/analytics",
+        icon: BarChart3,
+        enabled: true,
+        roles: ["counselor", "advisor", "admin"],
+      },
+    ],
+  },
+];
+
+/** W13 · Future Center sub-navigation */
+export const futureCenterNavigation: NavItem[] = [
+  { label: "Career Pathways", href: "/pathways", icon: Compass, enabled: true },
+  { label: "College Passport", href: "/college-passport", icon: GraduationCap, enabled: true },
+  { label: "Professional Skills", href: "/professional-skills", icon: Briefcase, enabled: true },
+  { label: "Career Portfolio", href: "/career-portfolio", icon: GraduationCap, enabled: true },
+  { label: "Opportunities", href: "/opportunities", icon: Sparkles, enabled: true },
+];
+
+/** W18 · School Culture & Traditions sub-navigation */
+export const traditionsNavigation: NavItem[] = [
+  { label: "Traditions Hub", href: "/traditions", icon: Flame, enabled: true },
+  { label: "Madonna History", href: "/history", icon: Landmark, enabled: true },
+  { label: "Hall of Champions", href: "/hall-of-champions", icon: Trophy, enabled: true },
+  { label: "Meet the Faculty", href: "/faculty", icon: GraduationCap, enabled: true },
+  { label: "Student Spotlight", href: "/spotlight", icon: Sparkles, enabled: true },
+  { label: "Staff Appreciation", href: "/staff-appreciation", icon: Heart, enabled: true },
+  { label: "Thank You Wall", href: "/thank-you", icon: Heart, enabled: true },
+  { label: "Madonna Memories", href: "/memories", icon: Headphones, enabled: true },
+  { label: "Campus Voice", href: "/campus-voice", icon: Megaphone, enabled: true },
+  { label: "Madonna World", href: "/madonna-world", icon: Compass, enabled: true },
+  { label: "Legacy Projects", href: "/legacy", icon: Trophy, enabled: true },
+  { label: "Time Capsule", href: "/time-capsule", icon: Map, enabled: true },
 ];
 
 export const profileNavigation = [
   { label: "Profile", href: "/profile" },
+  { label: "Blue Don Pass", href: "/pass" },
   { label: "Settings", href: "/settings" },
 ] as const;
 
@@ -133,8 +429,89 @@ export function filterNavigationByRole(
   });
 }
 
+/** Role-aware labels and mobile prominence (e.g. faculty club directory). */
+export function resolveNavigationForRole(
+  items: NavItem[],
+  role: CampusRole,
+): NavItem[] {
+  return filterNavigationByRole(items, role).map((item) => {
+    if (item.href === "/find-your-place" && isFacultyClubLookupRole(role)) {
+      return {
+        ...item,
+        label: "Clubs & Organizations",
+        mobile: true,
+      };
+    }
+
+    return item;
+  });
+}
+
+/**
+ * Role-aware view of {@link groupedNavigation} (or {@link focusedClubsNavigation}
+ * when focused clubs mode is on): filters top-level entries and group children
+ * by role, drops empty groups, and applies the faculty club lookup relabel.
+ */
+export function resolveGroupedNavigation(
+  role: CampusRole,
+): NavEntry[] {
+  const source = FOCUSED_CLUBS_MODE ? focusedClubsNavigation : groupedNavigation;
+  const entries: NavEntry[] = [];
+
+  for (const entry of source) {
+    if (!isNavGroup(entry)) {
+      const [item] = resolveNavigationForRole([entry], role);
+      if (item) {
+        entries.push(item);
+      }
+      continue;
+    }
+
+    if (entry.roles && entry.roles !== "all" && !entry.roles.includes(role)) {
+      continue;
+    }
+
+    const children = resolveNavigationForRole(entry.children, role);
+    if (children.length > 0) {
+      entries.push({ ...entry, children });
+    }
+  }
+
+  return entries;
+}
+
 export function getMobileNavigation(role: CampusRole): NavItem[] {
-  const items = filterNavigationByRole(primaryNavigation, role).filter(
+  if (FOCUSED_CLUBS_MODE) {
+    const focusedMobile: NavItem[] = [
+      {
+        label: FOCUS_CLUBS[0].shortLabel,
+        href: FOCUS_CLUBS[0].href,
+        icon: Cpu,
+        enabled: true,
+        mobile: true,
+        primary: true,
+      },
+      {
+        label: FOCUS_CLUBS[1].shortLabel,
+        href: FOCUS_CLUBS[1].href,
+        icon: Radio,
+        enabled: true,
+        mobile: true,
+        primary: true,
+      },
+      {
+        label: FOCUS_CLUBS[2].shortLabel,
+        href: FOCUS_CLUBS[2].href,
+        icon: Scissors,
+        enabled: true,
+        mobile: true,
+        primary: true,
+      },
+    ];
+    return resolveNavigationForRole(focusedMobile, role);
+  }
+
+  const items = resolveNavigationForRole(primaryNavigation, role).filter(
     (item) => item.mobile && item.enabled && item.href,
   );
 
@@ -161,10 +538,47 @@ export function getMobileNavigation(role: CampusRole): NavItem[] {
   ];
 }
 
-export function isNavItemActive(pathname: string, href: string): boolean {
+export function isNavItemActive(
+  pathname: string,
+  href: string,
+  search = "",
+): boolean {
   if (href === "/home") {
     return pathname === "/home" || pathname === "/dashboard";
   }
 
-  return pathname === href || pathname.startsWith(`${href}/`);
+  const qIndex = href.indexOf("?");
+  const pathOnly = qIndex >= 0 ? href.slice(0, qIndex) : href;
+  const hrefQuery = qIndex >= 0 ? href.slice(qIndex + 1) : "";
+
+  const pathMatches =
+    pathname === pathOnly || pathname.startsWith(`${pathOnly}/`);
+  if (!pathMatches) {
+    return false;
+  }
+
+  if (hrefQuery) {
+    const want = new URLSearchParams(hrefQuery);
+    const have = new URLSearchParams(
+      search.startsWith("?") ? search.slice(1) : search,
+    );
+    for (const [key, value] of want) {
+      if (have.get(key) !== value) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Plain org overview links should not stay active on ?tab=…
+  if (pathOnly.startsWith("/organizations/")) {
+    const tab = new URLSearchParams(
+      search.startsWith("?") ? search.slice(1) : search,
+    ).get("tab");
+    if (tab && tab !== "overview") {
+      return false;
+    }
+  }
+
+  return true;
 }

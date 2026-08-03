@@ -10,6 +10,7 @@ import {
   updateUserRoleAction,
   type AdminUserActionState,
 } from "@/features/admin/user-actions";
+import { ParentStudentLinkForm } from "@/components/admin/parent-student-link-form";
 
 const initialState: AdminUserActionState = {};
 
@@ -21,6 +22,7 @@ type AdminUserRowProps = {
   status: "active" | "inactive" | "pending";
   initials: string;
   passwordManagementEnabled: boolean;
+  students?: Array<{ id: string; displayName: string; email: string }>;
 };
 
 const statusStyles: Record<AdminUserRowProps["status"], string> = {
@@ -37,6 +39,7 @@ export function AdminUserRow({
   status,
   initials,
   passwordManagementEnabled,
+  students = [],
 }: AdminUserRowProps) {
   const [passwordState, passwordAction, passwordPending] = useActionState(
     resetUserPasswordAction,
@@ -152,6 +155,12 @@ export function AdminUserRow({
           ) : null}
         </form>
       </div>
+
+      {((role === "parent" || role === "admin") && status === "active") ? (
+        <div className="mt-4 border-t border-border pt-4">
+          <ParentStudentLinkForm parentId={userId} students={students} />
+        </div>
+      ) : null}
     </li>
   );
 }

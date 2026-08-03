@@ -37,8 +37,8 @@ export function DashboardPortfolioSummary({
           size="sm"
           nativeButton={false}
           render={
-            <Link href="/portfolio">
-              Open portfolio
+            <Link href="/career-portfolio">
+              One link
               <ChevronRight className="size-4" />
             </Link>
           }

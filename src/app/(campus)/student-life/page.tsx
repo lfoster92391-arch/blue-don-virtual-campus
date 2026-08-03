@@ -1,3 +1,5 @@
-import { createModulePage } from "@/lib/module-page";
+import { redirect } from "next/navigation";
 
-export default createModulePage("student-life");
+export default function StudentLifeRedirectPage() {
+  redirect("/find-your-place");
+}

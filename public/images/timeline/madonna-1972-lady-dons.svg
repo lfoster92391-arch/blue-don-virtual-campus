@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="Lady Dons girls athletics rise, 1972 placeholder">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A2342"/><stop offset="1" stop-color="#c026d3"/></linearGradient></defs>
+  <rect width="320" height="320" fill="url(#g)"/>
+  <g fill="#ffffff" opacity="0.95"><path d="M160 116 l10 22 24 3 -17 17 4 24 -21 -11 -21 11 4 -24 -17 -17 24 -3 z"/></g>
+  <text x="160" y="46" text-anchor="middle" fill="#ffffff" font-family="Georgia, serif" font-size="22" font-weight="bold">1972</text>
+  <text x="160" y="232" text-anchor="middle" fill="#ffffff" font-family="Georgia, serif" font-size="15">The Lady Dons Rise</text>
+  <text x="160" y="286" text-anchor="middle" fill="#ffffff" font-family="Georgia, serif" font-size="13" letter-spacing="1.5">WEIRTON MADONNA</text>
+  <text x="160" y="306" text-anchor="middle" fill="#f5cdf3" font-family="Arial, sans-serif" font-size="10">photo placeholder</text>
+</svg>

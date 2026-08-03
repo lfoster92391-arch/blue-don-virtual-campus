@@ -31,6 +31,8 @@ type CalendarViewSwitcherProps = {
   entries: CalendarEntry[];
   academies: { id: string; name: string; color: string | null }[];
   canCreate?: boolean;
+  initialAcademyId?: string;
+  clubFilters?: { slug: string; name: string; accent: string }[];
 };
 
 export function CalendarViewSwitcher({
@@ -38,17 +40,29 @@ export function CalendarViewSwitcher({
   entries,
   academies,
   canCreate = false,
+  initialAcademyId = "all",
+  clubFilters = [],
 }: CalendarViewSwitcherProps) {
   const [view, setView] = useState<CalendarView>(initialView);
   const [referenceDate, setReferenceDate] = useState(() => new Date());
-  const [selectedAcademyId, setSelectedAcademyId] = useState<string>("all");
+  const [selectedAcademyId, setSelectedAcademyId] = useState<string>(initialAcademyId);
+  const [selectedClubSlug, setSelectedClubSlug] = useState<string>(
+    initialAcademyId.startsWith("club:")
+      ? initialAcademyId.slice("club:".length)
+      : "all",
+  );
 
   const filteredEntries = useMemo(() => {
-    if (selectedAcademyId === "all") {
-      return entries;
+    let next = entries;
+    if (selectedClubSlug !== "all") {
+      next = next.filter(
+        (entry) => entry.academyId === `club:${selectedClubSlug}`,
+      );
+    } else if (selectedAcademyId !== "all") {
+      next = next.filter((entry) => entry.academyId === selectedAcademyId);
     }
-    return entries.filter((entry) => entry.academyId === selectedAcademyId);
-  }, [entries, selectedAcademyId]);
+    return next;
+  }, [entries, selectedAcademyId, selectedClubSlug]);
 
   const monthLabel = new Intl.DateTimeFormat("en-US", {
     month: "long",
@@ -107,6 +121,41 @@ export function CalendarViewSwitcher({
           ) : null}
         </div>
       </div>
+
+      {clubFilters.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={selectedClubSlug === "all" ? "default" : "outline"}
+            onClick={() => {
+              setSelectedClubSlug("all");
+              setSelectedAcademyId("all");
+            }}
+          >
+            All events
+          </Button>
+          {clubFilters.map((club) => (
+            <Button
+              key={club.slug}
+              type="button"
+              size="sm"
+              variant={selectedClubSlug === club.slug ? "default" : "outline"}
+              style={
+                selectedClubSlug === club.slug
+                  ? { backgroundColor: club.accent, borderColor: club.accent }
+                  : undefined
+              }
+              onClick={() => {
+                setSelectedClubSlug(club.slug);
+                setSelectedAcademyId(`club:${club.slug}`);
+              }}
+            >
+              {club.name}
+            </Button>
+          ))}
+        </div>
+      ) : null}
 
       {view === "academy" ? (
         <div className="flex flex-wrap gap-2">

@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 
 import { AppProviders } from "@/components/providers/app-providers";
+import { ThemeInitScript } from "@/components/providers/theme-init-script";
 import { siteConfig, brandColors } from "@/config/site";
-import { themeInitScript } from "@/lib/theme";
 
 import "./globals.css";
 
@@ -56,10 +56,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <script
-          id="theme-init"
-          dangerouslySetInnerHTML={{ __html: themeInitScript }}
-        />
+        <ThemeInitScript />
       </head>
       <body className="min-h-full flex flex-col font-sans">
         <AppProviders>{children}</AppProviders>

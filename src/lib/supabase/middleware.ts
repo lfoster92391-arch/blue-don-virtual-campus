@@ -1,6 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
+import { getFocusedModeRedirect } from "@/config/focused-clubs-allowlist";
+
 const PUBLIC_ROUTES = [
   "/login",
   "/register",
@@ -8,11 +11,47 @@ const PUBLIC_ROUTES = [
   "/reset-password",
   "/auth/callback",
   "/auth/signout",
+  "/pending-approval",
+  "/onboarding",
   "/manifest.webmanifest",
   "/sw.js",
   "/icons",
+  "/p/",
 ];
 const AUTH_ROUTES = ["/login", "/register", "/forgot-password"];
+
+function applyFocusedClubsRedirect(
+  request: NextRequest,
+  baseResponse: NextResponse,
+): NextResponse | null {
+  if (!FOCUSED_CLUBS_MODE) {
+    return null;
+  }
+
+  const destination = getFocusedModeRedirect(request.nextUrl.pathname);
+  if (!destination) {
+    return null;
+  }
+
+  const redirectUrl = request.nextUrl.clone();
+  const hashIndex = destination.indexOf("#");
+  const queryIndex = destination.indexOf("?");
+  const pathOnly =
+    hashIndex >= 0
+      ? destination.slice(0, hashIndex)
+      : queryIndex >= 0
+        ? destination.slice(0, queryIndex)
+        : destination;
+
+  redirectUrl.pathname = pathOnly;
+  redirectUrl.search = queryIndex >= 0 ? destination.slice(queryIndex).split("#")[0] : "";
+  // Hash fragments are client-only; home sections still work via id anchors when linked directly.
+  const response = NextResponse.redirect(redirectUrl);
+  baseResponse.cookies.getAll().forEach((cookie) => {
+    response.cookies.set(cookie.name, cookie.value);
+  });
+  return response;
+}
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -21,7 +60,8 @@ export async function updateSession(request: NextRequest) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return supabaseResponse;
+    const focused = applyFocusedClubsRedirect(request, supabaseResponse);
+    return focused ?? supabaseResponse;
   }
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -68,5 +108,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  return supabaseResponse;
+  const focused = applyFocusedClubsRedirect(request, supabaseResponse);
+  return focused ?? supabaseResponse;
 }

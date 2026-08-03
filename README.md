@@ -32,9 +32,49 @@ Madonna High School · Student Experience Platform
 
 | Item | Value |
 |------|-------|
-| Phase | 16 — RBAC & Organizations |
+| Phase | 17 — Enterprise Navigation + Blue Don OS |
+| Wave | **W1 · Blue Don OS** (current) — see `src/config/waves.ts` |
 | Blueprint | Sections 01–10 locked (v1.0) |
 | Stack | Next.js · TypeScript · Tailwind · shadcn/ui · Supabase · Prisma · Vercel |
+
+### Migration Waves
+
+The Digital Campus rolls out in waves (`W0`–`W17`). W0 is the completed foundation
+(Phases 0–16); W1 is the current Blue Don OS shell; W2–W17 are planned. The canonical
+registry lives in `src/config/waves.ts` (source: System Blueprint, Part X).
+
+| Wave | Focus | Status |
+|------|-------|--------|
+| W0 | Foundation — auth, academies, forms, tickets, orgs | Complete |
+| W1 | Blue Don OS — enterprise nav + Today digest | **Current** |
+| W2 | Event Engine v2 | Planned |
+| W3 | Broadcast Engine | Planned |
+| W4 | Journey Engine v1 | Planned |
+| W5 | Rewards Engine v1 | Planned |
+| W6 | Request Engine | Planned |
+| W7 | Campus Life v1 | Planned |
+| W8 | Identity Engine | Planned |
+| W9 | Campus Operations | Planned |
+| W10 | Integrations | Planned |
+| W11 | Journey v2 | Planned |
+| W12 | Media + Live | Planned |
+| W13 | Guidance + Partners | Planned |
+| W14 | FACTS Sync | Planned |
+| W15 | Journey v3 | Planned |
+| W16 | Blue Don AI | Planned |
+| W17 | Arcade + Campus Challenges | Planned |
+
+## Project location
+
+The canonical repo lives on **D:** — not under `C:\Users\...`:
+
+```
+D:\Projects\blue-don-virtual-campus
+```
+
+In Cursor: **File → Open Folder** and choose that path. Run all terminal commands from there.
+
+If you have an old partial copy at `C:\Users\LisaMorris\Projects\blue-don-virtual-campus` (no `src/`, no `.git`), ignore or delete it — it is not the full project.
 
 ## Quick Start
 

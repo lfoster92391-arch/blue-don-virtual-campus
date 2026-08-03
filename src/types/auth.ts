@@ -9,6 +9,7 @@ export type CampusUser = {
   role: CampusRole;
   profileImage: string | null;
   status: "active" | "inactive" | "pending";
+  relationshipNote: string | null;
   profileComplete: boolean;
   initials: string;
 };

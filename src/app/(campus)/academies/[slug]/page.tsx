@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 import { Calendar, ClipboardList, GraduationCap, Trophy } from "lucide-react";
 
 import { AcademyJoinButton } from "@/components/academies/academy-join-button";
+import { MembershipStatusBanner } from "@/components/academies/membership-status-banner";
+import { PendingJoinRequests } from "@/components/academies/pending-join-requests";
+import { WishlistSection } from "@/components/wishlist/wishlist-section";
 import { AcademyEngineTabs } from "@/components/academy-engine/academy-engine-tabs";
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
@@ -13,7 +16,16 @@ import {
 } from "@/lib/academy-engine/constants";
 import { formatDateLabel } from "@/lib/calendar/utils";
 import { requireCompleteProfile } from "@/lib/auth/session";
+import {
+  canReviewAcademyMembership,
+  getAcademyJoinPipelineStatus,
+  listPendingMemberships,
+} from "@/services/academy-service";
 import { getAcademyEngineDetail } from "@/services/academy-engine-service";
+import {
+  canManageWishlist,
+  listWishlistForAcademy,
+} from "@/services/wishlist-service";
 
 type AcademyDetailPageProps = {
   params: Promise<{ slug: string }>;
@@ -33,6 +45,17 @@ export default async function AcademyDetailPage({
     notFound();
   }
 
+  const [wishlistItems, canManageWishlistItems, canReview, joinPipeline] =
+    await Promise.all([
+      listWishlistForAcademy(academy.id),
+      canManageWishlist(user.id, user.role, { academyId: academy.id }),
+      canReviewAcademyMembership(user.id, user.role, academy.id),
+      user.role === "student"
+        ? getAcademyJoinPipelineStatus(user.id, academy.id)
+        : Promise.resolve(null),
+    ]);
+  const pendingRequests = canReview ? await listPendingMemberships(academy.id) : [];
+
   const activeTab = ["modules", "labs", "progress", "certifications"].includes(tab)
     ? tab
     : "overview";
@@ -47,10 +70,22 @@ export default async function AcademyDetailPage({
         <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/academies">All academies</Link>} />
         <AcademyJoinButton
           academyId={academy.id}
+          academyName={academy.name}
           slug={academy.slug}
           membershipStatus={(academy.membership?.status as "PENDING" | "ACTIVE" | "INACTIVE" | "REJECTED" | null) ?? null}
+          defaultSignatureName={user.displayName}
         />
       </div>
+
+      {joinPipeline ? (
+        <MembershipStatusBanner academyName={academy.name} pipeline={joinPipeline} />
+      ) : null}
+
+      {canReview && pendingRequests.length > 0 ? (
+        <div className="mt-6">
+          <PendingJoinRequests pending={pendingRequests} />
+        </div>
+      ) : null}
 
       {academy.pathways.length > 0 ? (
         <p className="text-sm text-muted-foreground">
@@ -80,7 +115,13 @@ export default async function AcademyDetailPage({
         <AcademyEngineTabs slug={slug} activeTab={activeTab} />
       </div>
 
-      {activeTab === "overview" ? <OverviewTab academy={academy} /> : null}
+      {activeTab === "overview" ? (
+        <OverviewTab
+          academy={academy}
+          wishlistItems={wishlistItems}
+          canManageWishlist={canManageWishlistItems}
+        />
+      ) : null}
       {activeTab === "modules" ? <ModulesTab academy={academy} /> : null}
       {activeTab === "labs" ? <LabsTab academy={academy} /> : null}
       {activeTab === "progress" ? <ProgressTab academy={academy} /> : null}
@@ -89,7 +130,15 @@ export default async function AcademyDetailPage({
   );
 }
 
-function OverviewTab({ academy }: { academy: Awaited<ReturnType<typeof getAcademyEngineDetail>> & object }) {
+function OverviewTab({
+  academy,
+  wishlistItems,
+  canManageWishlist: canManageWishlistItems,
+}: {
+  academy: Awaited<ReturnType<typeof getAcademyEngineDetail>> & object;
+  wishlistItems: Awaited<ReturnType<typeof listWishlistForAcademy>>;
+  canManageWishlist: boolean;
+}) {
   return (
     <>
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -120,6 +169,16 @@ function OverviewTab({ academy }: { academy: Awaited<ReturnType<typeof getAcadem
           <p className="text-sm text-muted-foreground">No upcoming events for this academy.</p>
         )}
       </section>
+
+      <div className="mt-8">
+        <WishlistSection
+          title="Class & club wishlist"
+          items={wishlistItems}
+          canManage={canManageWishlistItems}
+          academyId={academy.id}
+          academySlug={academy.slug}
+        />
+      </div>
 
       {academy.videos.length > 0 ? (
         <section className="mt-8">

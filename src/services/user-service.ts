@@ -14,6 +14,7 @@ import {
   toCampusStatus,
   toUserRole,
 } from "@/lib/auth/mappers";
+import { validateEmailForRole } from "@/lib/auth/email-domain";
 import type { CampusUser } from "@/types/auth";
 
 type EnsureUserInput = {
@@ -22,6 +23,7 @@ type EnsureUserInput = {
   displayName?: string | null;
   profileImage?: string | null;
   role?: CampusRole | null;
+  relationshipNote?: string | null;
 };
 
 function mapCampusUser(record: {
@@ -33,6 +35,7 @@ function mapCampusUser(record: {
   role: UserRole;
   profileImage: string | null;
   status: "ACTIVE" | "INACTIVE" | "PENDING";
+  relationshipNote?: string | null;
 }): CampusUser {
   const displayName =
     record.displayName ??
@@ -48,6 +51,7 @@ function mapCampusUser(record: {
     role: toCampusRole(record.role),
     profileImage: record.profileImage,
     status: toCampusStatus(record.status),
+    relationshipNote: record.relationshipNote ?? null,
     profileComplete: isProfileComplete(record),
     initials: getInitials(record),
   };
@@ -74,6 +78,7 @@ function mapFallbackUser(
     role: normalizeRole(metadata.role as string | undefined) ?? role,
     profileImage: (metadata.avatar_url as string | undefined) ?? null,
     status: firstName && lastName ? "active" : "pending",
+    relationshipNote: null,
     profileComplete: Boolean(
       (firstName && lastName) || metadata.onboarded === true,
     ),
@@ -92,6 +97,12 @@ export async function ensureUserProfile(input: EnsureUserInput): Promise<CampusU
   }
 
   const role = input.role ?? "student";
+  const emailCheck = validateEmailForRole(input.email, role);
+  if (!emailCheck.valid) {
+    throw new Error(emailCheck.message);
+  }
+
+  const isParent = role === "parent";
 
   const user = await withDatabase((prisma) =>
     prisma.user.upsert({
@@ -107,7 +118,8 @@ export async function ensureUserProfile(input: EnsureUserInput): Promise<CampusU
         displayName: input.displayName,
         profileImage: input.profileImage,
         role: toUserRole(role),
-        status: "PENDING",
+        status: isParent ? "PENDING" : "PENDING",
+        relationshipNote: isParent ? input.relationshipNote ?? null : undefined,
       },
     }),
   );
@@ -131,10 +143,27 @@ export async function completeOnboarding(input: {
   userId: string;
   firstName: string;
   lastName: string;
+  relationshipNote?: string;
 }): Promise<CampusUser | null> {
   if (!isDatabaseConfigured()) {
     return null;
   }
+
+  const existing = await withDatabase((prisma) =>
+    prisma.user.findUnique({ where: { id: input.userId } }),
+  );
+
+  if (!existing) {
+    return null;
+  }
+
+  const role = toCampusRole(existing.role);
+  const emailCheck = validateEmailForRole(existing.email, role);
+  if (!emailCheck.valid) {
+    throw new Error(emailCheck.message);
+  }
+
+  const isParent = role === "parent";
 
   const user = await withDatabase((prisma) =>
     prisma.user.update({
@@ -143,9 +172,25 @@ export async function completeOnboarding(input: {
         firstName: input.firstName,
         lastName: input.lastName,
         displayName: `${input.firstName} ${input.lastName}`,
-        status: "ACTIVE",
+        relationshipNote: isParent ? input.relationshipNote?.trim() || null : undefined,
+        status: isParent ? "PENDING" : "ACTIVE",
         onboardedAt: new Date(),
       },
+    }),
+  );
+
+  return user ? mapCampusUser(user) : null;
+}
+
+export async function approveUserAccount(userId: string): Promise<CampusUser | null> {
+  if (!isDatabaseConfigured()) {
+    return null;
+  }
+
+  const user = await withDatabase((prisma) =>
+    prisma.user.update({
+      where: { id: userId },
+      data: { status: "ACTIVE" },
     }),
   );
 
@@ -167,6 +212,7 @@ export async function createCampusUser(input: {
   const firstName = input.firstName?.trim() || null;
   const lastName = input.lastName?.trim() || null;
   const displayName = hasName ? `${firstName} ${lastName}` : input.email;
+  const isParent = input.role === "parent";
 
   const user = await withDatabase((prisma) =>
     prisma.user.create({
@@ -177,7 +223,7 @@ export async function createCampusUser(input: {
         lastName,
         displayName,
         role: toUserRole(input.role),
-        status: hasName ? "ACTIVE" : "PENDING",
+        status: isParent ? "PENDING" : hasName ? "ACTIVE" : "PENDING",
         onboardedAt: hasName ? new Date() : undefined,
       },
     }),

@@ -51,6 +51,11 @@ enum MembershipStatus {
   REJECTED
 }
 
+enum WishlistLinkType {
+  AMAZON
+  CUSTOM
+}
+
 enum UserStatus {
   ACTIVE
   INACTIVE
@@ -330,6 +335,8 @@ model Academy {
   certifications  Certification[]
   leaderboardEntries LeaderboardEntry[]
   studentProgress StudentAcademyProgress[]
+  wishlistItems   WishlistItem[]
+  organization    Organization?
 
   @@map("academies")
 }
@@ -344,16 +351,24 @@ model User {
   schoolId           String?            @map("school_id")
   profileImage       String?            @map("profile_image")
   status             UserStatus         @default(PENDING)
+  relationshipNote   String?            @map("relationship_note")
   onboardedAt        DateTime?          @map("onboarded_at")
+  portfolioSlug      String?            @unique @map("portfolio_slug")
+  portfolioPublic    Boolean            @default(false) @map("portfolio_public")
+  portfolioSections  Json?              @map("portfolio_sections")
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
   school             School?            @relation(fields: [schoolId], references: [id])
+  parentLinks        ParentStudentLink[] @relation("ParentLinks")
+  studentLinks       ParentStudentLink[] @relation("StudentLinks")
   createdEvents      Event[]            @relation("EventCreator")
   eventParticipation EventParticipant[]
   assignments        Assignment[]
   eventReminders     EventReminder[]
   formSubmissions    FormSubmission[]       @relation("FormSubmissionUser")
   approvedSubmissions FormSubmission[]      @relation("FormSubmissionApprover")
+  subjectSubmissions FormSubmission[]       @relation("FormSubmissionSubject")
+  parentApprovedSubmissions FormSubmission[] @relation("FormSubmissionParentApprover")
   academyMemberships AcademyMembership[]
   checklistCompletions ChecklistItemCompletion[]
   portfolioItems     PortfolioItem[]
@@ -370,10 +385,50 @@ model User {
   certifications     StudentCertification[]
   leaderboardEntries LeaderboardEntry[]
   organizationMemberships OrganizationMembership[]
+  createdWishlistItems    WishlistItem[]           @relation("WishlistItemCreator")
+  assignedEquipment       EquipmentItem[]          @relation("EquipmentAssignee")
+  equipmentCheckouts      EquipmentCheckout[]
+  approvedBusinessPartners BusinessPartner[]       @relation("BusinessPartnerApprover")
+  mentorProfiles            MentorProfile[]           @relation("MentorProfileUser")
+  approvedMentorProfiles    MentorProfile[]           @relation("MentorProfileApprover")
+  mentorConnectionRequests  MentorConnectionRequest[] @relation("MentorConnectionStudent")
+  reviewedMentorConnections MentorConnectionRequest[] @relation("MentorConnectionReviewer")
+  passportProgress          PassportProgress[]
+  collegeReadinessProgress  CollegeReadinessProgress[]
+  impactProjects            ImpactProject[]           @relation("ImpactProjectStudent")
+  advisedImpactProjects  ImpactProject[]           @relation("ImpactProjectAdvisor")
+  graduateLegacy         GraduateLegacy?
+  campusMediaItems       CampusMediaItem[]
+  cornerStoreItems       CornerStoreItem[]
+  clubLedgerEntries      ClubLedgerEntry[]       @relation("ClubLedgerCreator")
+  clubFundraisersCreated ClubFundraiser[]        @relation("ClubFundraiserCreator")
+  clubCalendarEvents     ClubCalendarEvent[]     @relation("ClubCalendarCreator")
+  broadcastAnnouncements BroadcastAnnouncement[] @relation("BroadcastAnnouncementAuthor")
+  clubInvoicesSubmitted  ClubInvoice[]           @relation("ClubInvoiceSubmitter")
+  clubInvoicesReviewed   ClubInvoice[]           @relation("ClubInvoiceReviewer")
+  cricutShopItems        CricutShopItem[]        @relation("CricutShopSeller")
+  cricutShopOrders       CricutShopOrder[]       @relation("CricutShopBuyer")
 
   @@index([role])
   @@index([schoolId])
+  @@index([status])
   @@map("users")
+}
+
+model ParentStudentLink {
+  id           String   @id @default(cuid())
+  parentId     String   @map("parent_id") @db.Uuid
+  studentId    String   @map("student_id") @db.Uuid
+  relationship String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  parent       User     @relation("ParentLinks", fields: [parentId], references: [id], onDelete: Cascade)
+  student      User     @relation("StudentLinks", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId])
+  @@index([parentId])
+  @@index([studentId])
+  @@map("parent_student_links")
 }
 
 model Organization {
@@ -381,12 +436,24 @@ model Organization {
   slug        String             @unique
   name        String
   type        OrganizationType
+  category    String?            @map("category")
+  sortOrder   Int                @default(0) @map("sort_order")
   description String?
   academyId   String?            @unique @map("academy_id")
   visibility  OrgVisibility      @default(SCHOOL)
   createdAt   DateTime           @default(now()) @map("created_at")
   updatedAt   DateTime           @updatedAt @map("updated_at")
+  academy       Academy?           @relation(fields: [academyId], references: [id], onDelete: SetNull)
   memberships OrganizationMembership[]
+  wishlistItems WishlistItem[]
+  equipmentItems EquipmentItem[]
+  campusMediaItems CampusMediaItem[]
+  cornerStoreItems CornerStoreItem[]
+  ledgerEntries ClubLedgerEntry[]
+  fundraisers ClubFundraiser[]
+  calendarEvents ClubCalendarEvent[]
+  clubInvoices ClubInvoice[]
+  cricutShopItems CricutShopItem[]
 
   @@index([type])
   @@map("organizations")
@@ -521,26 +588,38 @@ model Form {
 }
 
 model FormSubmission {
-  id            String    @id @default(cuid())
-  formId        String    @map("form_id")
-  userId        String    @map("user_id") @db.Uuid
-  signed        Boolean   @default(false)
-  signatureName String?   @map("signature_name")
-  approved      Boolean?
-  approvedById  String?   @map("approved_by_id") @db.Uuid
-  approvedAt    DateTime? @map("approved_at")
-  responseData  Json?     @map("response_data")
-  submittedAt   DateTime? @map("submitted_at")
-  expiresAt     DateTime? @map("expires_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  form          Form      @relation(fields: [formId], references: [id], onDelete: Cascade)
-  user          User      @relation("FormSubmissionUser", fields: [userId], references: [id], onDelete: Cascade)
-  approvedBy    User?     @relation("FormSubmissionApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  id                 String    @id @default(cuid())
+  formId             String    @map("form_id")
+  userId             String    @map("user_id") @db.Uuid
+  contextKey         String    @default("") @map("context_key")
+  subjectUserId      String?   @map("subject_user_id") @db.Uuid
+  schoolYear         String?   @map("school_year")
+  signed             Boolean   @default(false)
+  signatureName      String?   @map("signature_name")
+  approved           Boolean?
+  approvedById       String?   @map("approved_by_id") @db.Uuid
+  approvedAt         DateTime? @map("approved_at")
+  parentApproved     Boolean?  @map("parent_approved")
+  parentApprovedById String?   @map("parent_approved_by_id") @db.Uuid
+  parentApprovedAt   DateTime? @map("parent_approved_at")
+  responseData       Json?     @map("response_data")
+  auditMeta          Json?     @map("audit_meta")
+  submittedAt        DateTime? @map("submitted_at")
+  expiresAt          DateTime? @map("expires_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  form               Form      @relation(fields: [formId], references: [id], onDelete: Cascade)
+  user               User      @relation("FormSubmissionUser", fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy         User?     @relation("FormSubmissionApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  subjectUser        User?     @relation("FormSubmissionSubject", fields: [subjectUserId], references: [id], onDelete: SetNull)
+  parentApprovedBy   User?     @relation("FormSubmissionParentApprover", fields: [parentApprovedById], references: [id], onDelete: SetNull)
 
-  @@unique([formId, userId])
+  @@unique([formId, userId, contextKey])
   @@index([userId])
+  @@index([subjectUserId])
   @@index([approved])
+  @@index([parentApproved])
+  @@index([schoolYear])
   @@index([submittedAt])
   @@map("form_submissions")
 }
@@ -1049,4 +1128,694 @@ model LeaderboardEntry {
   @@unique([academyId, userId, period])
   @@index([academyId, period])
   @@map("leaderboard_entries")
+}
+
+model WishlistItem {
+  id             String           @id @default(cuid())
+  organizationId String?          @map("organization_id")
+  academyId      String?          @map("academy_id")
+  title          String
+  description    String?
+  url            String
+  linkType       WishlistLinkType @default(CUSTOM) @map("link_type")
+  sortOrder      Int              @default(0) @map("sort_order")
+  fulfilled      Boolean          @default(false)
+  createdById    String           @map("created_by_id") @db.Uuid
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  organization   Organization?    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  academy        Academy?         @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  createdBy      User             @relation("WishlistItemCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([academyId])
+  @@index([fulfilled])
+  @@map("wishlist_items")
+}
+
+enum PartnerType {
+  BUSINESS
+  COMMUNITY
+}
+
+enum CommunityCategory {
+  HOSPITAL
+  POLICE
+  FIRE
+  BANK
+  CHURCH
+  MANUFACTURING
+  TECHNOLOGY
+  CONSTRUCTION
+}
+
+enum BusinessCategory {
+  EMPLOYER
+  SPONSOR
+  EDUCATION
+  TECHNOLOGY
+  HEALTHCARE
+  OTHER
+}
+
+enum PartnerStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+}
+
+enum PartnerOpportunityType {
+  VOLUNTEER
+  JOB_SHADOW
+  INTERNSHIP
+  CAREER_TALK
+  SERVICE
+  SCHOLARSHIP
+  WORKSHOP
+}
+
+enum PartnerOpportunityStatus {
+  PENDING
+  APPROVED
+  PUBLISHED
+  CLOSED
+}
+
+enum EquipmentCategory {
+  CAMERA
+  CHROMEBOOK
+  MICROPHONE
+  PROJECTOR
+  LAPTOP_CART
+  OTHER
+}
+
+enum EquipmentStatus {
+  AVAILABLE
+  CHECKED_OUT
+  REPAIR
+  RETIRED
+}
+
+model EquipmentItem {
+  id               String            @id @default(cuid())
+  assetTag         String            @unique @map("asset_tag")
+  name             String
+  category         EquipmentCategory
+  status           EquipmentStatus   @default(AVAILABLE)
+  location         String
+  serialNumber     String?           @map("serial_number")
+  notes            String?
+  assignedToUserId String?           @map("assigned_to_user_id") @db.Uuid
+  checkedOutAt     DateTime?         @map("checked_out_at")
+  organizationId   String?           @map("organization_id")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  assignedTo       User?             @relation("EquipmentAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  organization     Organization?     @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  checkouts        EquipmentCheckout[]
+
+  @@index([category])
+  @@index([status])
+  @@index([organizationId])
+  @@index([assignedToUserId])
+  @@map("equipment_items")
+}
+
+model EquipmentCheckout {
+  id          String        @id @default(cuid())
+  equipmentId String        @map("equipment_id")
+  userId      String        @map("user_id") @db.Uuid
+  checkedOutAt DateTime     @default(now()) @map("checked_out_at")
+  dueAt       DateTime?     @map("due_at")
+  returnedAt  DateTime?     @map("returned_at")
+  notes       String?
+  equipment   EquipmentItem @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([equipmentId])
+  @@index([userId])
+  @@index([returnedAt])
+  @@map("equipment_checkouts")
+}
+
+model Partner {
+  id                  String             @id @default(cuid())
+  slug                String             @unique
+  name                String
+  description         String?
+  partnerType         PartnerType        @map("partner_type")
+  communityCategory   CommunityCategory? @map("community_category")
+  businessCategory    BusinessCategory?  @map("business_category")
+  status              PartnerStatus      @default(PENDING)
+  schoolApproved      Boolean            @default(false) @map("school_approved")
+  logoUrl             String?            @map("logo_url")
+  websiteUrl          String?            @map("website_url")
+  contactName         String?            @map("contact_name")
+  contactEmail        String?            @map("contact_email")
+  contactPhone        String?            @map("contact_phone")
+  address             String?
+  madonnaConnections  String[]           @default([]) @map("madonna_connections")
+  serviceAreas        String[]           @default([]) @map("service_areas")
+  sortOrder           Int                @default(0) @map("sort_order")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+  opportunities       PartnerOpportunity[]
+
+  @@index([partnerType])
+  @@index([communityCategory])
+  @@index([businessCategory])
+  @@index([status])
+  @@map("partners")
+}
+
+model PartnerOpportunity {
+  id          String                   @id @default(cuid())
+  partnerId   String                   @map("partner_id")
+  title       String
+  description String?
+  type        PartnerOpportunityType
+  status      PartnerOpportunityStatus @default(PENDING)
+  gradeLevels String[]                 @default([]) @map("grade_levels")
+  spots       Int?
+  deadline    DateTime?
+  createdAt   DateTime                 @default(now()) @map("created_at")
+  updatedAt   DateTime                 @updatedAt @map("updated_at")
+  partner     Partner                  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId])
+  @@index([status])
+  @@index([type])
+  @@map("partner_opportunities")
+}
+
+enum BusinessPartnerStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BusinessPartnerOpportunityType {
+  INTERNSHIP
+  JOB_SHADOW
+  HIRING
+  CAREER_INFO
+}
+
+model BusinessPartner {
+  id           String                 @id @default(cuid())
+  slug         String                 @unique
+  name         String
+  description  String
+  logoUrl      String?                @map("logo_url")
+  website      String?
+  industry     String
+  address      String?
+  status       BusinessPartnerStatus  @default(PENDING)
+  careerInfo   String?                @map("career_info")
+  employees    Json?
+  alumni       Json?
+  approvedById String?                @map("approved_by_id") @db.Uuid
+  approvedAt   DateTime?              @map("approved_at")
+  createdAt    DateTime               @default(now()) @map("created_at")
+  updatedAt    DateTime               @updatedAt @map("updated_at")
+  approvedBy   User?                  @relation("BusinessPartnerApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  opportunities BusinessPartnerOpportunity[]
+
+  @@index([status])
+  @@index([industry])
+  @@map("business_partners")
+}
+
+model BusinessPartnerOpportunity {
+  id          String                         @id @default(cuid())
+  partnerId   String                         @map("partner_id")
+  type        BusinessPartnerOpportunityType
+  title       String
+  description String
+  isActive    Boolean                        @default(true) @map("is_active")
+  createdAt   DateTime                       @default(now()) @map("created_at")
+  updatedAt   DateTime                       @updatedAt @map("updated_at")
+  partner     BusinessPartner                @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId])
+  @@index([type])
+  @@index([isActive])
+  @@map("business_partner_opportunities")
+}
+
+enum MentorCategory {
+  TEACHER
+  ALUMNI
+  BUSINESS
+  COLLEGE_STUDENT
+  INDUSTRY
+}
+
+enum MentorProfileStatus {
+  PENDING
+  APPROVED
+  INACTIVE
+}
+
+enum MentorConnectionRequestStatus {
+  PENDING
+  APPROVED
+  DECLINED
+}
+
+model MentorProfile {
+  id               String              @id @default(cuid())
+  userId           String?             @map("user_id") @db.Uuid
+  name             String
+  email            String
+  category         MentorCategory
+  title            String
+  organization     String
+  bio              String
+  expertiseTags    String[]            @map("expertise_tags")
+  photoUrl         String?             @map("photo_url")
+  status           MentorProfileStatus @default(PENDING)
+  approvedById     String?             @map("approved_by_id") @db.Uuid
+  approvedAt       DateTime?           @map("approved_at")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+  user             User?               @relation("MentorProfileUser", fields: [userId], references: [id], onDelete: SetNull)
+  approvedBy       User?               @relation("MentorProfileApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  connectionRequests MentorConnectionRequest[]
+
+  @@index([status])
+  @@index([category])
+  @@index([userId])
+  @@map("mentor_profiles")
+}
+
+model MentorConnectionRequest {
+  id              String                        @id @default(cuid())
+  studentId       String                        @map("student_id") @db.Uuid
+  mentorProfileId String                        @map("mentor_profile_id")
+  message         String
+  status          MentorConnectionRequestStatus @default(PENDING)
+  reviewedById    String?                       @map("reviewed_by_id") @db.Uuid
+  createdAt       DateTime                      @default(now()) @map("created_at")
+  updatedAt       DateTime                      @updatedAt @map("updated_at")
+  student         User                          @relation("MentorConnectionStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  mentorProfile   MentorProfile                 @relation(fields: [mentorProfileId], references: [id], onDelete: Cascade)
+  reviewedBy      User?                         @relation("MentorConnectionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, mentorProfileId])
+  @@index([status])
+  @@index([studentId])
+  @@index([mentorProfileId])
+  @@map("mentor_connection_requests")
+}
+
+enum CollegeReadinessStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETE
+}
+
+model CollegeReadinessProgress {
+  id          String                 @id @default(cuid())
+  userId      String                 @map("user_id") @db.Uuid
+  itemId      String                 @map("item_id")
+  status      CollegeReadinessStatus @default(NOT_STARTED)
+  completedAt DateTime?              @map("completed_at")
+  notes       String?
+  createdAt   DateTime               @default(now()) @map("created_at")
+  updatedAt   DateTime               @updatedAt @map("updated_at")
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
+  @@index([userId])
+  @@map("college_readiness_progress")
+}
+
+enum PassportType {
+  TRADE
+  MILITARY
+  COLLEGE
+}
+
+model PassportProgress {
+  id             String       @id @default(cuid())
+  userId         String       @map("user_id") @db.Uuid
+  passportType   PassportType @map("passport_type")
+  completedItems Json         @default("{}") @map("completed_items")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, passportType])
+  @@index([userId])
+  @@map("passport_progress")
+}
+
+enum ImpactProjectStatus {
+  PROPOSAL
+  APPROVED
+  IN_PROGRESS
+  COMPLETE
+  REJECTED
+}
+
+model ImpactProject {
+  id          String              @id @default(cuid())
+  studentId   String              @map("student_id") @db.Uuid
+  title       String
+  description String
+  status      ImpactProjectStatus @default(PROPOSAL)
+  milestones  Json                @default("[]")
+  advisorId   String?             @map("advisor_id") @db.Uuid
+  completedAt DateTime?           @map("completed_at")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+  student     User                @relation("ImpactProjectStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  advisor     User?               @relation("ImpactProjectAdvisor", fields: [advisorId], references: [id], onDelete: SetNull)
+
+  @@index([studentId])
+  @@index([status])
+  @@index([advisorId])
+  @@map("impact_projects")
+}
+
+model GraduateLegacy {
+  id             String   @id @default(cuid())
+  userId         String   @unique @map("user_id") @db.Uuid
+  slug           String   @unique
+  classYear      Int      @map("class_year")
+  organizations  Json     @default("[]")
+  achievements   Json     @default("[]")
+  projects       Json     @default("[]")
+  college        String?
+  favoriteMemory String?  @map("favorite_memory")
+  advice         String?
+  legacyMessage  String?  @map("legacy_message")
+  alumniOptIn    Boolean  @default(false) @map("alumni_opt_in")
+  isPublic       Boolean  @default(false) @map("is_public")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([slug])
+  @@index([classYear])
+  @@map("graduate_legacies")
+}
+
+enum CampusMediaType {
+  VIDEO_UPLOAD
+  LIVE_STREAM
+}
+
+enum CampusMediaStatus {
+  DRAFT
+  PUBLISHED
+  LIVE
+  ENDED
+}
+
+model CampusMediaItem {
+  id             String            @id @default(cuid())
+  title          String
+  description    String?
+  type           CampusMediaType
+  status         CampusMediaStatus @default(DRAFT)
+  storagePath    String?           @map("storage_path")
+  publicUrl      String?           @map("public_url")
+  thumbnailUrl   String?           @map("thumbnail_url")
+  embedUrl       String?           @map("embed_url")
+  streamKey      String?           @map("stream_key")
+  organizationId String?           @map("organization_id")
+  uploadedById   String            @map("uploaded_by_id") @db.Uuid
+  publishedAt    DateTime?         @map("published_at")
+  endedAt        DateTime?         @map("ended_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  uploadedBy     User              @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  organization   Organization?     @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  announcements  BroadcastAnnouncement[]
+
+  @@index([status])
+  @@index([type])
+  @@index([organizationId])
+  @@index([uploadedById])
+  @@map("campus_media_items")
+}
+
+model BroadcastAnnouncement {
+  id               String           @id @default(cuid())
+  announcementDate DateTime         @map("announcement_date") @db.Date
+  title            String
+  body             String
+  authorId         String           @map("author_id") @db.Uuid
+  mediaItemId      String?          @map("media_item_id")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  author           User             @relation("BroadcastAnnouncementAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  mediaItem        CampusMediaItem? @relation(fields: [mediaItemId], references: [id], onDelete: SetNull)
+
+  @@unique([announcementDate])
+  @@index([announcementDate])
+  @@index([authorId])
+  @@index([mediaItemId])
+  @@map("broadcast_announcements")
+}
+
+enum CornerStoreStatus {
+  ACTIVE
+  SOLD
+  DRAFT
+  REMOVED
+}
+
+enum ClubLedgerEntryType {
+  DEPOSIT
+  WITHDRAWAL
+}
+
+enum ClubFundraiserStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model ClubLedgerEntry {
+  id            String              @id @default(cuid())
+  organizationId String             @map("organization_id")
+  type          ClubLedgerEntryType
+  amountCents   Int                 @map("amount_cents")
+  memo          String?
+  fundraiserId  String?             @map("fundraiser_id")
+  invoiceId     String?             @unique @map("invoice_id")
+  receiptUrl    String?             @map("receipt_url")
+  createdById   String              @map("created_by_id") @db.Uuid
+  createdAt     DateTime            @default(now()) @map("created_at")
+  organization  Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fundraiser    ClubFundraiser?     @relation(fields: [fundraiserId], references: [id], onDelete: SetNull)
+  invoice       ClubInvoice?        @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  createdBy     User                @relation("ClubLedgerCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([fundraiserId])
+  @@index([createdById])
+  @@map("club_ledger_entries")
+}
+
+enum ClubInvoiceStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/** Expense / invoice submission with materials line items + receipt scan. */
+model ClubInvoice {
+  id                 String            @id @default(cuid())
+  organizationId     String            @map("organization_id")
+  vendor             String
+  invoiceDate        DateTime          @map("invoice_date")
+  totalCents         Int               @map("total_cents")
+  memo               String?
+  receiptUrl         String?           @map("receipt_url")
+  receiptStoragePath String?           @map("receipt_storage_path")
+  status             ClubInvoiceStatus @default(PENDING)
+  submittedById      String            @map("submitted_by_id") @db.Uuid
+  reviewedById       String?           @map("reviewed_by_id") @db.Uuid
+  reviewedAt         DateTime?         @map("reviewed_at")
+  reviewNote         String?           @map("review_note")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+  organization       Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  submittedBy        User              @relation("ClubInvoiceSubmitter", fields: [submittedById], references: [id], onDelete: Cascade)
+  reviewedBy         User?             @relation("ClubInvoiceReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  lines              ClubInvoiceLine[]
+  ledgerEntry        ClubLedgerEntry?
+
+  @@index([organizationId, status])
+  @@index([submittedById])
+  @@index([status])
+  @@map("club_invoices")
+}
+
+model ClubInvoiceLine {
+  id            String      @id @default(cuid())
+  invoiceId     String      @map("invoice_id")
+  description   String
+  quantity      Decimal     @db.Decimal(12, 3)
+  unitCostCents Int         @map("unit_cost_cents")
+  lineTotalCents Int        @map("line_total_cents")
+  sortOrder     Int         @default(0) @map("sort_order")
+  invoice       ClubInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("club_invoice_lines")
+}
+
+enum CricutShopItemStatus {
+  ACTIVE
+  SOLD
+  DRAFT
+  REMOVED
+}
+
+enum CricutFulfillmentMethod {
+  PICKUP
+  SHIP
+}
+
+enum CricutShopOrderStatus {
+  PENDING
+  CONFIRMED
+  FULFILLED
+  CANCELLED
+}
+
+/** Cricut Club branded merch / maker shop listings. */
+model CricutShopItem {
+  id             String               @id @default(cuid())
+  title          String
+  description    String?
+  priceCents     Int                  @map("price_cents")
+  imageUrl       String?              @map("image_url")
+  storagePath    String?              @map("storage_path")
+  status         CricutShopItemStatus @default(ACTIVE)
+  sellerId       String               @map("seller_id") @db.Uuid
+  organizationId String               @map("organization_id")
+  inventoryQty   Int?                 @map("inventory_qty")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  seller         User                 @relation("CricutShopSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  orderLines     CricutShopOrderLine[]
+
+  @@index([status])
+  @@index([organizationId])
+  @@index([sellerId])
+  @@map("cricut_shop_items")
+}
+
+model CricutShopOrder {
+  id                 String                 @id @default(cuid())
+  buyerId            String                 @map("buyer_id") @db.Uuid
+  fulfillment        CricutFulfillmentMethod
+  status             CricutShopOrderStatus  @default(PENDING)
+  subtotalCents      Int                    @map("subtotal_cents")
+  shippingCents      Int                    @default(0) @map("shipping_cents")
+  totalCents         Int                    @map("total_cents")
+  shipName           String?                @map("ship_name")
+  shipLine1          String?                @map("ship_line1")
+  shipLine2          String?                @map("ship_line2")
+  shipCity           String?                @map("ship_city")
+  shipState          String?                @map("ship_state")
+  shipPostal         String?                @map("ship_postal")
+  notes              String?
+  createdAt          DateTime               @default(now()) @map("created_at")
+  updatedAt          DateTime               @updatedAt @map("updated_at")
+  buyer              User                   @relation("CricutShopBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  lines              CricutShopOrderLine[]
+
+  @@index([buyerId])
+  @@index([status])
+  @@map("cricut_shop_orders")
+}
+
+model CricutShopOrderLine {
+  id          String          @id @default(cuid())
+  orderId     String          @map("order_id")
+  itemId      String          @map("item_id")
+  title       String
+  unitPriceCents Int          @map("unit_price_cents")
+  quantity    Int
+  lineTotalCents Int          @map("line_total_cents")
+  order       CricutShopOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item        CricutShopItem  @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([itemId])
+  @@map("cricut_shop_order_lines")
+}
+
+model ClubFundraiser {
+  id             String               @id @default(cuid())
+  organizationId String               @map("organization_id")
+  title          String
+  description    String?
+  goalCents      Int                  @map("goal_cents")
+  status         ClubFundraiserStatus @default(ACTIVE)
+  startsAt       DateTime?            @map("starts_at")
+  endsAt         DateTime?            @map("ends_at")
+  createdById    String               @map("created_by_id") @db.Uuid
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User                 @relation("ClubFundraiserCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  ledgerEntries  ClubLedgerEntry[]
+
+  @@index([organizationId, status])
+  @@index([createdById])
+  @@map("club_fundraisers")
+}
+
+model ClubCalendarEvent {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  title          String
+  description    String?
+  location       String?
+  startDate      DateTime     @map("start_date")
+  endDate        DateTime     @map("end_date")
+  createdById    String       @map("created_by_id") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User         @relation("ClubCalendarCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, startDate])
+  @@index([startDate])
+  @@index([createdById])
+  @@map("club_calendar_events")
+}
+
+model CornerStoreItem {
+  id             String            @id @default(cuid())
+  title          String
+  description    String?
+  category       String?
+  priceCents     Int               @map("price_cents")
+  imageUrl       String?           @map("image_url")
+  storagePath    String?           @map("storage_path")
+  paymentMethods Json              @map("payment_methods")
+  status         CornerStoreStatus @default(ACTIVE)
+  sellerId       String            @map("seller_id") @db.Uuid
+  organizationId String?           @map("organization_id")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  seller         User              @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  organization   Organization?     @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([sellerId])
+  @@index([organizationId])
+  @@index([category])
+  @@map("corner_store_items")
 }

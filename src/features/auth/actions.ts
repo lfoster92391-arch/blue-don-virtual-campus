@@ -12,11 +12,13 @@ import {
   assignUserRole,
   completeOnboarding,
   ensureUserProfile,
+  getUserProfile,
 } from "@/services/user-service";
 
 const onboardingSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required"),
   lastName: z.string().trim().min(1, "Last name is required"),
+  relationshipNote: z.string().trim().optional(),
 });
 
 const roleAssignmentSchema = z.object({
@@ -36,6 +38,7 @@ export async function completeOnboardingAction(
   const parsed = onboardingSchema.safeParse({
     firstName: formData.get("firstName"),
     lastName: formData.get("lastName"),
+    relationshipNote: formData.get("relationshipNote") || undefined,
   });
 
   if (!parsed.success) {
@@ -58,11 +61,29 @@ export async function completeOnboardingAction(
     return { error: "You must be signed in to continue." };
   }
 
-  const profile = await completeOnboarding({
-    userId: user.id,
-    firstName: parsed.data.firstName,
-    lastName: parsed.data.lastName,
-  });
+  const existingProfile = await getUserProfile(user.id);
+  const role = existingProfile?.role ?? normalizeRole(user.user_metadata?.role as string | undefined) ?? "student";
+
+  if (role === "parent" && !parsed.data.relationshipNote?.trim()) {
+    return {
+      error:
+        "Please describe your relationship to the school (for example: parent of Jane Smith, Class of 2028).",
+    };
+  }
+
+  let profile;
+  try {
+    profile = await completeOnboarding({
+      userId: user.id,
+      firstName: parsed.data.firstName,
+      lastName: parsed.data.lastName,
+      relationshipNote: parsed.data.relationshipNote,
+    });
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Unable to save profile.",
+    };
+  }
 
   await supabase.auth.updateUser({
     data: {
@@ -82,6 +103,10 @@ export async function completeOnboardingAction(
 
   if (!profile) {
     return { success: "Profile saved." };
+  }
+
+  if (profile.role === "parent" && profile.status === "pending") {
+    redirect("/pending-approval");
   }
 
   redirect("/home");
@@ -138,5 +163,7 @@ export async function syncAuthProfileAction(role?: string | null) {
     displayName: user.user_metadata?.display_name as string | undefined,
     profileImage: user.user_metadata?.avatar_url as string | undefined,
     role: normalizeRole(role ?? (user.user_metadata?.role as string | undefined)),
+    relationshipNote:
+      (user.user_metadata?.relationship_note as string | undefined) ?? null,
   });
 }

@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/generate-pwa-icons.mjs && prisma generate && next build",
+    "dev:lan": "next dev --hostname 0.0.0.0",
+    "build": "node scripts/generate-pwa-icons.mjs && prisma generate && next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
@@ -12,6 +13,8 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "npx tsx prisma/seed.ts",
+    "db:seed:demo": "npx tsx prisma/seed-demo.ts",
+    "db:reset:clean": "prisma migrate reset --force --skip-seed && npm run db:seed",
     "postinstall": "prisma generate"
   },
   "dependencies": {

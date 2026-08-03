@@ -23,7 +23,9 @@ function isPrismaClientComplete(client: PrismaClient): boolean {
     typeof client.knowledgeArticle?.findMany === "function" &&
     typeof client.lab?.findMany === "function" &&
     typeof client.simulator?.findMany === "function" &&
-    typeof client.learningModule?.findMany === "function"
+    typeof client.learningModule?.findMany === "function" &&
+    typeof client.campusMediaItem?.findMany === "function" &&
+    typeof client.cornerStoreItem?.findMany === "function"
   );
 }
 

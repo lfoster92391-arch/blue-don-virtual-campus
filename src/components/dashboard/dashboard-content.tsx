@@ -34,6 +34,7 @@ export async function DashboardContent({
           widgetId={widget.id}
           user={user}
           data={viewModel.data}
+          hasLinkedStudents={viewModel.hasLinkedStudents}
         />
       ))}
 
@@ -43,6 +44,7 @@ export async function DashboardContent({
           widgetId={widget.id}
           user={user}
           data={viewModel.data}
+          hasLinkedStudents={viewModel.hasLinkedStudents}
         />
       ))}
 
@@ -52,6 +54,7 @@ export async function DashboardContent({
           widgetId={widget.id}
           user={user}
           data={viewModel.data}
+          hasLinkedStudents={viewModel.hasLinkedStudents}
         />
       ))}
 
@@ -63,6 +66,7 @@ export async function DashboardContent({
               widgetId={widget.id}
               user={user}
               data={viewModel.data}
+              hasLinkedStudents={viewModel.hasLinkedStudents}
             />
           ))}
         </div>
@@ -76,6 +80,7 @@ export async function DashboardContent({
               widgetId={widget.id}
               user={user}
               data={viewModel.data}
+              hasLinkedStudents={viewModel.hasLinkedStudents}
             />
           ))}
         </div>
@@ -87,6 +92,7 @@ export async function DashboardContent({
           widgetId={widget.id}
           user={user}
           data={viewModel.data}
+          hasLinkedStudents={viewModel.hasLinkedStudents}
         />
       ))}
     </div>

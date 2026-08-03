@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { MembershipReviewActions } from "@/components/academies/membership-review-actions";
+import { PendingJoinRequests } from "@/components/academies/pending-join-requests";
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
 import { canManageAcademy } from "@/config/roles";
@@ -25,24 +25,9 @@ export default async function AdminAcademiesPage() {
       <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/admin">Governance center</Link>} />
 
       {pending.length > 0 ? (
-        <ul className="mt-8 space-y-3">
-          {pending.map((membership) => (
-            <li
-              key={membership.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4"
-            >
-              <div>
-                <p className="font-medium">
-                  {membership.user.displayName ?? membership.user.email}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Requested {membership.academy.name}
-                </p>
-              </div>
-              <MembershipReviewActions membershipId={membership.id} />
-            </li>
-          ))}
-        </ul>
+        <div className="mt-8">
+          <PendingJoinRequests pending={pending} showAcademyName />
+        </div>
       ) : (
         <p className="mt-8 text-sm text-muted-foreground">No pending membership requests.</p>
       )}

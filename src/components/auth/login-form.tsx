@@ -20,6 +20,17 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
+function formatSignInError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes("invalid login credentials")) {
+    return "Invalid email or password. On phones, check that the email was not auto-capitalized. If this keeps failing, reset the password (see docs/TEST_ACCOUNTS.md) or use Forgot password.";
+  }
+  if (lower.includes("email not confirmed")) {
+    return "This email is not confirmed yet. Ask an admin to confirm the account in Supabase, or re-run the provision script which sets email_confirm.";
+  }
+  return message;
+}
+
 export function LoginForm({
   supabaseConfigured,
 }: {
@@ -27,11 +38,18 @@ export function LoginForm({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [error, setError] = useState<string | null>(
-    searchParams.get("error") === "auth_callback_failed"
-      ? "Sign in failed. Please try again."
-      : null,
-  );
+  const [error, setError] = useState<string | null>(() => {
+    if (searchParams.get("error") === "auth_callback_failed") {
+      return "Sign in failed. Please try again.";
+    }
+    if (searchParams.get("error") === "email_not_allowed") {
+      return (
+        searchParams.get("message") ??
+        "This email is not allowed for your account type."
+      );
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(false);
   const setupRequired =
     !supabaseConfigured || searchParams.get("setup") === "required";
@@ -55,13 +73,17 @@ export function LoginForm({
       return;
     }
 
+    // Phones often capitalize the first letter or add trailing spaces.
+    const email = values.email.trim().toLowerCase();
+    const password = values.password;
+
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password,
+      email,
+      password,
     });
 
     if (signInError) {
-      setError(signInError.message);
+      setError(formatSignInError(signInError.message));
       setLoading(false);
       return;
     }
@@ -118,7 +140,12 @@ export function LoginForm({
           <Input
             id="email"
             type="email"
+            inputMode="email"
             autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="next"
             {...form.register("email")}
           />
           {form.formState.errors.email ? (
@@ -179,6 +206,13 @@ export function LoginForm({
         Need an account?{" "}
         <Link href="/register" className="font-medium text-[#0A2342] hover:underline dark:text-white">
           Create one
+        </Link>
+        {" · "}
+        <Link
+          href="/register?role=parent"
+          className="font-medium text-[#0A2342] hover:underline dark:text-white"
+        >
+          Parent registration
         </Link>
       </p>
     </AuthShell>

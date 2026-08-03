@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Headphones, ListChecks, Settings, User } from "lucide-react";
+import { Gift, Headphones, ListChecks, Settings, User } from "lucide-react";
 
 import { PartnerBackLink } from "@/components/layout/partner-back-link";
 import { isPartnerLinked } from "@/config/partner";
@@ -90,6 +90,17 @@ export function ProfileMenu({ user }: { user: CampusUser }) {
             Settings
           </Link>
         </DropdownMenuItem>
+        {user.role === "teacher" ||
+        user.role === "advisor" ||
+        user.role === "admin" ||
+        user.role === "coach" ? (
+          <DropdownMenuItem>
+            <Link href="/teacher/wishlists" className="flex w-full items-center gap-2">
+              <Gift className="size-4" />
+              Class wishlists
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         {isPartnerLinked() ? (
           <>
             <DropdownMenuSeparator />

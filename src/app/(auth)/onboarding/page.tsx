@@ -11,6 +11,9 @@ export default async function OnboardingPage() {
   }
 
   if (user.profileComplete) {
+    if (user.role === "parent" && user.status === "pending") {
+      redirect("/pending-approval");
+    }
     redirect("/home");
   }
 

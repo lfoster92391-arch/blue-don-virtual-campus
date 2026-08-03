@@ -10,6 +10,7 @@ import { isSupabaseAdminConfigured } from "@/config/env";
 import { canManageUsers } from "@/config/roles";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { listCampusUsers } from "@/services/user-service";
+import { listStudentOptions } from "@/services/parent-student-service";
 
 export default async function ServiceDeskUsersPage() {
   const user = await requireCompleteProfile();
@@ -18,7 +19,10 @@ export default async function ServiceDeskUsersPage() {
     redirect("/service-desk");
   }
 
-  const users = await listCampusUsers();
+  const [users, students] = await Promise.all([
+    listCampusUsers(),
+    listStudentOptions(),
+  ]);
   const accountManagementEnabled = isSupabaseAdminConfigured();
 
   return (
@@ -74,6 +78,7 @@ export default async function ServiceDeskUsersPage() {
                 status={campusUser.status}
                 initials={campusUser.initials}
                 passwordManagementEnabled={accountManagementEnabled}
+                students={students}
               />
             ))}
           </ul>

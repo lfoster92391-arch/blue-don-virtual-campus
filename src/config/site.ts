@@ -1,5 +1,9 @@
 import { DEFAULT_APP_URL, env } from "@/config/env";
 import { getAssetPilotSiteUrl } from "@/config/integration";
+import { CURRENT_WAVE_ID } from "@/config/waves";
+
+export { CURRENT_WAVE_ID, WAVES, getCurrentWave, getWave, getWaveLabel, phaseToWave } from "@/config/waves";
+export type { Wave, WaveStatus } from "@/config/waves";
 
 export const brandAssets = {
   logo: "/icons/source-logo.png",
@@ -28,8 +32,10 @@ export const siteConfig = {
   tagline: "Choose Your Path. Build Your Future.",
   institution: "Madonna High School",
   version: "0.1.0",
-  // Phase 17 = enterprise navigation + Blue Don OS shell (Wave W1). See docs/BLUE_DON_SYSTEM_BLUEPRINT.md
+  // Phase 17 = enterprise navigation + Blue Don OS shell. Canonical wave = W1
+  // (current). See src/config/waves.ts + docs/BLUE_DON_SYSTEM_BLUEPRINT.md Part X.
   phase: 17,
+  wave: CURRENT_WAVE_ID,
   url: env.NEXT_PUBLIC_APP_URL ?? DEFAULT_APP_URL,
   assetPilotUrl: getAssetPilotSiteUrl(),
 } as const;

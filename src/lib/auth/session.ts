@@ -9,6 +9,11 @@ import {
 } from "@/services/user-service";
 import type { CampusUser } from "@/types/auth";
 import { normalizeRole } from "@/config/roles";
+import { validateEmailForRole } from "@/lib/auth/email-domain";
+import {
+  parentHasLinkedStudents,
+  parentNeedsStudentLink,
+} from "@/services/parent-student-service";
 
 export async function getAuthUser() {
   if (!isSupabaseConfigured()) {
@@ -37,16 +42,27 @@ export async function getCurrentUser(): Promise<CampusUser | null> {
   let profile = await getUserProfile(authUser.id);
 
   if (!profile) {
-    profile = await ensureUserProfile({
-      id: authUser.id,
-      email: authUser.email,
-      displayName: authUser.user_metadata?.display_name as string | undefined,
-      profileImage: authUser.user_metadata?.avatar_url as string | undefined,
-      role: normalizeRole(authUser.user_metadata?.role as string | undefined),
-    });
+    try {
+      profile = await ensureUserProfile({
+        id: authUser.id,
+        email: authUser.email,
+        displayName: authUser.user_metadata?.display_name as string | undefined,
+        profileImage: authUser.user_metadata?.avatar_url as string | undefined,
+        role: normalizeRole(authUser.user_metadata?.role as string | undefined),
+      });
+    } catch {
+      return null;
+    }
   }
 
-  return buildCampusUserFromAuth(authUser, profile);
+  const user = buildCampusUserFromAuth(authUser, profile);
+  const emailCheck = validateEmailForRole(user.email, user.role);
+
+  if (!emailCheck.valid) {
+    return null;
+  }
+
+  return user;
 }
 
 export async function requireUser(): Promise<CampusUser> {
@@ -57,7 +73,7 @@ export async function requireUser(): Promise<CampusUser> {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/login?error=email_not_allowed");
   }
 
   return user;
@@ -73,8 +89,29 @@ export async function requireCompleteProfile(): Promise<CampusUser> {
   return user;
 }
 
-export async function requireRole(permission: string): Promise<CampusUser> {
+export async function requireCampusAccess(): Promise<CampusUser> {
   const user = await requireCompleteProfile();
+
+  if (user.status === "pending") {
+    redirect("/pending-approval");
+  }
+
+  if (user.status !== "active") {
+    redirect("/login");
+  }
+
+  if (parentNeedsStudentLink(user.role)) {
+    const hasLinks = await parentHasLinkedStudents(user.id);
+    if (!hasLinks) {
+      redirect("/pending-approval?reason=awaiting_student_link");
+    }
+  }
+
+  return user;
+}
+
+export async function requireRole(permission: string): Promise<CampusUser> {
+  const user = await requireCampusAccess();
   const { hasPermission } = await import("@/config/roles");
 
   if (!hasPermission(user.role, permission)) {

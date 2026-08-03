@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="Lady Dons volleyball regional crown, 1982 placeholder">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A2342"/><stop offset="1" stop-color="#2E8B57"/></linearGradient></defs>
+  <rect width="320" height="320" fill="url(#g)"/>
+  <g fill="none" stroke="#ffffff" stroke-width="5" opacity="0.95"><circle cx="160" cy="150" r="34"/><path d="M160 116 q-30 30 -30 68"/><path d="M160 116 q30 30 30 68"/><path d="M126 150 q34 -6 68 6"/></g>
+  <text x="160" y="46" text-anchor="middle" fill="#ffffff" font-family="Georgia, serif" font-size="22" font-weight="bold">1982</text>
+  <text x="160" y="232" text-anchor="middle" fill="#ffffff" font-family="Georgia, serif" font-size="15">Volleyball Regional Crown</text>
+  <text x="160" y="286" text-anchor="middle" fill="#ffffff" font-family="Georgia, serif" font-size="13" letter-spacing="1.5">WEIRTON MADONNA</text>
+  <text x="160" y="306" text-anchor="middle" fill="#cdeadb" font-family="Arial, sans-serif" font-size="10">photo placeholder</text>
+</svg>

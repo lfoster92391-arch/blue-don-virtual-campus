@@ -3,6 +3,7 @@ import { ArrowRight, Construction } from "lucide-react";
 
 import type { ModuleShellConfig } from "@/config/module-shells";
 import { siteConfig } from "@/config/site";
+import { phaseToWave } from "@/config/waves";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,8 @@ type ModuleShellPageProps = {
 };
 
 export function ModuleShellPage({ config }: ModuleShellPageProps) {
+  const currentWave = phaseToWave(siteConfig.phase);
+
   return (
     <ShellPage
       title={config.title}
@@ -25,7 +28,7 @@ export function ModuleShellPage({ config }: ModuleShellPageProps) {
     >
       <DashboardCard
         title={`Coming in Phase ${config.phase}`}
-        description={`This destination is part of the Blue Don Digital Campus migration (Wave W${siteConfig.phase}). The shell is live; features ship in focused waves per the System Blueprint.`}
+        description={`This destination is part of the Blue Don Digital Campus migration (currently ${currentWave.id} · ${currentWave.label}). The shell is live; features ship in focused waves per the System Blueprint.`}
         status={{ label: config.pillar, variant: "info" }}
       >
         <div className="space-y-4">

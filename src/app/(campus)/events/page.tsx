@@ -1,9 +1,15 @@
 import Link from "next/link";
-import { Calendar, MapPin, Plus, Users } from "lucide-react";
+import { BellRing, Calendar, MapPin, Megaphone, Plus, Users } from "lucide-react";
 
+import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
 import { canManageEvents } from "@/config/roles";
+import {
+  EVENT_PUBLICATIONS,
+  EVENT_REMINDERS,
+  PUBLICATION_CHANNEL_LABELS,
+} from "@/config/event-engine";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { formatDateLabel, formatTimeRange } from "@/lib/calendar/utils";
 import { listEvents } from "@/services/event-service";
@@ -18,6 +24,87 @@ export default async function EventsPage() {
       title="Events"
       description="Campus gatherings, academy activities, and community coordination across Madonna High School."
     >
+      <div className="grid gap-6 lg:grid-cols-2">
+        <DashboardCard
+          title="Event Publications"
+          description="Fan-out to campus audiences across feed, calendar, email, and push."
+          icon={<Megaphone className="size-5" />}
+          status={{ label: "Event Engine v2", variant: "info" }}
+        >
+          <ul className="space-y-3">
+            {EVENT_PUBLICATIONS.map((pub) => (
+              <li
+                key={pub.id}
+                className="rounded-lg border border-border px-3 py-2.5"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium text-foreground">{pub.eventTitle}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {pub.audience} · {pub.reach.toLocaleString()} reach
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      pub.status === "published"
+                        ? "bg-[#2E8B57]/10 text-[#2E8B57]"
+                        : pub.status === "scheduled"
+                          ? "bg-[#D4A017]/10 text-[#D4A017]"
+                          : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {pub.status}
+                  </span>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {pub.channels.map((ch) => (
+                    <span
+                      key={ch}
+                      className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground"
+                    >
+                      {PUBLICATION_CHANNEL_LABELS[ch]}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground">{pub.publishLabel}</p>
+              </li>
+            ))}
+          </ul>
+        </DashboardCard>
+
+        <DashboardCard
+          title="Reminders"
+          description="Automated nudges before events go live."
+          icon={<BellRing className="size-5" />}
+        >
+          <ul className="space-y-3">
+            {EVENT_REMINDERS.map((rem) => (
+              <li
+                key={rem.id}
+                className="flex items-start justify-between gap-3 rounded-lg border border-border px-3 py-2.5"
+              >
+                <div>
+                  <p className="font-medium text-foreground">{rem.eventTitle}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {rem.offsetLabel} · {PUBLICATION_CHANNEL_LABELS[rem.channel]}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{rem.sendLabel}</p>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                    rem.status === "sent"
+                      ? "bg-[#2E8B57]/10 text-[#2E8B57]"
+                      : "bg-[#2F80ED]/10 text-[#2F80ED]"
+                  }`}
+                >
+                  {rem.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </DashboardCard>
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {events.length} event{events.length === 1 ? "" : "s"} on the campus calendar

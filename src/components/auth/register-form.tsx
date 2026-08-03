@@ -9,7 +9,17 @@ import { z } from "zod";
 
 import { AuthShell } from "@/components/auth/auth-shell";
 import { SupabaseSetupNotice } from "@/components/auth/supabase-setup-notice";
-import { CAMPUS_ROLES, ROLE_LABELS, normalizeRole } from "@/config/roles";
+import {
+  CAMPUS_ROLES,
+  ROLE_LABELS,
+  normalizeRole,
+  type CampusRole,
+} from "@/config/roles";
+import {
+  IT_CONTACT_EMAIL,
+  SCHOOL_EMAIL_DOMAIN,
+  validateEmailForRole,
+} from "@/lib/auth/email-domain";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
@@ -19,6 +29,7 @@ const registerSchema = z
     email: z.email("Enter a valid email address"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(8, "Confirm your password"),
+    relationshipNote: z.string().trim().optional(),
   })
   .refine((values) => values.password === values.confirmPassword, {
     message: "Passwords do not match",
@@ -35,6 +46,9 @@ export function RegisterForm({
   const router = useRouter();
   const searchParams = useSearchParams();
   const inviteRole = normalizeRole(searchParams.get("role"));
+  const role: CampusRole =
+    inviteRole && CAMPUS_ROLES.includes(inviteRole) ? inviteRole : "student";
+  const isParentRegistration = role === "parent";
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,6 +59,7 @@ export function RegisterForm({
       email: "",
       password: "",
       confirmPassword: "",
+      relationshipNote: "",
     },
   });
 
@@ -53,7 +68,13 @@ export function RegisterForm({
     setError(null);
     setMessage(null);
 
-    const role = inviteRole && CAMPUS_ROLES.includes(inviteRole) ? inviteRole : "student";
+    const emailCheck = validateEmailForRole(values.email, role);
+    if (!emailCheck.valid) {
+      setError(emailCheck.message);
+      setLoading(false);
+      return;
+    }
+
     const supabase = createClient();
     if (!supabase) {
       setError("Supabase is not configured. Add credentials to .env first.");
@@ -66,6 +87,7 @@ export function RegisterForm({
       options: {
         data: {
           role,
+          relationship_note: values.relationshipNote?.trim() || null,
         },
         emailRedirectTo: `${window.location.origin}/auth/callback?role=${role}`,
       },
@@ -83,7 +105,13 @@ export function RegisterForm({
       return;
     }
 
-    setMessage("Check your email to confirm your account, then sign in.");
+    if (isParentRegistration) {
+      setMessage(
+        `Check your email to confirm your account. After signing in, your account will remain pending until IT approves it. Email ${IT_CONTACT_EMAIL} with your relationship to the school.`,
+      );
+    } else {
+      setMessage("Check your email to confirm your account, then sign in.");
+    }
     setLoading(false);
   }
 
@@ -91,7 +119,6 @@ export function RegisterForm({
     setLoading(true);
     setError(null);
 
-    const role = inviteRole ?? "student";
     const supabase = createClient();
     if (!supabase) {
       setError("Supabase is not configured. Add credentials to .env first.");
@@ -134,6 +161,23 @@ export function RegisterForm({
         </div>
       ) : null}
 
+      {!isParentRegistration ? (
+        <p className="text-sm text-muted-foreground">
+          Students and staff must use a @{SCHOOL_EMAIL_DOMAIN} email address.
+        </p>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Parents may use a personal email. Access requires IT approval — contact{" "}
+          <a
+            href={`mailto:${IT_CONTACT_EMAIL}`}
+            className="font-medium text-[#0A2342] underline dark:text-white"
+          >
+            {IT_CONTACT_EMAIL}
+          </a>{" "}
+          with your relationship to the school.
+        </p>
+      )}
+
       <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium">
@@ -146,6 +190,19 @@ export function RegisterForm({
             </p>
           ) : null}
         </div>
+
+        {isParentRegistration ? (
+          <div className="space-y-2">
+            <label htmlFor="relationshipNote" className="text-sm font-medium">
+              Relationship to school
+            </label>
+            <Input
+              id="relationshipNote"
+              placeholder="Parent of Jane Smith, Class of 2028"
+              {...form.register("relationshipNote")}
+            />
+          </div>
+        ) : null}
 
         <div className="space-y-2">
           <label htmlFor="password" className="text-sm font-medium">
