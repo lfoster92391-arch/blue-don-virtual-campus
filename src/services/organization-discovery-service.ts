@@ -1,6 +1,10 @@
 import { getOrganizationProfile } from "@/config/organization-profiles";
 import { MADONNA_ORGANIZATIONS } from "@/config/madonna-organizations";
-import { isFocusClubSlug } from "@/config/focused-clubs";
+import {
+  FOCUS_CLUBS,
+  isFocusClubSlug,
+  type FocusClubSlug,
+} from "@/config/focused-clubs";
 import { isDatabaseConfigured } from "@/config/env";
 import type { OrganizationType } from "@/generated/prisma/client";
 import { isPrismaReady, withDatabase } from "@/lib/prisma";
@@ -14,6 +18,76 @@ export type { OrganizationDiscoveryCard, OrganizationMatch } from "@/lib/organiz
 export { filterDiscoveryCards, searchDiscoveryCards } from "@/lib/organization-discovery";
 
 const DISCOVERABLE_TYPES: OrganizationType[] = ["CLUB", "TEAM"];
+
+/** Catalog-backed org row used when Postgres is down / upsert fails. */
+export type FocusClubFallbackOrganization = {
+  id: string;
+  slug: string;
+  name: string;
+  type: OrganizationType;
+  category: string | null;
+  description: string | null;
+  academy: { id: string; slug: string; name: string } | null;
+  memberships: Array<{
+    user: {
+      displayName: string | null;
+      firstName: string | null;
+      lastName: string | null;
+    };
+  }>;
+  _count: { memberships: number };
+};
+
+export type OrganizationDiscoveryDetail = {
+  organization: FocusClubFallbackOrganization;
+  profile: ReturnType<typeof getOrganizationProfile>;
+  card: OrganizationDiscoveryCard;
+  /** True when served from Madonna catalog because DB upsert/load failed. */
+  isFallback?: boolean;
+};
+
+/**
+ * Static shell for IT / Broadcasting / Cricut when DATABASE_URL is wrong
+ * or the circuit breaker trips — never 404 these nav destinations.
+ */
+export function buildFocusClubFallbackDetail(
+  slug: FocusClubSlug,
+): OrganizationDiscoveryDetail {
+  const seed = MADONNA_ORGANIZATIONS.find((org) => org.slug === slug);
+  const focusMeta = FOCUS_CLUBS.find((club) => club.slug === slug);
+
+  const id = seed?.id ?? `fallback-${slug}`;
+  const name = seed?.name ?? focusMeta?.name ?? slug;
+  const description =
+    seed?.description ?? focusMeta?.description ?? "Madonna focus club.";
+  const type = (seed?.type ?? "CLUB") as OrganizationType;
+  const category = seed?.category ?? null;
+
+  const organization: FocusClubFallbackOrganization = {
+    id,
+    slug,
+    name,
+    type,
+    category,
+    description,
+    academy: null,
+    memberships: [],
+    _count: { memberships: 0 },
+  };
+
+  const profile = getOrganizationProfile(slug, {
+    name,
+    description,
+    category: category ?? undefined,
+  });
+
+  const card = buildDiscoveryCard({
+    ...organization,
+    _count: { memberships: 0 },
+  });
+
+  return { organization, profile, card, isFallback: true };
+}
 
 type UserDiscoverySignals = {
   academySlugs: string[];
@@ -236,20 +310,41 @@ async function loadOrganizationDiscoveryRow(slug: string) {
   );
 }
 
-export async function getOrganizationDiscoveryDetail(slug: string) {
+export async function getOrganizationDiscoveryDetail(
+  slug: string,
+): Promise<OrganizationDiscoveryDetail | null> {
   if (!isDatabaseConfigured() || !isPrismaReady()) {
+    if (isFocusClubSlug(slug)) {
+      console.warn(
+        `[org-discovery] Database unavailable; catalog fallback for focus club "${slug}"`,
+      );
+      return buildFocusClubFallbackDetail(slug);
+    }
     return null;
   }
 
   // Focus clubs are primary nav destinations. Production may predate the
   // Madonna org catalog seed — upsert IT / Broadcasting / Cricut on visit.
   if (isFocusClubSlug(slug)) {
-    await ensureAllFocusClubOrganizations();
+    try {
+      await ensureAllFocusClubOrganizations();
+    } catch (error) {
+      console.error(
+        `[org-discovery] Focus-club upsert failed for "${slug}":`,
+        error,
+      );
+    }
   }
 
   const org = await loadOrganizationDiscoveryRow(slug);
 
   if (!org) {
+    if (isFocusClubSlug(slug)) {
+      console.error(
+        `[org-discovery] Focus club "${slug}" missing after upsert; serving catalog fallback`,
+      );
+      return buildFocusClubFallbackDetail(slug);
+    }
     return null;
   }
 
@@ -264,7 +359,22 @@ export async function getOrganizationDiscoveryDetail(slug: string) {
     _count: { memberships: org._count.memberships },
   });
 
-  return { organization: org, profile, card };
+  return {
+    organization: {
+      id: org.id,
+      slug: org.slug,
+      name: org.name,
+      type: org.type,
+      category: org.category,
+      description: org.description,
+      academy: org.academy,
+      memberships: org.memberships,
+      _count: { memberships: org._count.memberships },
+    },
+    profile,
+    card,
+    isFallback: false,
+  };
 }
 
 export async function getRecommendedOrganizations(

@@ -25,7 +25,7 @@ export async function ensureFocusClubOrganization(slug: string) {
     return null;
   }
 
-  return withDatabase((prisma) =>
+  const row = await withDatabase((prisma) =>
     prisma.organization.upsert({
       where: { slug: seed.slug },
       update: {
@@ -46,6 +46,14 @@ export async function ensureFocusClubOrganization(slug: string) {
       },
     }),
   );
+
+  if (!row) {
+    console.error(
+      `[focus-club-org] Upsert returned null for "${slug}" (check DATABASE_URL / Prisma auth)`,
+    );
+  }
+
+  return row;
 }
 
 /** Upsert IT Club, Broadcasting, and Cricut Club from the catalog. */

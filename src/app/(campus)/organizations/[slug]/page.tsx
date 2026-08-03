@@ -20,13 +20,14 @@ import { ORGANIZATION_CATEGORY_META } from "@/config/madonna-organizations";
 import type { OrganizationCategory } from "@/config/madonna-organizations";
 import { canRequestOrganizationMembership } from "@/config/roles";
 import { requireCompleteProfile } from "@/lib/auth/session";
-import { prisma } from "@/lib/prisma";
+import { withDatabase } from "@/lib/prisma";
 import {
   canReviewAcademyMembership,
   getAcademyJoinPipelineStatus,
   listPendingMemberships,
 } from "@/services/academy-service";
 import {
+  buildFocusClubFallbackDetail,
   getOrganizationDiscoveryDetail,
   getOrganizationMatch,
 } from "@/services/organization-discovery-service";
@@ -58,7 +59,10 @@ import {
   listClubInvoices,
   listPendingInvoicesForFocusClubs,
 } from "@/services/club-invoice-service";
-import { FOCUS_CLUB_SLUGS } from "@/config/focused-clubs";
+import {
+  FOCUS_CLUB_SLUGS,
+  isFocusClubSlug,
+} from "@/config/focused-clubs";
 import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
 
 type OrganizationPageProps = {
@@ -73,13 +77,22 @@ export default async function OrganizationPage({
   const { slug } = await params;
   const { tab: tabParam } = await searchParams;
   const user = await requireCompleteProfile();
-  const detail = await getOrganizationDiscoveryDetail(slug);
+  let detail = await getOrganizationDiscoveryDetail(slug);
+
+  // Focus clubs (IT / Broadcasting / Cricut) must never 404 — even when
+  // DATABASE_URL is wrong and Prisma upsert/load fails.
+  if (!detail && isFocusClubSlug(slug)) {
+    console.error(
+      `[organizations] Missing detail for focus club "${slug}"; forcing catalog fallback`,
+    );
+    detail = buildFocusClubFallbackDetail(slug);
+  }
 
   if (!detail) {
     notFound();
   }
 
-  const { organization, profile, card } = detail;
+  const { organization, profile, card, isFallback } = detail;
 
   // W20 · Club Worlds — resolve this org's workspace personality (accent +
   // whether the immersive workspace tab is available for its type).
@@ -90,47 +103,77 @@ export default async function OrganizationPage({
     activeTab = "overview";
   }
 
+  // Skip DB-backed panels when serving catalog fallback (broken DATABASE_URL /
+  // circuit breaker) so we don't hammer Prisma or throw via the proxy.
   const [match, items, canManage, canManageMedia, organizationMedia, academyMembership, canReview, joinPipeline, financeSnapshot, canManageFinances, clubCalendarEvents, canManageCalendar, activeLive, dailyAnnouncement, clubInvoices, canSubmitInvoices, canReviewInvoices] =
-    await Promise.all([
-      getOrganizationMatch(user.id, slug),
-      listWishlistItems({ organizationId: organization.id }),
-      canManageWishlist(user.id, user.role, {
-        organizationId: organization.id,
-        academyId: organization.academy?.id,
-      }),
-      canManageCampusMedia(user.id, user.role),
-      slug === "broadcasting"
-        ? listOrganizationMedia(organization.id)
-        : Promise.resolve([]),
-      organization.academy
-        ? prisma.academyMembership.findUnique({
-            where: {
-              userId_academyId: {
-                userId: user.id,
-                academyId: organization.academy.id,
-              },
-            },
-            select: { status: true },
-          })
-        : Promise.resolve(null),
-      organization.academy
-        ? canReviewAcademyMembership(user.id, user.role, organization.academy.id)
-        : Promise.resolve(false),
-      organization.academy && user.role === "student"
-        ? getAcademyJoinPipelineStatus(user.id, organization.academy.id)
-        : Promise.resolve(null),
-      getClubFinanceSnapshot(organization.id),
-      canManageClubFinances(user.id, user.role, organization.id),
-      listClubCalendarEvents({ organizationId: organization.id }),
-      canManageClubCalendar(user.id, user.role, organization.id),
-      slug === "broadcasting" ? getActiveLiveStream() : Promise.resolve(null),
-      slug === "broadcasting"
-        ? getTodaysBroadcastAnnouncement()
-        : Promise.resolve(null),
-      listClubInvoices({ organizationId: organization.id }),
-      canSubmitClubInvoice(user.id, user.role, organization.id),
-      canReviewClubInvoice(user.id, user.role, organization.id),
-    ]);
+    isFallback
+      ? [
+          null,
+          [],
+          false,
+          false,
+          [],
+          null,
+          false,
+          null,
+          null,
+          false,
+          [],
+          false,
+          null,
+          null,
+          [],
+          false,
+          false,
+        ]
+      : await Promise.all([
+          getOrganizationMatch(user.id, slug),
+          listWishlistItems({ organizationId: organization.id }),
+          canManageWishlist(user.id, user.role, {
+            organizationId: organization.id,
+            academyId: organization.academy?.id,
+          }),
+          canManageCampusMedia(user.id, user.role),
+          slug === "broadcasting"
+            ? listOrganizationMedia(organization.id)
+            : Promise.resolve([]),
+          organization.academy
+            ? withDatabase((db) =>
+                db.academyMembership.findUnique({
+                  where: {
+                    userId_academyId: {
+                      userId: user.id,
+                      academyId: organization.academy!.id,
+                    },
+                  },
+                  select: { status: true },
+                }),
+              )
+            : Promise.resolve(null),
+          organization.academy
+            ? canReviewAcademyMembership(
+                user.id,
+                user.role,
+                organization.academy.id,
+              )
+            : Promise.resolve(false),
+          organization.academy && user.role === "student"
+            ? getAcademyJoinPipelineStatus(user.id, organization.academy.id)
+            : Promise.resolve(null),
+          getClubFinanceSnapshot(organization.id),
+          canManageClubFinances(user.id, user.role, organization.id),
+          listClubCalendarEvents({ organizationId: organization.id }),
+          canManageClubCalendar(user.id, user.role, organization.id),
+          slug === "broadcasting"
+            ? getActiveLiveStream()
+            : Promise.resolve(null),
+          slug === "broadcasting"
+            ? getTodaysBroadcastAnnouncement()
+            : Promise.resolve(null),
+          listClubInvoices({ organizationId: organization.id }),
+          canSubmitClubInvoice(user.id, user.role, organization.id),
+          canReviewClubInvoice(user.id, user.role, organization.id),
+        ]);
 
   let focusClubSnapshots: Awaited<
     ReturnType<typeof listFocusClubFinanceSnapshots>
@@ -139,11 +182,14 @@ export default async function OrganizationPage({
     ReturnType<typeof listPendingInvoicesForFocusClubs>
   > = [];
 
-  if (FOCUSED_CLUBS_MODE && slug === "it-club") {
-    const focusOrgs = await prisma.organization.findMany({
-      where: { slug: { in: [...FOCUS_CLUB_SLUGS] } },
-      select: { id: true },
-    });
+  if (!isFallback && FOCUSED_CLUBS_MODE && slug === "it-club") {
+    const focusOrgs =
+      (await withDatabase((db) =>
+        db.organization.findMany({
+          where: { slug: { in: [...FOCUS_CLUB_SLUGS] } },
+          select: { id: true },
+        }),
+      )) ?? [];
     const ids = focusOrgs.map((o) => o.id);
     [focusClubSnapshots, pendingFocusInvoices] = await Promise.all([
       listFocusClubFinanceSnapshots(ids),
@@ -176,7 +222,8 @@ export default async function OrganizationPage({
     organizationId: organization.id,
     organizationSlug: organization.slug,
     organizationType: organization.type,
-    showJoinSection: canRequestOrganizationMembership(user.role),
+    showJoinSection:
+      !isFallback && canRequestOrganizationMembership(user.role),
     canManageMedia,
     organizationMedia,
     activeLive,
@@ -216,6 +263,13 @@ export default async function OrganizationPage({
         </div>
       }
     >
+      {isFallback ? (
+        <p className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100">
+          Club page is running in catalog mode — live memberships, finances, and
+          media will appear once the campus database connection is restored.
+        </p>
+      ) : null}
+
       <div className="flex flex-wrap gap-2">
         {!FOCUSED_CLUBS_MODE ? (
           <>
