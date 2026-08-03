@@ -82,3 +82,15 @@ Models: `ClubInvoice`, `ClubInvoiceLine` (+ `ClubLedgerEntry.invoiceId` / `recei
 1. `npx prisma migrate deploy` then `npm run db:seed`  
 2. `/home`, `/organizations/it-club?tab=finances`, `/organizations/broadcasting?tab=invoices`, `/cricut/shop`  
 3. Restore full nav: `BLUE_DON_FOCUSED_CLUBS=0`
+
+## Production orgs (IT / Broadcasting / Cricut)
+
+Nav hrefs use slugs `it-club`, `broadcasting`, and `cricut-club`. Those rows come from `MADONNA_ORGANIZATIONS` via `npm run db:seed` (Phase 16 upsert).
+
+If production was deployed before that seed ran, club pages 404 until the orgs exist. Prefer a focused upsert (no demo wipe):
+
+```bash
+npm run db:seed:focus-clubs
+```
+
+Club pages also auto-upsert missing focus-club rows on first visit so the shell loads even before that script runs.

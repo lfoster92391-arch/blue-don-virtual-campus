@@ -1,5 +1,6 @@
 import { getOrganizationProfile } from "@/config/organization-profiles";
 import { MADONNA_ORGANIZATIONS } from "@/config/madonna-organizations";
+import { isFocusClubSlug } from "@/config/focused-clubs";
 import { isDatabaseConfigured } from "@/config/env";
 import type { OrganizationType } from "@/generated/prisma/client";
 import { isPrismaReady, withDatabase } from "@/lib/prisma";
@@ -7,6 +8,7 @@ import type {
   OrganizationDiscoveryCard,
   OrganizationMatch,
 } from "@/lib/organization-discovery";
+import { ensureAllFocusClubOrganizations } from "@/services/focus-club-org-service";
 
 export type { OrganizationDiscoveryCard, OrganizationMatch } from "@/lib/organization-discovery";
 export { filterDiscoveryCards, searchDiscoveryCards } from "@/lib/organization-discovery";
@@ -212,12 +214,8 @@ export async function listDiscoverableOrganizations(): Promise<OrganizationDisco
   );
 }
 
-export async function getOrganizationDiscoveryDetail(slug: string) {
-  if (!isDatabaseConfigured() || !isPrismaReady()) {
-    return null;
-  }
-
-  const org = await withDatabase((prisma) =>
+async function loadOrganizationDiscoveryRow(slug: string) {
+  return withDatabase((prisma) =>
     prisma.organization.findUnique({
       where: { slug },
       include: {
@@ -236,6 +234,20 @@ export async function getOrganizationDiscoveryDetail(slug: string) {
       },
     }),
   );
+}
+
+export async function getOrganizationDiscoveryDetail(slug: string) {
+  if (!isDatabaseConfigured() || !isPrismaReady()) {
+    return null;
+  }
+
+  // Focus clubs are primary nav destinations. Production may predate the
+  // Madonna org catalog seed — upsert IT / Broadcasting / Cricut on visit.
+  if (isFocusClubSlug(slug)) {
+    await ensureAllFocusClubOrganizations();
+  }
+
+  const org = await loadOrganizationDiscoveryRow(slug);
 
   if (!org) {
     return null;
