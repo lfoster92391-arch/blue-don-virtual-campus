@@ -17,6 +17,7 @@ const PUBLIC_ROUTES = [
   "/sw.js",
   "/icons",
   "/p/",
+  "/ok",
 ];
 const AUTH_ROUTES = ["/login", "/register", "/forgot-password"];
 

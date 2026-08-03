@@ -1,68 +1,30 @@
-const CACHE_NAME = "blue-don-static-v2";
+// Kill-switch service worker: unregister self and clear caches.
+// Kept at /sw.js so previously registered clients pick this up on update.
 
-const PRECACHE_URLS = [
-  "/manifest.webmanifest",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-  "/icons/apple-touch-icon.png",
-];
+const CACHE_PREFIX = "blue-don-";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)),
-  );
   self.skipWaiting();
+  event.waitUntil(Promise.resolve());
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter((key) => key !== CACHE_NAME)
-            .map((key) => caches.delete(key)),
-        ),
-      )
-      .then(() => self.clients.claim()),
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter((key) => key.startsWith(CACHE_PREFIX))
+          .map((key) => caches.delete(key)),
+      );
+      await self.registration.unregister();
+      const clients = await self.clients.matchAll({ type: "window" });
+      for (const client of clients) {
+        client.navigate(client.url);
+      }
+    })(),
   );
 });
 
-function isStaticAsset(pathname) {
-  return (
-    pathname.startsWith("/_next/static/") ||
-    pathname.startsWith("/icons/") ||
-    pathname === "/manifest.webmanifest" ||
-    pathname.endsWith(".woff2")
-  );
-}
-
-self.addEventListener("fetch", (event) => {
-  const { request } = event;
-
-  if (request.method !== "GET") {
-    return;
-  }
-
-  const url = new URL(request.url);
-
-  if (url.origin !== self.location.origin || !isStaticAsset(url.pathname)) {
-    return;
-  }
-
-  // Network-first for Next.js bundles so deployed nav/content updates reach PWAs.
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        if (!response.ok) {
-          return response;
-        }
-
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-        return response;
-      })
-      .catch(() => caches.match(request)),
-  );
-});
+// Do not intercept fetches while draining old registrations.
+self.addEventListener("fetch", () => {});
