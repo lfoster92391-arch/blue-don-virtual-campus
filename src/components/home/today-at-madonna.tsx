@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 
 import { BriefingSection } from "@/components/home/briefing-section";
 import { AdvisorMessagesPanel } from "@/components/home/advisor-messages-panel";
+import { ClubOpsPulsePanel } from "@/components/home/club-ops-pulse";
 import { CommandCenterMeetings } from "@/components/home/command-center-meetings";
 import { CommandCenterTasks } from "@/components/home/command-center-tasks";
 import { BellScheduleWidget } from "@/components/school-hub/bell-schedule-widget";
@@ -30,6 +31,7 @@ import type {
 } from "@/lib/command-center";
 import { cn } from "@/lib/utils";
 import type { BroadcastAnnouncementView } from "@/services/broadcast-announcement-service";
+import type { ClubOpsPulse } from "@/services/club-ops-pulse-service";
 import { getTodayInMadonnaHistory } from "@/services/madonna-culture-service";
 import type { HubDigest } from "@/services/school-hub-service";
 import {
@@ -45,6 +47,7 @@ type TodayAtMadonnaProps = {
   messages?: StudentMessageView[];
   meetings?: CommandCenterMeetingView[];
   tasks?: ClubStudentTaskView[];
+  opsPulse?: ClubOpsPulse | null;
 };
 
 function getGreeting(hour: number) {
@@ -290,6 +293,7 @@ export function TodayAtMadonna({
   messages = [],
   meetings = [],
   tasks = [],
+  opsPulse = null,
 }: TodayAtMadonnaProps) {
   const preferredName =
     user.firstName ?? user.displayName.split(" ")[0] ?? user.displayName;
@@ -328,6 +332,7 @@ export function TodayAtMadonna({
       </header>
 
       <div className="mt-6 space-y-4">
+        {opsPulse ? <ClubOpsPulsePanel pulse={opsPulse} /> : null}
         <AdvisorMessagesPanel messages={messages} />
         <div className="grid gap-4 lg:grid-cols-2">
           <CommandCenterMeetings meetings={meetings} />

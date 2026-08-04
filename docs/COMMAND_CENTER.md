@@ -8,10 +8,58 @@ Lisa — how `/home` works as each student’s hub, plus advisor messages, meeti
 
 Sections (top → bottom):
 
-1. **Messages & advisor requests** — unread first; “View later” list underneath
-2. **Club meetings** — own club(s) only + mandatory all-hands
-3. **My Tasks** — assigned work with status + past-due callouts
-4. **Today at Madonna** briefing (weather, schedule, announcements, discovery) — unchanged professional briefing
+1. **Club operations (live)** — what IT / Broadcasting / Cricut are doing right now
+2. **Messages & advisor requests** — unread first; “View later” list underneath
+3. **Club meetings** — own club(s) only + mandatory all-hands
+4. **My Tasks** — assigned work with status + past-due callouts
+5. **Today at Madonna** briefing (weather, schedule, announcements, discovery) — unchanged professional briefing
+
+## Club operations — the live ops pulse
+
+The top panel of `/home` is the “inside the command center” board: one card per
+focus club answering **what are they doing right now**.
+
+**Code:** `src/services/club-ops-pulse-service.ts` → `src/components/home/club-ops-pulse.tsx`
+
+### Who sees which clubs
+
+| Viewer | Sees |
+|--------|------|
+| Student / parent | Only focus clubs they are an **ACTIVE** member of |
+| Admin, advisor, teacher, coach, counselor, staff | **All three** clubs (“Monitoring” badge) |
+| Nobody in a focus club, no monitor role | Panel does not render |
+
+Money detail (ledger balance, pending invoice queue) is **officer or admin only**
+— President / VP / Secretary of that club, or a faculty monitor role. Everyone
+else still sees fundraiser goal bars.
+
+### What each card monitors
+
+| Club | Verb | Live data |
+|------|------|-----------|
+| **IT Club** | Building | Club projects in progress / planning (titles), tasks in progress, open help-desk tickets (`TECHNICAL`), pending invoices + ledger balance (officers), meetings today |
+| **Broadcasting** | Prepping to broadcast | Today’s rundown fill (`broadcast_daily_scripts` values vs template `STUDENT_FILL` slots), next air time (`broadcast_schedules`), announcement submissions pending, coverage bookings pending + next accepted booking, studio equipment checklist, join applications |
+| **Cricut Club** | Making | Orders by status (Order sent · In production · Ready for pickup · Completed), what is on the cut table right now (most recently touched in-production order + line items), design submissions pending / in production, active listings |
+
+Every card also carries the shared ops set: next meeting, past-due tasks,
+active fundraisers, and goal bars.
+
+### Goals
+
+Goal bars are derived, not a new table:
+
+- **Fundraisers** — `club_fundraisers.goal_cents` vs deposits tagged to that
+  fundraiser in `club_ledger_entries`
+- **Assigned work completed** — completed vs completed + open `club_student_tasks`
+- **Today’s rundown ready** (Broadcasting) — filled vs total student-fill slots
+- **Studio gear checked** (Broadcasting) — `broadcast_equipment_items.is_checked`
+- **Production queue cleared** (Cricut) — completed orders vs completed + open pipeline
+
+### Resilience
+
+No new schema — everything reads existing tables. Each club section is wrapped
+in its own soft-fail, so a broken query degrades that one card to a quiet state
+instead of blanking `/home`.
 
 ## Advisor / officer → student messages
 

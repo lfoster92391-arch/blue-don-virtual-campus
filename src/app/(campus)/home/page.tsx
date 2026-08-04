@@ -17,6 +17,10 @@ import {
   getTodayDigest,
   type BlueDonOSViewModel,
 } from "@/services/campus-os-service";
+import {
+  getClubOpsPulse,
+  type ClubOpsPulse,
+} from "@/services/club-ops-pulse-service";
 import { listMeetingsForStudent } from "@/services/club-calendar-service";
 import { listTasksForStudent } from "@/services/club-student-task-service";
 import {
@@ -66,6 +70,7 @@ export default async function HomePage() {
     meetings,
     tasks,
     cricutWishlistUrl,
+    opsPulse,
   ] = await Promise.all([
     safeHomeData("digest", () => getTodayDigest(user.id), emptyDigest()),
     safeHomeData("context", () => getStudentContext(user.id), EMPTY_CONTEXT),
@@ -95,6 +100,11 @@ export default async function HomePage() {
       [] as ClubStudentTaskView[],
     ),
     safeHomeData("cricut-wishlist", () => getCricutAmazonWishlistUrl(), null),
+    safeHomeData(
+      "club-ops-pulse",
+      () => getClubOpsPulse({ id: user.id, role: user.role }),
+      null as ClubOpsPulse | null,
+    ),
   ]);
 
   const showAgreements = user.role === "student" || user.role === "parent";
@@ -122,6 +132,7 @@ export default async function HomePage() {
         messages={messages}
         meetings={meetings}
         tasks={tasks}
+        opsPulse={opsPulse}
       />
     </>
   );

@@ -1,4 +1,5 @@
 import { CampusFeed } from "@/components/home/campus-feed";
+import { ClubOpsPulsePanel } from "@/components/home/club-ops-pulse";
 import { CommandStrip } from "@/components/home/command-strip";
 import { DailyDiscovery } from "@/components/home/daily-discovery";
 import { QuickActions } from "@/components/home/quick-actions";
@@ -15,6 +16,7 @@ import type {
 } from "@/lib/command-center";
 import type { BroadcastAnnouncementView } from "@/services/broadcast-announcement-service";
 import type { BlueDonOSViewModel } from "@/services/campus-os-service";
+import type { ClubOpsPulse } from "@/services/club-ops-pulse-service";
 import type { HubDigest } from "@/services/school-hub-service";
 import type { StudentContext } from "@/services/student-context-service";
 import type { CampusUser } from "@/types/auth";
@@ -28,6 +30,7 @@ type BlueDonOSProps = {
   messages?: StudentMessageView[];
   meetings?: CommandCenterMeetingView[];
   tasks?: ClubStudentTaskView[];
+  opsPulse?: ClubOpsPulse | null;
 };
 
 export function BlueDonOS({
@@ -39,6 +42,7 @@ export function BlueDonOS({
   messages = [],
   meetings = [],
   tasks = [],
+  opsPulse = null,
 }: BlueDonOSProps) {
   if (FOCUSED_CLUBS_MODE) {
     return (
@@ -49,6 +53,7 @@ export function BlueDonOS({
         messages={messages}
         meetings={meetings}
         tasks={tasks}
+        opsPulse={opsPulse}
       />
     );
   }
@@ -62,6 +67,8 @@ export function BlueDonOS({
         context={context}
         announcementCount={CAMPUS_FEED.length}
       />
+
+      {opsPulse ? <ClubOpsPulsePanel pulse={opsPulse} /> : null}
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="space-y-8 xl:col-span-2">
