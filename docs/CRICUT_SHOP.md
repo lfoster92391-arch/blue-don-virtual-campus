@@ -7,6 +7,7 @@ Lisa — how the Cricut maker shop, orders, designs, and wishlist fit together.
 | Surface | Route |
 |---------|--------|
 | Production hub (counter, fundraising, wishlist settings) | `/cricut` |
+| Easy cheap creations (dollar-store projects) | `/cricut/projects` — see [CRICUT_PROJECTS.md](CRICUT_PROJECTS.md) |
 | Catalog / sell | `/cricut/shop` |
 | Product detail | `/cricut/shop/[id]` |
 | Cart | `/cricut/cart` |
@@ -17,7 +18,9 @@ Lisa — how the Cricut maker shop, orders, designs, and wishlist fit together.
 | Club overview (counter + wishlist + links) | `/organizations/cricut-club` |
 | Club tab shortcuts | Shop → `/cricut/shop`, Designs → `/cricut/designs`, Orders → `/cricut/orders`, Fundraisers (officers) |
 
-Nav: Cricut section also lists Production hub, Shop, Designs, Orders.
+Nav: Cricut section also lists Production hub, Projects, Shop, Designs, Orders.
+
+Project ideas feed the shop: **Sell this** on `/cricut/projects/[id]` creates a `CricutShopItem` at the suggested price, which then flows through the normal cart → order form → Command Center pipeline below.
 
 ## Product catalog
 

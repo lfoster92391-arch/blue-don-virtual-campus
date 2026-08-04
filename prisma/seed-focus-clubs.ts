@@ -13,6 +13,7 @@ import { Pool } from "pg";
 
 import { MADONNA_ORGANIZATIONS } from "../src/config/madonna-organizations";
 import { DEFAULT_BROADCAST_SCRIPT_SLOTS } from "../src/config/broadcast-script";
+import { CRICUT_STARTER_PROJECT_IDEAS } from "../src/config/cricut-projects";
 import { FOCUS_CLUB_SLUGS } from "../src/config/focused-clubs";
 import { PrismaClient } from "../src/generated/prisma/client";
 
@@ -89,6 +90,61 @@ async function main() {
               "Skipped BroadcastScriptTemplate seed (table may be missing):",
               error instanceof Error ? error.message : error,
             );
+          }
+        }
+      }
+
+      if (seed.slug === "cricut-club") {
+        const org = await prisma.organization.findUnique({
+          where: { slug: "cricut-club" },
+          select: { id: true },
+        });
+        if (org && typeof prisma.cricutProjectIdea?.upsert === "function") {
+          let seeded = 0;
+          for (const [index, idea] of CRICUT_STARTER_PROJECT_IDEAS.entries()) {
+            try {
+              await prisma.cricutProjectIdea.upsert({
+                where: { slug: idea.slug },
+                create: {
+                  organizationId: org.id,
+                  slug: idea.slug,
+                  title: idea.title,
+                  summary: idea.summary,
+                  materials: idea.materials,
+                  steps: idea.steps,
+                  estimatedCostCents: idea.estimatedCostCents,
+                  suggestedSellPriceCents: idea.suggestedSellPriceCents,
+                  dollarStoreTag: idea.dollarStoreTag,
+                  difficulty: idea.difficulty,
+                  timeMinutes: idea.timeMinutes,
+                  sellNotes: idea.sellNotes ?? null,
+                  sortOrder: index,
+                },
+                update: {
+                  title: idea.title,
+                  summary: idea.summary,
+                  materials: idea.materials,
+                  steps: idea.steps,
+                  estimatedCostCents: idea.estimatedCostCents,
+                  suggestedSellPriceCents: idea.suggestedSellPriceCents,
+                  dollarStoreTag: idea.dollarStoreTag,
+                  difficulty: idea.difficulty,
+                  timeMinutes: idea.timeMinutes,
+                  sellNotes: idea.sellNotes ?? null,
+                  sortOrder: index,
+                },
+              });
+              seeded += 1;
+            } catch (error) {
+              console.warn(
+                `Skipped Cricut project idea "${idea.slug}" (table may be missing):`,
+                error instanceof Error ? error.message : error,
+              );
+              break;
+            }
+          }
+          if (seeded > 0) {
+            console.log(`Seeded ${seeded} Cricut dollar-store project ideas`);
           }
         }
       }

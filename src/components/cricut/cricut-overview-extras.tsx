@@ -39,6 +39,12 @@ export async function CricutOverviewExtras() {
           size="sm"
           variant="outline"
           nativeButton={false}
+          render={<Link href="/cricut/projects">Easy cheap creations</Link>}
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          nativeButton={false}
           render={<Link href="/cricut/shop">Shop</Link>}
         />
         <Button

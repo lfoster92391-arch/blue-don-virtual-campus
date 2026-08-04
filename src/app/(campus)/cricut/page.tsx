@@ -4,6 +4,7 @@ import {
   ClipboardList,
   Lightbulb,
   ShoppingBag,
+  Sparkles,
 } from "lucide-react";
 
 import { CricutAmazonWishlistBanner } from "@/components/cricut/cricut-amazon-wishlist";
@@ -16,6 +17,7 @@ import { CRICUT_CLUB_SLUG, formatShopPrice } from "@/config/cricut-shop";
 import { formatCents } from "@/lib/club-finance";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { listCricutDesigns } from "@/services/cricut-design-service";
+import { listCricutProjectIdeas } from "@/services/cricut-project-service";
 import { getClubFinanceSnapshot } from "@/services/club-finance-service";
 import {
   canManageCricutShop,
@@ -27,13 +29,15 @@ import {
 
 export default async function CricutHubPage() {
   const user = await requireCompleteProfile();
-  const [org, stats, wishlistUrl, items, designs] = await Promise.all([
-    getCricutOrganization(),
-    getCricutProductionStats(),
-    getCricutAmazonWishlistUrl(),
-    listCricutShopItems(),
-    listCricutDesigns(),
-  ]);
+  const [org, stats, wishlistUrl, items, designs, projectIdeas] =
+    await Promise.all([
+      getCricutOrganization(),
+      getCricutProductionStats(),
+      getCricutAmazonWishlistUrl(),
+      listCricutShopItems(),
+      listCricutDesigns(),
+      listCricutProjectIdeas(),
+    ]);
 
   const finance = org ? await getClubFinanceSnapshot(org.id) : null;
   const canManage = org
@@ -43,6 +47,8 @@ export default async function CricutHubPage() {
     finance?.fundraisers.filter((f) => f.status === "ACTIVE") ?? [];
   const sellable = items.filter((i) => i.availableToSell).slice(0, 3);
   const pendingDesigns = designs.filter((d) => d.status === "PENDING").length;
+  const projectCount = projectIdeas.length;
+  const featuredProjects = projectIdeas.slice(0, 3);
 
   return (
     <ShellPage
@@ -70,7 +76,21 @@ export default async function CricutHubPage() {
         <CricutProductionCounter stats={stats} />
         <CricutAmazonWishlistBanner url={wishlistUrl} />
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Link
+            href="/cricut/projects"
+            className="rounded-xl border border-border bg-card p-5 shadow-sm transition-colors hover:border-[#DB2777]/40"
+          >
+            <Sparkles className="size-5 text-[#DB2777]" />
+            <p className="mt-3 font-semibold">Easy cheap creations</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Dollar-store projects with supplies, steps, cost, and sell price.
+              {projectCount > 0 ? ` ${projectCount} to pick from.` : ""}
+            </p>
+            <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[#DB2777]">
+              Make something <ArrowRight className="size-3.5" />
+            </span>
+          </Link>
           <Link
             href="/cricut/shop"
             className="rounded-xl border border-border bg-card p-5 shadow-sm transition-colors hover:border-[#DB2777]/40"
@@ -112,6 +132,41 @@ export default async function CricutHubPage() {
             </span>
           </Link>
         </div>
+
+        {featuredProjects.length > 0 ? (
+          <DashboardCard
+            title="Cheap builds to try"
+            description="Dollar-store projects — tap one to see supplies, steps, and cost."
+            actions={
+              <Button
+                size="sm"
+                variant="outline"
+                nativeButton={false}
+                render={<Link href="/cricut/projects">All projects</Link>}
+              />
+            }
+          >
+            <ul className="grid gap-3 sm:grid-cols-3">
+              {featuredProjects.map((idea) => (
+                <li key={idea.id}>
+                  <Link
+                    href={`/cricut/projects/${idea.id}`}
+                    className="block rounded-lg border border-border px-3 py-3 transition-colors hover:border-[#DB2777]/40"
+                  >
+                    <p className="font-medium line-clamp-1">{idea.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Costs {formatShopPrice(idea.estimatedCostCents)} · sells
+                      for{" "}
+                      <span className="text-[#DB2777]">
+                        {formatShopPrice(idea.suggestedSellPriceCents)}
+                      </span>
+                    </p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </DashboardCard>
+        ) : null}
 
         {sellable.length > 0 ? (
           <DashboardCard

@@ -425,6 +425,8 @@ model User {
   cricutShopOrdersAssigned CricutShopOrder[]     @relation("CricutShopAssignee")
   cricutDesignsSubmitted CricutDesignSubmission[] @relation("CricutDesignSubmitter")
   cricutDesignsReviewed  CricutDesignSubmission[] @relation("CricutDesignReviewer")
+  cricutProjectIdeas     CricutProjectIdea[]      @relation("CricutProjectIdeaAuthor")
+  cricutProjectBuilds    CricutProjectBuild[]     @relation("CricutProjectBuilder")
   clubDocumentsCreated   ClubDocument[]          @relation("ClubDocumentCreator")
   clubDocumentsUpdated   ClubDocument[]          @relation("ClubDocumentUpdater")
   clubProjectsOwned      ClubProject[]           @relation("ClubProjectOwner")
@@ -493,6 +495,7 @@ model Organization {
   clubInvoices ClubInvoice[]
   cricutShopItems CricutShopItem[]
   cricutDesignSubmissions CricutDesignSubmission[]
+  cricutProjectIdeas CricutProjectIdea[]
   broadcastScriptTemplate BroadcastScriptTemplate?
   broadcastDailyScripts BroadcastDailyScript[]
   clubDocuments ClubDocument[]
@@ -2010,6 +2013,7 @@ model CricutShopItem {
   seller         User                 @relation("CricutShopSeller", fields: [sellerId], references: [id], onDelete: Cascade)
   organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   orderLines     CricutShopOrderLine[]
+  projectBuilds  CricutProjectBuild[] @relation("CricutProjectBuildListing")
 
   @@index([status])
   @@index([organizationId])
@@ -2073,6 +2077,82 @@ model CricutDesignSubmission {
   @@index([submitterId])
   @@index([status])
   @@map("cricut_design_submissions")
+}
+
+enum CricutProjectDifficulty {
+  EASY
+  MEDIUM
+  ADVANCED
+}
+
+enum CricutProjectBuildIntent {
+  MAKE
+  SELL
+}
+
+enum CricutProjectBuildStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+/** Dollar-store / cheap-creation project ideas Cricut Club can make or sell. */
+model CricutProjectIdea {
+  id                      String                  @id @default(cuid())
+  organizationId          String                  @map("organization_id")
+  slug                    String                  @unique
+  title                   String
+  summary                 String
+  /** CricutProjectMaterial[] — name, qty, source, costCents, clubSupply. */
+  materials               Json
+  /** CricutProjectStep[] — title, detail. */
+  steps                   Json
+  estimatedCostCents      Int                     @map("estimated_cost_cents")
+  suggestedSellPriceCents Int                     @map("suggested_sell_price_cents")
+  imageUrl                String?                 @map("image_url")
+  storagePath             String?                 @map("storage_path")
+  dollarStoreTag          String?                 @map("dollar_store_tag")
+  difficulty              CricutProjectDifficulty @default(EASY)
+  timeMinutes             Int?                    @map("time_minutes")
+  sellNotes               String?                 @map("sell_notes")
+  active                  Boolean                 @default(true)
+  sortOrder               Int                     @default(0) @map("sort_order")
+  createdById             String?                 @map("created_by_id") @db.Uuid
+  createdAt               DateTime                @default(now()) @map("created_at")
+  updatedAt               DateTime                @updatedAt @map("updated_at")
+  organization            Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy               User?                   @relation("CricutProjectIdeaAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  builds                  CricutProjectBuild[]
+
+  @@index([organizationId, active])
+  @@index([difficulty])
+  @@map("cricut_project_ideas")
+}
+
+/** A student's personal run at a project idea — materials/steps checklist. */
+model CricutProjectBuild {
+  id                 String                   @id @default(cuid())
+  ideaId             String                   @map("idea_id")
+  userId             String                   @map("user_id") @db.Uuid
+  intent             CricutProjectBuildIntent @default(MAKE)
+  status             CricutProjectBuildStatus @default(PLANNED)
+  /** Index positions of finished steps. */
+  completedSteps     Json                     @default("[]") @map("completed_steps")
+  /** Index positions of gathered materials. */
+  gatheredMaterials  Json                     @default("[]") @map("gathered_materials")
+  notes              String?
+  listedItemId       String?                  @map("listed_item_id")
+  createdAt          DateTime                 @default(now()) @map("created_at")
+  updatedAt          DateTime                 @updatedAt @map("updated_at")
+  idea               CricutProjectIdea        @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  user               User                     @relation("CricutProjectBuilder", fields: [userId], references: [id], onDelete: Cascade)
+  listedItem         CricutShopItem?          @relation("CricutProjectBuildListing", fields: [listedItemId], references: [id], onDelete: SetNull)
+
+  @@unique([ideaId, userId])
+  @@index([userId, status])
+  @@index([ideaId])
+  @@map("cricut_project_builds")
 }
 
 model CricutShopOrderLine {

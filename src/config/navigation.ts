@@ -309,6 +309,14 @@ export const focusedClubsNavigation: NavEntry[] = [
         clubSlug: FOCUS_CLUBS[2].slug,
       },
       {
+        label: "Projects",
+        href: "/cricut/projects",
+        icon: Scissors,
+        enabled: true,
+        primary: true,
+        clubSlug: FOCUS_CLUBS[2].slug,
+      },
+      {
         label: "Shop",
         href: "/cricut/shop",
         icon: CircleDollarSign,

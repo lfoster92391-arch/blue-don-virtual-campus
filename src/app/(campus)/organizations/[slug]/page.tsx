@@ -562,11 +562,18 @@ export default async function OrganizationPage({
           />
         ) : null}
         {FOCUSED_CLUBS_MODE && organization.slug === "cricut-club" ? (
-          <Button
-            size="sm"
-            nativeButton={false}
-            render={<Link href="/cricut/shop">Cricut Shop</Link>}
-          />
+          <>
+            <Button
+              size="sm"
+              nativeButton={false}
+              render={<Link href="/cricut/projects">Project ideas</Link>}
+            />
+            <Button
+              size="sm"
+              nativeButton={false}
+              render={<Link href="/cricut/shop">Cricut Shop</Link>}
+            />
+          </>
         ) : null}
         {FOCUSED_CLUBS_MODE &&
         (organization.slug === "it-club" ||

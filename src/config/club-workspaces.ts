@@ -688,6 +688,14 @@ const WORKSPACES: Record<ClubType, Omit<ClubWorkspace, "clubType" | "theme">> = 
     intro: "Maker lab HQ — design, cut, press, and fundraise with Cricut.",
     features: [
       {
+        id: "cr-projects",
+        title: "Easy Cheap Creations",
+        description: "Dollar-store project ideas with supplies, steps, and pricing.",
+        icon: "🛒",
+        href: "/cricut/projects",
+        items: ["What you need", "Step-by-step", "Cost + sell price"],
+      },
+      {
         id: "cr-studio",
         title: "Maker Studio",
         description: "Cricut Maker workflow and Design Space practice.",
