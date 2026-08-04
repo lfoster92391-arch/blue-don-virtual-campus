@@ -455,6 +455,7 @@ model User {
   sportsPlayerProfiles       SportsPlayer[]            @relation("SportsPlayerUser")
   sportsStatsRecorded        SportsPlayerStat[]        @relation("SportsStatRecorder")
   studioCommandsRequested    StudioCommand[]           @relation("StudioCommandRequester")
+  studioGraphicsOperated     StudioGraphic[]           @relation("StudioGraphicOperator")
 
   @@index([role])
   @@index([schoolId])
@@ -2007,6 +2008,92 @@ model StudioCommand {
   @@map("studio_commands")
 }
 
+/**
+ * On-air graphics for the Broadcast Control Studio (Phase 6).
+ *
+ * The overlay is an OBS Browser Source pointed at an unauthenticated page, so
+ * the only thing these tables may ever hold is copy that is already public on
+ * the campus sports surfaces. No stream keys, no OBS passwords, no PII.
+ */
+enum StudioGraphicKind {
+  LOWER_THIRD
+  PLAYER_ID
+  SCORE_BUG
+  LINEUP
+  GAME_ANNOUNCEMENT
+  FINAL_SCORE
+  ANNOUNCEMENT
+  SPONSOR
+}
+
+enum StudioGraphicState {
+  /** Cued on the console only. The overlay never renders a PREVIEW row. */
+  PREVIEW
+  LIVE
+  CLEARED
+}
+
+/**
+ * One overlay surface — the Browser Source URL a studio machine loads.
+ *
+ * `sessionKey` is the long unguessable segment in that URL. The page is
+ * necessarily unauthenticated (OBS cannot log in), so the key is the only gate
+ * and can be rotated from the console. `lastSeenAt` is written by the overlay's
+ * own polling, so "browser source attached" is measured, never assumed.
+ */
+model StudioOverlay {
+  id         String    @id @default(cuid())
+  /** Stable channel key, e.g. `studio-b`. Not a secret. */
+  key        String    @unique
+  label      String
+  sessionKey String    @unique @map("session_key")
+  lastSeenAt DateTime? @map("last_seen_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  graphics StudioGraphic[]
+
+  @@map("studio_overlays")
+}
+
+/**
+ * The active graphic of each kind on one overlay — at most eight rows per
+ * surface, not a graphics CMS. Editable copy lives in `fields`; the score,
+ * lineup, and final-score cards keep a `gameId` instead of a copied score, so
+ * the overlay renders the same `SportsGame` row the campus reads.
+ */
+model StudioGraphic {
+  id        String             @id @default(cuid())
+  overlayId String             @map("overlay_id")
+  kind      StudioGraphicKind
+  state     StudioGraphicState @default(PREVIEW)
+  /** Narrow display copy: title, subtitle, detail, note, and lineup rows. */
+  fields    Json               @default("{}")
+
+  gameId   String? @map("game_id")
+  playerId String? @map("player_id")
+
+  takenAt   DateTime? @map("taken_at")
+  clearedAt DateTime? @map("cleared_at")
+
+  updatedById   String? @map("updated_by_id") @db.Uuid
+  updatedByName String? @map("updated_by_name")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  overlay   StudioOverlay @relation(fields: [overlayId], references: [id], onDelete: Cascade)
+  game      SportsGame?   @relation("StudioGraphicGame", fields: [gameId], references: [id], onDelete: SetNull)
+  player    SportsPlayer? @relation("StudioGraphicPlayer", fields: [playerId], references: [id], onDelete: SetNull)
+  updatedBy User?         @relation("StudioGraphicOperator", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([overlayId, kind])
+  @@index([overlayId, state])
+  @@index([gameId])
+  @@map("studio_graphics")
+}
+
 enum SportSeason {
   FALL
   WINTER
@@ -2137,6 +2224,7 @@ model SportsGame {
   highlights     SportsHighlight[]
   reports        SportsGameReport[]
   playerStats    SportsPlayerStat[]
+  studioGraphics StudioGraphic[]    @relation("StudioGraphicGame")
 
   @@index([sportId, kickoffAt])
   @@index([status, kickoffAt])
@@ -2246,9 +2334,10 @@ model SportsPlayer {
   sortOrder     Int                @default(0) @map("sort_order")
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
-  sport         Sport              @relation(fields: [sportId], references: [id], onDelete: Cascade)
-  user          User?              @relation("SportsPlayerUser", fields: [userId], references: [id], onDelete: SetNull)
-  stats         SportsPlayerStat[]
+  sport          Sport              @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  user           User?              @relation("SportsPlayerUser", fields: [userId], references: [id], onDelete: SetNull)
+  stats          SportsPlayerStat[]
+  studioGraphics StudioGraphic[]    @relation("StudioGraphicPlayer")
 
   @@index([sportId, isActive])
   @@map("sports_players")

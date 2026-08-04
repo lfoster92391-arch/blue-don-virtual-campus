@@ -5,9 +5,10 @@ operator surface that eventually drives OBS, graphics, audio, and the
 scoreboard. It lives outside the campus shell so it reads as broadcast
 hardware, not a SaaS dashboard.
 
-**Status: Phase 5 shipped — the console reads campus data, writes the game
-score, and drives OBS through the Studio Bridge.** The graphics / sponsor take
-engine and the Daktronics feed are **not approved**. Do not build them without
+**Status: Phase 6 shipped — the console reads campus data, writes the game
+score, drives OBS through the Studio Bridge, and takes graphics to an OBS
+Browser Source overlay.** Sponsor rotation, the Daktronics feed, real audio
+metering, and source tally are **not approved**. Do not build them without
 sign-off.
 
 ## Route
@@ -15,7 +16,9 @@ sign-off.
 | Route | Group | Access |
 | --- | --- | --- |
 | `/broadcast/studio` | `src/app/(studio)` | Campus access + `canManageCampusMedia` |
+| `/broadcast/overlay/[sessionKey]` | `src/app/(overlay)` | **Public by necessity** — an OBS Browser Source cannot log in. Guarded by the session key alone; see [Graphics and the overlay](#graphics-and-the-overlay-phase-6) |
 | `/api/broadcast/studio/state` | `src/app/api` | Same crew check, same-origin console polling; `?gameId=` pins the game the operator picked |
+| `/api/broadcast/overlay/[sessionKey]` | `src/app/api` | Public, same key. What the overlay polls; `404` for any key that is not a live overlay |
 | `/api/studio/bridge/commands` | `src/app/api` | **Agent only.** Bearer `STUDIO_BRIDGE_TOKEN`; claims queued commands |
 | `/api/studio/bridge/state` | `src/app/api` | **Agent only.** Bearer `STUDIO_BRIDGE_TOKEN`; posts OBS telemetry and command results |
 
@@ -25,6 +28,12 @@ sign-off.
 - The page gate is `requireCampusAccess()` followed by `canManageCampusMedia()`,
   the same crew check the Control Room uses. Non-crew are redirected to
   `/organizations/broadcasting?tab=media`.
+- The `(overlay)` route group (`src/app/(overlay)/layout.tsx`) has no chrome at
+  all: `overlay.css` forces a transparent `html` / `body`, hides the cursor, and
+  suppresses the PWA install prompt, so OBS composites the graphics straight
+  over the program feed. `/broadcast/overlay/` is on `PUBLIC_ROUTES` in
+  `src/lib/supabase/middleware.ts` — without that, OBS would render the login
+  page on air.
 - `/broadcast` is on `FOCUSED_MODE_ALLOWED_PREFIXES`
   (`src/config/focused-clubs-allowlist.ts`) so focused clubs mode does not
   soft-wipe the console.
@@ -47,9 +56,9 @@ badge, so an operator never has to guess which readouts are real.
 | Left | System health | env + `CampusMediaItem` + `StudioBridge` | **Campus stream record** (On air / Idle), **RTMP ingest** (Key set / No key), **Studio bridge** (Connected / Disconnected / Never paired / Not set up), **OBS WebSocket** (Connected / No OBS), **Encoder** (measured kbps + dropped frames while streaming). Scoreboard and disk stay "Not linked" |
 | Left | OBS stream target | `revealStreamCredentialsAction` | Crew-gated reveal, unchanged from Phase 2 |
 | Center | PROGRAM | `CampusMediaItem.embedUrl` | Real viewer embed when the on-air row has one, black slate otherwise; footer credits the operator who started the stream |
+| Center | Graphics | `StudioGraphic` + `SportsGame` + `SportsPlayer` | **Read and write.** Eight graphic kinds with editable copy, Preview / Take live / Remove, PVW and PGM monitors rendering the real overlay components, the Browser Source URL, and an overlay-attached lamp |
 | Center | Sources / Audio | static config | Tile and fader labels only |
 | Right | Game control | `SportsGame` | **Read and write.** Game picker, away/home labels with opponent logos, scores with per-sport quick keys, and `SCHEDULED / LIVE / FINAL` status. Clock and period are console-only. Reads MANUAL MODE — no Daktronics |
-| Right | Graphics / Sponsors | static config | Preset and slot names only |
 | Right | Run of show | `BroadcastDailyScript` + `BroadcastScriptTemplate` | Today's rundown with the **filled values** rendered per slot, a `Filled / Needed / Open / Prayer / Fixed` chip per item, a `4/7 filled` count, and who saved it when. Links to the Daily Rundown to edit |
 | Footer | GO LIVE / START RECORD / END BROADCAST | `startStudioBroadcastAction` / `endStudioBroadcastAction` / command queue | GO LIVE and END BROADCAST write the campus record **and** queue OBS start / stop when the bridge is up. START RECORD toggles the OBS recording and is disabled without the bridge |
 
@@ -115,6 +124,10 @@ Phase 5 extends the rule to OBS. "Connected" is derived from **how recently the
 agent reported**, never from a stored flag, so an agent that dies mid-show reads
 DISCONNECTED and drags the OBS and encoder rows down with it. The audio faders
 are still config, not measurement, and the panel now says so.
+
+Phase 6 extends it again to the overlay: "attached" means a Browser Source
+actually asked for the state inside the last 25 seconds, and the graphics panel
+says a sponsor is one billboard rather than implying a rotation exists.
 
 ## Studio Bridge (Phase 5)
 
@@ -219,6 +232,106 @@ No file paths, no stream key, no OBS password. Bitrate is **derived** from the
 `outputBytes` delta between polls rather than invented, and is null until two
 samples exist.
 
+## Graphics and the overlay (Phase 6)
+
+Graphics do not go through the bridge. OBS renders them itself, from a **Browser
+Source** pointed at a page on the campus site, and the console changes what that
+page shows by writing a row.
+
+```
+Studio console  ──writes StudioGraphic──►  Campus (Vercel + Postgres)
+   (crew-gated)                                        │
+                                                       │  polls every 1 s
+                                                       ▼
+                                    /broadcast/overlay/<sessionKey>  ──► OBS Browser Source
+                                          (public, key-guarded)
+```
+
+Setup for the Studio B PC: **[STUDIO_OVERLAY_SETUP.md](./STUDIO_OVERLAY_SETUP.md)**.
+
+Two reasons it is a pull rather than a bridge command: a Browser Source is
+already a browser, so it can fetch on its own; and rendering has to survive the
+agent being down. If the bridge dies mid-show the operator loses scene control
+but keeps their lower thirds.
+
+### The URL is the credential
+
+An OBS Browser Source cannot log in — there is no place to type a password and
+no session to carry. So the overlay is unauthenticated, and the protection is
+that the URL is unguessable: `StudioOverlay.sessionKey` is
+`STUDIO_OVERLAY_KEY_BYTES` (24) of `randomBytes`, base64url, 32 characters.
+
+- The key is rendered **once**, into the crew-gated console page. It is
+  deliberately **not** in `StudioConsoleSnapshot`, which is re-polled every five
+  seconds and easy to leave open on a shared screen.
+- **Rotate** in the Graphics panel issues a new key and orphans the old URL
+  instantly. That is the recovery if a URL is ever shared or a laptop walks off;
+  the cost is re-pasting the URL into OBS.
+- The page and the API both send `noindex, nofollow` and `Cache-Control:
+  no-store`, and an unknown key gets a flat `404` rather than a hint.
+- Nothing on the overlay is more sensitive than what `/sports` already publishes:
+  roster names, numbers, positions, and scores. No stream key, no OBS password,
+  no bridge token, and no student data the Sports Desk has not already posted.
+
+### What is on air is one row per region
+
+The frame is divided into three regions, and **one graphic per region can be
+live**. Taking a player ID replaces the lower third rather than stacking on it,
+and a full-screen card can never land underneath a name strap. `saveStudioGraphic`
+clears the outgoing sibling and writes the new graphic in a single transaction.
+
+| Kind | Region | Fills from |
+| --- | --- | --- |
+| Lower third | Lower | Typed: name, title / role, secondary line |
+| Player ID | Lower | `SportsPlayer` picker for the selected game, then editable |
+| Announcement | Lower | Typed: headline, second line, tag |
+| Sponsor | Lower | Typed. One billboard — **no rotation, no impression counts** |
+| Score bug | Bug | `SportsGame` + the console clock / period |
+| Starting lineup | Full | `SportsPlayer` roster, hand-picked into up to 12 rows |
+| Game announcement | Full | `SportsGame` matchup, site, kickoff |
+| Final score | Full | `SportsGame` final |
+
+`STUDIO_GRAPHIC_DEFS` is keyed by the Prisma `StudioGraphicKind` enum, so adding
+a kind to the schema without teaching the console what it looks like is a type
+error rather than a blank graphic on air.
+
+### Preview, Take live, Remove
+
+| Key | Does | Visible on air |
+| --- | --- | --- |
+| **Preview** | Saves the copy as `PREVIEW` and renders it in the PVW monitor | No |
+| **Take live** | `PREVIEW → LIVE`, clearing whatever shared the region | Yes, within ~1 s |
+| **Update on air** | Replaces **Preview** while a graphic is live: rewrites the copy in place without blanking the screen | Yes, in place |
+| **Remove** | `LIVE → CLEARED`. The copy is kept, so it can be re-taken as typed | Pulled within ~1 s |
+| **Clear all** | Every live graphic off in one write. Cued copy is untouched | All pulled |
+
+Both console monitors render the **same components** the overlay does, at the
+same aspect, so PVW is what actually goes out — not an approximation of it.
+
+### The score is never copied
+
+Score, lineup, final, and game-announcement cards store a `gameId`, not a score.
+`getStudioOverlayPayload` resolves `SportsGame` on every poll, so the bug on
+screen and the score on `/sports` are the same number by construction: correcting
+a score in Game control fixes the graphic on air one second later, and there is
+no second scoreboard to disagree with.
+
+The clock is the exception, because no campus table stores one — it stays
+session-local (see above). The console pushes an **anchor** instead: seconds
+remaining, running or stopped, and the instant it was read. The overlay counts
+down from that anchor itself, so a running clock costs one write when it starts
+and one when it stops, not one per second.
+
+### Overlay attached, or not
+
+The honesty rule extends to the Browser Source. Every overlay read stamps
+`lastSeenAt` (throttled to `STUDIO_OVERLAY_HEARTBEAT_INTERVAL_MS`, 8 s), and the
+console calls the overlay attached only if that stamp is inside
+`STUDIO_OVERLAY_ONLINE_WINDOW_MS` (25 s). Close the Browser Source and the panel
+says so within half a minute. It is derived from a real request, never from a
+stored flag — so an operator can tell "nothing is cued" apart from "OBS is not
+looking at us."
+
 ## Data flow and refresh
 
 - `getStudioConsoleSnapshot()` (`src/services/broadcast-studio-service.ts`)
@@ -304,30 +417,59 @@ Phase 5 adds the first studio-owned tables, in
 Enums: `StudioCommandKind` (the seven whitelisted actions) and
 `StudioCommandStatus` (`QUEUED / CLAIMED / DONE / FAILED / EXPIRED`).
 
+Phase 6 adds two more, in `prisma/migrations/20260805120000_studio_graphics`:
+
+| Model | Table | Holds |
+| --- | --- | --- |
+| `StudioOverlay` | `studio_overlays` | One row per Browser Source surface, keyed `studio-b`. The session key and `lastSeenAt`. Rotating the URL is an update to this row |
+| `StudioGraphic` | `studio_graphics` | One row per overlay **per kind** — `@@unique([overlayId, kind])`. State, the typed copy as JSON, optional `gameId` / `playerId`, and who last touched it |
+
+Enums: `StudioGraphicKind` (the eight kinds) and `StudioGraphicState`
+(`PREVIEW / LIVE / CLEARED`).
+
+One row per kind, upserted, rather than an append-only take log: an operator
+retypes and re-takes the same lower third all night, and a log would grow by the
+minute while answering a question nobody asked. Removing a graphic sets
+`CLEARED` and keeps the copy, so it can be re-taken exactly as typed.
+
+The JSON `fields` column is narrow and sanitized on write — four text lines
+capped at `STUDIO_GRAPHIC_TEXT_MAX` (120), up to `STUDIO_LINEUP_MAX_ENTRIES`
+(12) lineup rows, and the clock anchor. Anything else a caller sends is dropped
+rather than stored, because the overlay that renders it is public.
+
 Still no schema for the game clock or period — that stays session-local by
-design (see above), and Phase 5 did not change it.
+design (see above). Phase 6 pushes an anchor into the graphic when a score bug
+is on air, but nothing persists a ticking clock.
 
 ## Files
 
 ```
 src/app/(studio)/layout.tsx                       dark console chrome
-src/app/(studio)/broadcast/studio/page.tsx        crew gate + first snapshot
+src/app/(studio)/broadcast/studio/page.tsx        crew gate + first snapshot + overlay URL
+src/app/(overlay)/layout.tsx                      no-chrome wrapper for the Browser Source
+src/app/(overlay)/overlay.css                     transparent page, no cursor, no install prompt
+src/app/(overlay)/broadcast/overlay/[sessionKey]/page.tsx   the OBS Browser Source page
 src/app/api/broadcast/studio/state/route.ts       crew-gated console polling read
+src/app/api/broadcast/overlay/[sessionKey]/route.ts         public overlay poll (no-store, 404 on bad key)
 src/app/api/studio/bridge/commands/route.ts       agent: claim queued commands (+ heartbeat)
 src/app/api/studio/bridge/state/route.ts          agent: post telemetry + command results
-src/services/broadcast-studio-service.ts          the StudioConsoleSnapshot
+src/services/broadcast-studio-service.ts          the StudioConsoleSnapshot + the overlay payload
 src/services/studio-bridge-service.ts             token auth, queue, telemetry, transport gate
-src/features/broadcast-studio/actions.ts          score write, command queue, go live / end
+src/services/studio-graphics-service.ts           cue / take / clear, session key, overlay heartbeat
+src/features/broadcast-studio/actions.ts          score write, command queue, graphics, go live / end
 src/components/studio/studio-console.tsx          client shell + polling + grid
 src/components/studio/studio-frame.tsx            panel / tile / air-lamp primitives
 src/components/studio/studio-header.tsx           air state, clocks, event, sync lamp
 src/components/studio/studio-panels.tsx           the console panels (scenes, health, …)
 src/components/studio/studio-game-control.tsx     game picker, score keys, status
+src/components/studio/studio-graphics-panel.tsx   kind picker, copy fields, PVW/PGM, overlay URL
+src/components/broadcast-overlay/overlay-client.tsx         1 s poll loop for the Browser Source
+src/components/broadcast-overlay/overlay-stage.tsx          the graphics themselves (shared with PVW/PGM)
 src/components/studio/use-studio-command.ts       queues one OBS command, tracks in-flight
 src/components/studio/use-studio-game-clock.ts    session-local clock + period
 src/components/studio/studio-time.ts              shared second ticker + formatters
 src/components/studio/studio-control-bar.tsx      transport (go live / record / end)
-src/config/broadcast-studio.ts                    scene/source/graphics scaffolding, score keys, poll + bridge windows
+src/config/broadcast-studio.ts                    scene/source scaffolding, graphic kinds + regions, score keys, poll windows
 src/components/media/stream-target-reveal.tsx     gated credential reveal
 ```
 
@@ -349,6 +491,8 @@ Supporting reads and writes added outside the studio tree, all in
   horizon.
 - `listCoverableGames()` — the game picker's list, live games first.
 - `setGameScore()` — the narrow score / status / result write.
+- `listPlayers({ sportId })` — the roster behind the player ID and lineup cards,
+  the same published list the game page uses.
 
 ## How to verify Phase 3
 
@@ -428,13 +572,47 @@ Install the agent first — [STUDIO_BRIDGE_SETUP.md](./STUDIO_BRIDGE_SETUP.md).
     `STUDIO_BRIDGE_TOKEN`, the OBS password, or a stream key, and
     `/api/studio/bridge/commands` without a Bearer token answers `401`.
 
-## Not in Phase 5 (awaiting approval)
+## How to verify Phase 6
 
-- Graphics and sponsor take / clear engine, sponsor rotation storage
+Add the Browser Source first — [STUDIO_OVERLAY_SETUP.md](./STUDIO_OVERLAY_SETUP.md).
+You can do the whole check in a browser tab on the overlay URL if OBS is not to
+hand; the URL is a normal web page, just a transparent one.
+
+1. Open `/broadcast/studio` as Broadcasting crew. The **Graphics** panel lists
+   the eight kinds and shows the overlay URL with **Copy overlay URL**. With no
+   Browser Source open it reads that nothing is attached.
+2. Open the overlay URL in a second tab. Within ~25 s the panel says the overlay
+   is attached.
+3. Pick **Lower third**, type a name, a role, and a secondary line, and press
+   **Preview**. It appears in the **PVW** monitor and **nothing changes on the
+   overlay** — that is the whole point of the distinction.
+4. Press **Take live**. It animates in on the overlay within about a second and
+   moves to the **PGM** monitor.
+5. Fix a typo in the name and press **Update on air**. The copy changes in place;
+   the graphic never blanks.
+6. Pick a game in **Game control**, then take the **Score bug**. Tap a score key.
+   The number on the overlay follows within a second, because the bug reads the
+   game row rather than a copy. Start the console clock — the overlay counts
+   down on its own, and stopping it re-anchors.
+7. With the score bug still up, take a **Lower third**. Both stay — different
+   regions. Now take a **Player ID**: it replaces the lower third, and the score
+   bug is untouched.
+8. Press **Remove**, then re-take the same kind. Your copy is still there.
+9. Press **Clear all**. Everything leaves the overlay; the copy survives.
+10. Confirm the guards: `/broadcast/overlay/` with a made-up key answers `404`,
+    the overlay page has no login redirect and no campus chrome, and its network
+    tab carries no stream key, bridge token, or session cookie. Press **Rotate**
+    and reload the old URL — it is now a `404`, and OBS needs the new one.
+
+## Not in Phase 6 (awaiting approval)
+
+- Sponsor rotation, scheduling, or impression counts (one billboard exists)
+- Interactive run of show — the rundown is still read-only in the console
 - Source tally, per-source visibility toggles, real audio meters and mixing
 - Daktronics scoreboard feed (the console is manual entry only)
 - Durable clock / period, or any scoreboard schema of its own
+- Graphic themes, per-club skins, or an image / logo uploader for graphics
 - Recording disk space telemetry
 - Full RBAC operator role UIs
-- Realtime multi-operator sync (the console still polls every 5 s)
+- Realtime multi-operator sync (the console polls every 5 s, the overlay 1 s)
 - Any simulated or fake video backend

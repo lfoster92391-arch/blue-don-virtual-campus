@@ -1,0 +1,24 @@
+/*
+ * OBS Browser Source chrome.
+ *
+ * A Browser Source composites whatever the page paints, so the page itself has
+ * to be transparent — a white body would drop a white card over the program
+ * feed. `!important` is deliberate: the campus base layer sets a background on
+ * `body`, and losing this race on air is not a recoverable mistake.
+ *
+ * Loaded only by the (overlay) route group, so the campus keeps its own paper.
+ */
+html,
+body {
+  background: transparent !important;
+}
+
+body {
+  overflow: hidden;
+  cursor: none;
+}
+
+/* Nothing from the campus PWA shell may paint over a live program feed. */
+[role="region"][aria-label="Install app"] {
+  display: none !important;
+}

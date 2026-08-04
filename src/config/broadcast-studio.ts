@@ -2,19 +2,22 @@
  * Broadcast Control Studio — console scaffolding.
  *
  * What is left in this file is hardware furniture that has no database source
- * yet: Studio B scene names, source tiles, fader labels, graphics and sponsor
- * slots. Panels backed by real campus rows read from
- * `broadcast-studio-service.ts` instead. Nothing here talks to hardware; scene,
- * source, and audio state arrive with the OBS bridge.
+ * yet — Studio B scene names, source tiles, fader labels — plus the shapes the
+ * graphics engine works in: which graphic kinds exist, which screen region each
+ * one owns, and which fields an operator types. Panels backed by real campus
+ * rows read from `broadcast-studio-service.ts` instead. Nothing here talks to
+ * hardware; scene, source, and audio state arrive with the OBS bridge.
  * See docs/BROADCAST_STUDIO.md.
  */
+
+import type { StudioGraphicKind } from "@/generated/prisma/client";
 
 export const STUDIO_ROUTE = "/broadcast/studio";
 
 export const STUDIO_PHASE = {
-  current: 5,
-  label: "Phase 5 · OBS control",
-  note: "Scene switching, recording, and stream start/stop run through the Studio Bridge on the Studio B PC. Graphics, sponsors, audio, and any scoreboard hardware feed arrive later.",
+  current: 6,
+  label: "Phase 6 · Graphics",
+  note: "Scene switching and transport run through the Studio Bridge; graphics are taken to an OBS Browser Source overlay. Audio, sources, and any scoreboard hardware feed arrive later.",
 } as const;
 
 /** How often the console re-reads on-air state from the server. */
@@ -161,32 +164,206 @@ export const STUDIO_AUDIO_CHANNELS: StudioAudioChannelDef[] = [
   { id: "vt", label: "VT AUDIO", detail: "Package playback", level: 62 },
 ];
 
+/* --------------------------------------------------------------- graphics */
+
+/** Where the OBS Browser Source lives. The session key follows this prefix. */
+export const STUDIO_OVERLAY_ROUTE_PREFIX = "/broadcast/overlay";
+
+/** Stable channel key for the one overlay surface Studio B runs today. */
+export const STUDIO_OVERLAY_DEFAULT_KEY = "studio-b";
+
+/**
+ * How often the overlay re-reads what is on air. Faster than the console's own
+ * 5 s poll because this one is the thing the audience sees: a take should land
+ * inside a second, not inside a breath.
+ */
+export const STUDIO_OVERLAY_POLL_INTERVAL_MS = 1_000;
+
+/**
+ * The overlay reads every second but only stamps `lastSeenAt` this often — the
+ * console needs to know a Browser Source is attached, not to log every poll.
+ */
+export const STUDIO_OVERLAY_HEARTBEAT_INTERVAL_MS = 8_000;
+
+/**
+ * How stale that stamp may get before the console says no Browser Source is
+ * attached. Comfortably wider than the heartbeat so one slow request does not
+ * blink the lamp.
+ */
+export const STUDIO_OVERLAY_ONLINE_WINDOW_MS = 25_000;
+
+/** Bytes of randomness behind the session key in the overlay URL. */
+export const STUDIO_OVERLAY_KEY_BYTES = 24;
+
+/** Caps on operator-typed graphic copy, enforced again server-side. */
+export const STUDIO_GRAPHIC_TEXT_MAX = 120;
+export const STUDIO_LINEUP_MAX_ENTRIES = 12;
+
+/**
+ * The three areas of the frame a graphic can own. One live graphic per region,
+ * so taking a player ID replaces the lower third instead of stacking on top of
+ * it, and a full-screen card never lands under a name strap.
+ */
+export type StudioGraphicRegion = "LOWER" | "BUG" | "FULL";
+
+export const STUDIO_GRAPHIC_REGION_LABELS: Record<StudioGraphicRegion, string> =
+  {
+    LOWER: "Lower third",
+    BUG: "Corner bug",
+    FULL: "Full screen",
+  };
+
+/** A text input the panel offers for a kind. */
+export type StudioGraphicFieldKey = "title" | "subtitle" | "detail" | "note";
+
+export type StudioGraphicFieldDef = {
+  key: StudioGraphicFieldKey;
+  label: string;
+  placeholder: string;
+};
+
 export type StudioGraphicDef = {
-  id: string;
+  kind: StudioGraphicKind;
   label: string;
   detail: string;
+  region: StudioGraphicRegion;
+  fields: StudioGraphicFieldDef[];
+  /**
+   * What fills the parts the operator does not type. `GAME` and `PLAYER` cards
+   * read the campus row live, so the panel can say where the numbers come from
+   * instead of implying someone typed them.
+   */
+  source: "MANUAL" | "GAME" | "PLAYER" | "ROSTER";
 };
 
-export const STUDIO_GRAPHICS: StudioGraphicDef[] = [
-  { id: "lower-third", label: "Lower third", detail: "Name + title" },
-  { id: "headline", label: "Headline bar", detail: "Top story strap" },
-  { id: "ticker", label: "Ticker", detail: "Scrolling announcements" },
-  { id: "bug", label: "Channel bug", detail: "MHS mark, corner" },
-  { id: "fullscreen", label: "Full screen", detail: "Stat / quote card" },
-];
-
-export type StudioSponsorDef = {
-  id: string;
-  label: string;
-  detail: string;
+/**
+ * Every kind gets a definition — keying by the Prisma enum means adding a kind
+ * to the schema without teaching the console what it looks like is a type
+ * error, not a blank graphic on air.
+ */
+export const STUDIO_GRAPHIC_DEFS: Record<StudioGraphicKind, StudioGraphicDef> = {
+  LOWER_THIRD: {
+    kind: "LOWER_THIRD",
+    label: "Lower third",
+    detail: "Name, role, secondary line",
+    region: "LOWER",
+    source: "MANUAL",
+    fields: [
+      { key: "title", label: "Name", placeholder: "Jordan Ellis" },
+      { key: "subtitle", label: "Title / role", placeholder: "Play-by-play" },
+      {
+        key: "detail",
+        label: "Secondary line",
+        placeholder: "Quarterback • #12",
+      },
+    ],
+  },
+  PLAYER_ID: {
+    kind: "PLAYER_ID",
+    label: "Player ID",
+    detail: "Roster name, number, position",
+    region: "LOWER",
+    source: "PLAYER",
+    fields: [
+      { key: "title", label: "Name", placeholder: "Pick a player" },
+      { key: "subtitle", label: "Number / position", placeholder: "#12 • QB" },
+      { key: "detail", label: "Stat line", placeholder: "14 carries, 96 yds" },
+    ],
+  },
+  SCORE_BUG: {
+    kind: "SCORE_BUG",
+    label: "Score bug",
+    detail: "Live score from the game record",
+    region: "BUG",
+    source: "GAME",
+    fields: [
+      { key: "note", label: "Tag line", placeholder: "MHS Broadcasting" },
+    ],
+  },
+  LINEUP: {
+    kind: "LINEUP",
+    label: "Starting lineup",
+    detail: "Roster card for the selected sport",
+    region: "FULL",
+    source: "ROSTER",
+    fields: [
+      { key: "title", label: "Heading", placeholder: "Starting lineup" },
+      { key: "subtitle", label: "Sub-heading", placeholder: "Blue Dons" },
+    ],
+  },
+  GAME_ANNOUNCEMENT: {
+    kind: "GAME_ANNOUNCEMENT",
+    label: "Game announcement",
+    detail: "Matchup, site, and kickoff",
+    region: "FULL",
+    source: "GAME",
+    fields: [
+      { key: "title", label: "Heading", placeholder: "Tonight on MHS" },
+      { key: "note", label: "Note", placeholder: "Coverage starts at 6:45" },
+    ],
+  },
+  FINAL_SCORE: {
+    kind: "FINAL_SCORE",
+    label: "Final score",
+    detail: "Final from the game record",
+    region: "FULL",
+    source: "GAME",
+    fields: [
+      { key: "title", label: "Heading", placeholder: "Final" },
+      { key: "note", label: "Note", placeholder: "Blue Dons take the district" },
+    ],
+  },
+  ANNOUNCEMENT: {
+    kind: "ANNOUNCEMENT",
+    label: "Announcement",
+    detail: "Breaking or school strap",
+    region: "LOWER",
+    source: "MANUAL",
+    fields: [
+      { key: "title", label: "Headline", placeholder: "Early release Friday" },
+      {
+        key: "subtitle",
+        label: "Second line",
+        placeholder: "Buses roll at 1:15",
+      },
+      { key: "note", label: "Tag", placeholder: "School announcement" },
+    ],
+  },
+  SPONSOR: {
+    kind: "SPONSOR",
+    label: "Sponsor",
+    detail: "Single billboard — no rotation yet",
+    region: "LOWER",
+    source: "MANUAL",
+    fields: [
+      { key: "title", label: "Sponsor", placeholder: "Hometown Hardware" },
+      { key: "subtitle", label: "Line", placeholder: "Proud to back the Dons" },
+      { key: "note", label: "Tag", placeholder: "Tonight's sponsor" },
+    ],
+  },
 };
 
-export const STUDIO_SPONSORS: StudioSponsorDef[] = [
-  { id: "slot-1", label: "Sponsor slot 1", detail: "Pre-show bumper" },
-  { id: "slot-2", label: "Sponsor slot 2", detail: "Mid-show billboard" },
-  { id: "slot-3", label: "Sponsor slot 3", detail: "Sports segment" },
-  { id: "slot-4", label: "Sponsor slot 4", detail: "Close / credits" },
+/** Picker order in the console — the run of a normal broadcast, roughly. */
+export const STUDIO_GRAPHIC_ORDER: StudioGraphicKind[] = [
+  "LOWER_THIRD",
+  "PLAYER_ID",
+  "SCORE_BUG",
+  "LINEUP",
+  "GAME_ANNOUNCEMENT",
+  "FINAL_SCORE",
+  "ANNOUNCEMENT",
+  "SPONSOR",
 ];
+
+export function studioGraphicDef(kind: StudioGraphicKind): StudioGraphicDef {
+  return STUDIO_GRAPHIC_DEFS[kind];
+}
+
+export function studioGraphicRegion(
+  kind: StudioGraphicKind,
+): StudioGraphicRegion {
+  return STUDIO_GRAPHIC_DEFS[kind].region;
+}
 
 export type StudioHealthCheckDef = {
   id: string;

@@ -4,16 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { StudioControlBar } from "@/components/studio/studio-control-bar";
 import { GameControlPanel } from "@/components/studio/studio-game-control";
+import { GraphicsPanel } from "@/components/studio/studio-graphics-panel";
 import { StudioHeader } from "@/components/studio/studio-header";
 import {
   AudioPanel,
   CrewPanel,
-  GraphicsPanel,
   ProgramPanel,
   RunOfShowPanel,
   ScenesPanel,
   SourcesPanel,
-  SponsorsPanel,
   SystemHealthPanel,
 } from "@/components/studio/studio-panels";
 import { STUDIO_POLL_INTERVAL_MS } from "@/config/broadcast-studio";
@@ -31,6 +30,11 @@ type StudioConsoleProps = {
   operatorRole: string;
   streamKeyHint: string;
   hasSharedStreamKey: boolean;
+  /**
+   * OBS Browser Source path for the graphics overlay. Rendered once with the
+   * crew-gated page rather than carried in the snapshot the console re-polls.
+   */
+  overlayPath: string | null;
 };
 
 /** A just-saved score, held until a poll from after the write catches up. */
@@ -50,6 +54,7 @@ export function StudioConsole({
   operatorRole,
   streamKeyHint,
   hasSharedStreamKey,
+  overlayPath,
 }: StudioConsoleProps) {
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [scoreWrite, setScoreWrite] = useState<ScoreWrite | null>(null);
@@ -106,9 +111,19 @@ export function StudioConsole({
 
           <div className="flex min-h-0 flex-col gap-2">
             <ProgramPanel program={snapshot.program} />
-            <div className="grid min-h-0 gap-2 sm:grid-cols-2">
-              <SourcesPanel />
-              <AudioPanel />
+            <div className="grid min-h-0 flex-1 gap-2 xl:grid-cols-[minmax(0,1fr)_13rem]">
+              <GraphicsPanel
+                graphics={snapshot.graphics}
+                fetchedAt={snapshot.fetchedAt}
+                scoreboard={scoreboard}
+                roster={snapshot.roster}
+                overlayPath={overlayPath}
+                onChanged={onCommandSettled}
+              />
+              <div className="flex min-h-0 flex-col gap-2">
+                <SourcesPanel />
+                <AudioPanel />
+              </div>
             </div>
           </div>
 
@@ -134,8 +149,6 @@ export function StudioConsole({
                 void refresh();
               }}
             />
-            <GraphicsPanel />
-            <SponsorsPanel />
             <RunOfShowPanel runOfShow={snapshot.runOfShow} />
           </div>
         </div>

@@ -15,12 +15,17 @@ import {
   type BroadcastSlotType,
 } from "@/config/broadcast-script";
 import { BROADCAST_PRODUCTION_ROLE_LABELS } from "@/config/broadcast-production";
-import { STUDIO_PREVIEW_WINDOW_MINUTES } from "@/config/broadcast-studio";
+import {
+  STUDIO_PREVIEW_WINDOW_MINUTES,
+  studioGraphicRegion,
+  type StudioGraphicRegion,
+} from "@/config/broadcast-studio";
 import {
   GAME_SITE_LABELS,
   GAME_STATUS_LABELS,
   type GameStatusKey,
 } from "@/config/sports-highlights";
+import type { StudioGraphicKind } from "@/generated/prisma/client";
 import {
   getBroadcastSchedule,
   listCrewCredits,
@@ -34,6 +39,7 @@ import {
   getCurrentOrNextGame,
   getGame,
   listCoverableGames,
+  listPlayers,
   type SportsGameView,
 } from "@/services/sports-highlights-service";
 import {
@@ -41,6 +47,12 @@ import {
   isStudioBridgeConfigured,
   type StudioBridgeSnapshot,
 } from "@/services/studio-bridge-service";
+import {
+  readStudioOverlay,
+  getStudioGraphicsState,
+  type StudioGraphicFields,
+  type StudioGraphicsState,
+} from "@/services/studio-graphics-service";
 
 /** LIVE = on-air record exists. PREVIEW = inside the pre-roll window. */
 export type StudioAirState = "LIVE" | "PREVIEW" | "OFFLINE";
@@ -121,6 +133,19 @@ export type StudioScoreboardState = {
   kickoffAt: string;
 };
 
+/**
+ * A roster entry for the graphics panel, from `SportsPlayer` for the sport of
+ * the game on the console. Nothing here is new data — it is the same roster the
+ * Sports Desk publishes.
+ */
+export type StudioRosterPlayer = {
+  id: string;
+  fullName: string;
+  jerseyNumber: string | null;
+  position: string | null;
+  gradeYear: string | null;
+};
+
 /** One choice in the console's game picker. */
 export type StudioGameOption = {
   gameId: string;
@@ -142,12 +167,20 @@ export type StudioConsoleSnapshot = {
   scoreboard: StudioScoreboardState | null;
   /** Games the operator can point the console at (live first, then by kickoff). */
   gameOptions: StudioGameOption[];
+  /** Roster for the game on the console, for player ID and lineup graphics. */
+  roster: StudioRosterPlayer[];
   /**
    * OBS control path. Every field is posted telemetry from the agent on the
    * Studio B PC — nothing here is inferred, so the console can disable the OBS
    * controls and say DISCONNECTED the moment the agent stops reporting.
    */
   bridge: StudioBridgeSnapshot;
+  /**
+   * What is cued and what is on the overlay. The Browser Source URL is
+   * deliberately **not** here — it is rendered once with the crew-gated page
+   * instead of riding along in a payload the console re-reads every 5 s.
+   */
+  graphics: StudioGraphicsState;
 };
 
 const CAMPUS_TEAM_LABEL = "MHS";
@@ -320,19 +353,33 @@ export async function getStudioConsoleSnapshot(options?: {
 }): Promise<StudioConsoleSnapshot> {
   const now = Date.now();
 
-  const [activeLive, schedule, crew, autoGame, coverableGames, orgId, bridge] =
-    await Promise.all([
-      getActiveLiveStream().catch(() => null),
-      getBroadcastSchedule().catch(() => null),
-      listCrewCredits({ visibleOnly: true }).catch(() => []),
-      getCurrentOrNextGame({ withinHours: 36 }).catch(() => null),
-      listCoverableGames({ aheadHours: 36, behindHours: 6 }).catch(() => []),
-      resolveBroadcastOrgId().catch(() => null),
-      getStudioBridgeSnapshot().catch(() => ({
-        configured: isStudioBridgeConfigured(),
-        device: null,
-      })),
-    ]);
+  const [
+    activeLive,
+    schedule,
+    crew,
+    autoGame,
+    coverableGames,
+    orgId,
+    bridge,
+    graphics,
+  ] = await Promise.all([
+    getActiveLiveStream().catch(() => null),
+    getBroadcastSchedule().catch(() => null),
+    listCrewCredits({ visibleOnly: true }).catch(() => []),
+    getCurrentOrNextGame({ withinHours: 36 }).catch(() => null),
+    listCoverableGames({ aheadHours: 36, behindHours: 6 }).catch(() => []),
+    resolveBroadcastOrgId().catch(() => null),
+    getStudioBridgeSnapshot().catch(() => ({
+      configured: isStudioBridgeConfigured(),
+      device: null,
+    })),
+    getStudioGraphicsState().catch(() => ({
+      configured: false,
+      overlayOnline: false,
+      overlayLastSeenAt: null,
+      items: [],
+    })),
+  ]);
 
   // A pinned game usually sits in the coverable window already; read it
   // directly when the operator is parked on an older or later game.
@@ -348,9 +395,12 @@ export async function getStudioConsoleSnapshot(options?: {
     optionRows.unshift(game);
   }
 
-  const script = orgId
-    ? await getTodaysBroadcastScript(orgId).catch(() => null)
-    : null;
+  const [script, roster] = await Promise.all([
+    orgId ? getTodaysBroadcastScript(orgId).catch(() => null) : null,
+    game
+      ? listPlayers({ sportId: game.sportId }).catch(() => [])
+      : Promise.resolve([]),
+  ]);
 
   const nextAirAt = schedule?.nextAirAt ?? null;
 
@@ -389,6 +439,88 @@ export async function getStudioConsoleSnapshot(options?: {
     }),
     scoreboard: buildScoreboard(game),
     gameOptions: optionRows.map(buildGameOption),
+    roster: roster.map((player) => ({
+      id: player.id,
+      fullName: player.fullName,
+      jerseyNumber: player.jerseyNumber,
+      position: player.position,
+      gradeYear: player.gradeYear,
+    })),
     bridge,
+    graphics,
+  };
+}
+
+/* --------------------------------------------------------------- overlay */
+
+/**
+ * One graphic as the overlay renders it: the operator's copy, plus the game
+ * row resolved at read time for the cards that are bound to one.
+ */
+export type StudioOverlayGraphic = {
+  /** Stable per region slot — one graphic of each kind can be live at a time. */
+  id: string;
+  kind: StudioGraphicKind;
+  region: StudioGraphicRegion;
+  takenAt: string | null;
+  fields: StudioGraphicFields;
+  /**
+   * Never a copied score. Resolved from `SportsGame` on every read, so the bug
+   * on screen and the score on `/sports` are the same number by construction.
+   */
+  scoreboard: StudioScoreboardState | null;
+};
+
+export type StudioOverlayPayload = {
+  fetchedAt: string;
+  live: StudioOverlayGraphic[];
+};
+
+/**
+ * Everything the OBS Browser Source renders, for one session key.
+ *
+ * Returns null for an unknown key so the route can answer a flat 404. Only
+ * `LIVE` graphics are ever included — what an operator has cued stays on the
+ * console.
+ */
+export async function getStudioOverlayPayload(
+  sessionKey: string,
+): Promise<StudioOverlayPayload | null> {
+  const overlay = await readStudioOverlay(sessionKey);
+
+  if (!overlay) {
+    return null;
+  }
+
+  const gameIds = [
+    ...new Set(
+      overlay.live
+        .map((graphic) => graphic.gameId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  const games = new Map<string, SportsGameView>();
+  await Promise.all(
+    gameIds.map(async (gameId) => {
+      const game = await getGame(gameId).catch(() => null);
+      if (game) {
+        games.set(gameId, game);
+      }
+    }),
+  );
+
+  return {
+    fetchedAt: new Date().toISOString(),
+    live: overlay.live.map((graphic) => ({
+      id: graphic.kind,
+      kind: graphic.kind,
+      region: studioGraphicRegion(graphic.kind),
+      takenAt: graphic.takenAt,
+      fields: graphic.fields,
+      scoreboard: graphic.gameId
+        ? buildScoreboard(games.get(graphic.gameId) ?? null)
+        : null,
+    })),
   };
 }

@@ -17,11 +17,9 @@ import {
 import { useStudioCommand } from "@/components/studio/use-studio-command";
 import {
   STUDIO_AUDIO_CHANNELS,
-  STUDIO_GRAPHICS,
   STUDIO_HEALTH_CHECKS,
   STUDIO_SCENES,
   STUDIO_SOURCES,
-  STUDIO_SPONSORS,
 } from "@/config/broadcast-studio";
 import { toMediaEmbedUrl } from "@/lib/media-embed";
 import { cn } from "@/lib/utils";
@@ -382,52 +380,6 @@ export function AudioPanel() {
       <StudioEmptyNote>
         Nominal fader positions from config — not audio the bridge measured.
         Real meters and mutes are not wired.
-      </StudioEmptyNote>
-    </StudioPanel>
-  );
-}
-
-export function GraphicsPanel() {
-  return (
-    <StudioPanel title="Graphics" badge={<PhaseBadge />}>
-      <div className="space-y-1.5">
-        {STUDIO_GRAPHICS.map((graphic) => (
-          <StudioTile
-            key={graphic.id}
-            label={graphic.label}
-            detail={graphic.detail}
-            state="muted"
-          />
-        ))}
-      </div>
-      <StudioEmptyNote>
-        Take / clear controls arrive with the graphics engine.
-      </StudioEmptyNote>
-    </StudioPanel>
-  );
-}
-
-export function SponsorsPanel() {
-  return (
-    <StudioPanel title="Sponsors" badge={<PhaseBadge />}>
-      <div className="grid grid-cols-2 gap-1.5">
-        {STUDIO_SPONSORS.map((sponsor) => (
-          <div
-            key={sponsor.id}
-            className="rounded-sm border border-dashed border-white/15 bg-white/[0.02] px-2 py-3 text-center"
-          >
-            <p className="text-[0.65rem] font-medium text-slate-400">
-              {sponsor.label}
-            </p>
-            <p className="mt-0.5 text-[0.6rem] text-slate-600">
-              {sponsor.detail}
-            </p>
-          </div>
-        ))}
-      </div>
-      <StudioEmptyNote>
-        Slot names only. Sponsor rotation and impression logging come with the
-        graphics engine.
       </StudioEmptyNote>
     </StudioPanel>
   );

@@ -9,7 +9,10 @@ import {
   startLiveBroadcastAction,
   type MediaActionState,
 } from "@/features/media/actions";
-import type { StudioCommandKind } from "@/generated/prisma/client";
+import type {
+  StudioCommandKind,
+  StudioGraphicKind,
+} from "@/generated/prisma/client";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import {
   buildScoreboard,
@@ -20,6 +23,15 @@ import {
   queueStudioCommand,
   type StudioCommandView,
 } from "@/services/studio-bridge-service";
+import {
+  clearAllStudioGraphics,
+  clearStudioGraphic,
+  rotateStudioOverlayKey,
+  saveStudioGraphic,
+  type StudioGraphicFields,
+  type StudioGraphicIntent,
+  type StudioGraphicView,
+} from "@/services/studio-graphics-service";
 
 export type StudioScoreActionState = {
   error?: string;
@@ -190,6 +202,129 @@ export async function startStudioBroadcastAction(
   revalidatePath(STUDIO_ROUTE);
 
   return { ...started, obs };
+}
+
+/* --------------------------------------------------------------- graphics */
+
+export type StudioGraphicActionState = {
+  error?: string;
+  /** The saved row, so the panel can show the take before the next poll. */
+  graphic?: StudioGraphicView;
+};
+
+/**
+ * Cue or take one graphic on the overlay.
+ *
+ * Nothing about OBS is involved: the overlay is a Browser Source polling the
+ * campus, so a take is a database write and the graphic appears within a
+ * second. Crew permission and the copy limits are re-checked inside
+ * `saveStudioGraphic`.
+ */
+export async function saveStudioGraphicAction(input: {
+  kind: StudioGraphicKind;
+  intent: StudioGraphicIntent;
+  fields: Partial<StudioGraphicFields>;
+  gameId?: string | null;
+  playerId?: string | null;
+}): Promise<StudioGraphicActionState> {
+  try {
+    const user = await requireCompleteProfile();
+
+    const result = await saveStudioGraphic({
+      actorId: user.id,
+      actorName: user.displayName || user.email,
+      role: user.role,
+      kind: input.kind,
+      intent: input.intent,
+      fields: input.fields,
+      gameId: input.gameId,
+      playerId: input.playerId,
+    });
+
+    return "error" in result ? { error: result.error } : { graphic: result.graphic };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Unable to save the graphic.",
+    };
+  }
+}
+
+/** Takes one graphic off the overlay. The copy stays for the next take. */
+export async function clearStudioGraphicAction(input: {
+  kind: StudioGraphicKind;
+}): Promise<{ error?: string }> {
+  try {
+    const user = await requireCompleteProfile();
+
+    const result = await clearStudioGraphic({
+      actorId: user.id,
+      role: user.role,
+      kind: input.kind,
+    });
+
+    return "error" in result ? { error: result.error } : {};
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Unable to clear the graphic.",
+    };
+  }
+}
+
+/** Clears the whole overlay in one press. */
+export async function clearAllStudioGraphicsAction(): Promise<{
+  error?: string;
+  cleared?: number;
+}> {
+  try {
+    const user = await requireCompleteProfile();
+
+    const result = await clearAllStudioGraphics({
+      actorId: user.id,
+      role: user.role,
+    });
+
+    return "error" in result ? { error: result.error } : { cleared: result.cleared };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Unable to clear the overlay.",
+    };
+  }
+}
+
+/**
+ * Issues a new Browser Source URL. The old one stops resolving immediately, so
+ * this is both the between-seasons hygiene step and the recovery if a URL is
+ * shared outside the crew.
+ */
+export async function rotateStudioOverlayKeyAction(): Promise<{
+  error?: string;
+  path?: string;
+}> {
+  try {
+    const user = await requireCompleteProfile();
+
+    const result = await rotateStudioOverlayKey({
+      actorId: user.id,
+      role: user.role,
+    });
+
+    if ("error" in result) {
+      return { error: result.error };
+    }
+
+    revalidatePath(STUDIO_ROUTE);
+    return { path: result.path };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to rotate the overlay URL.",
+    };
+  }
 }
 
 /** END BROADCAST — ends the campus record, and stops OBS when the bridge is up. */
