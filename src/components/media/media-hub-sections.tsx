@@ -4,6 +4,7 @@ import {
   Clapperboard,
   Clock,
   Megaphone,
+  MonitorPlay,
   Radio,
   Sparkles,
   Trophy,
@@ -27,7 +28,7 @@ import { VideoUploadForm } from "@/components/media/video-upload-form";
 import { Button } from "@/components/ui/button";
 import {
   BROADCAST_ORG_SLUG,
-  type BlueDonLiveRtmpConfig,
+  type BlueDonLiveRtmpPublicConfig,
 } from "@/config/broadcast-media";
 import type { BroadcastAnnouncementView } from "@/services/broadcast-announcement-service";
 import type {
@@ -43,7 +44,7 @@ type MediaHubSectionsProps = {
   canManageMedia: boolean;
   storageConfigured: boolean;
   currentUserId: string;
-  rtmp: BlueDonLiveRtmpConfig;
+  rtmp: BlueDonLiveRtmpPublicConfig;
   dailyAnnouncement: BroadcastAnnouncementView | null;
   schedule: BroadcastScheduleView;
   crewCredits: BroadcastCrewCreditView[];
@@ -138,6 +139,19 @@ export function MediaHubSections({
               activeLive
                 ? { label: "On air", variant: "warning" }
                 : { label: "Studio", variant: "info" }
+            }
+            actions={
+              <Button
+                size="sm"
+                variant="outline"
+                nativeButton={false}
+                render={
+                  <Link href="/broadcast/studio">
+                    <MonitorPlay className="size-3.5" />
+                    Broadcast Studio
+                  </Link>
+                }
+              />
             }
           >
             <div id="live">

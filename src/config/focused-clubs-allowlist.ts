@@ -12,6 +12,7 @@ export const FOCUSED_MODE_ALLOWED_PREFIXES = [
   "/organizations/cricut-club",
   "/cricut",
   "/media",
+  "/broadcast",
   "/sports",
   "/archive",
   "/service-desk",

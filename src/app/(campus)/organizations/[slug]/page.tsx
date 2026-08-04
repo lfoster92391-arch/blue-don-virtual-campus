@@ -66,7 +66,7 @@ import {
   canEditBroadcastScriptValues,
   getTodaysBroadcastScript,
 } from "@/services/broadcast-script-service";
-import { getBlueDonLiveRtmpConfig } from "@/config/broadcast-media";
+import { getBlueDonLiveRtmpPublicConfig } from "@/config/broadcast-media";
 import {
   canManageClubCalendar,
   listClubCalendarEvents,
@@ -456,7 +456,8 @@ export default async function OrganizationPage({
     mediaStorageConfigured:
       slug === "broadcasting" ? isCampusMediaStorageConfigured() : false,
     currentUserId: user.id,
-    rtmpConfig: slug === "broadcasting" ? getBlueDonLiveRtmpConfig() : null,
+    rtmpConfig:
+      slug === "broadcasting" ? getBlueDonLiveRtmpPublicConfig() : null,
     financeSnapshot,
     canManageFinances,
     clubInvoices,
@@ -588,15 +589,24 @@ export default async function OrganizationPage({
         {FOCUSED_CLUBS_MODE &&
         organization.slug === "broadcasting" &&
         isBroadcastCrew ? (
-          <Button
-            size="sm"
-            nativeButton={false}
-            render={
-              <Link href="/organizations/broadcasting?tab=script">
-                Daily Rundown
-              </Link>
-            }
-          />
+          <>
+            <Button
+              size="sm"
+              nativeButton={false}
+              render={
+                <Link href="/organizations/broadcasting?tab=script">
+                  Daily Rundown
+                </Link>
+              }
+            />
+            {canManageMedia ? (
+              <Button
+                size="sm"
+                nativeButton={false}
+                render={<Link href="/broadcast/studio">Broadcast Studio</Link>}
+              />
+            ) : null}
+          </>
         ) : null}
         {FOCUSED_CLUBS_MODE && organization.slug === "cricut-club" ? (
           <>

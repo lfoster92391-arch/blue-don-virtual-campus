@@ -9,16 +9,22 @@ import {
   canManageCampusMedia,
   createCampusVideoUpload,
   endCampusLiveStream,
+  getStudioStreamCredentials,
   resolveBroadcastOrganizationId,
   startCampusLiveStream,
   uploadCampusVideoFile,
+  type StudioStreamCredentials,
 } from "@/services/media-service";
 
 export type MediaActionState = {
   error?: string;
   success?: string;
   itemId?: string;
-  streamKey?: string;
+};
+
+export type StreamCredentialsState = {
+  error?: string;
+  credentials?: StudioStreamCredentials;
 };
 
 const uploadSchema = z.object({
@@ -54,6 +60,7 @@ const announcementSchema = z.object({
 function revalidateMediaPaths() {
   revalidatePath("/media");
   revalidatePath("/organizations/broadcasting");
+  revalidatePath("/broadcast/studio");
   revalidatePath("/home");
 }
 
@@ -176,7 +183,6 @@ export async function startLiveBroadcastAction(
     return {
       success: "You are live on Blue Don Live. Keep OBS streaming until you End broadcast.",
       itemId: started.id,
-      streamKey: started.streamKey,
     };
   } catch (error) {
     return {
@@ -199,6 +205,24 @@ export async function endLiveBroadcastAction(itemId: string): Promise<MediaActio
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unable to end live broadcast.",
+    };
+  }
+}
+
+/**
+ * Hands the RTMP ingest URL and stream key to an authorized operator on demand.
+ * Credentials never ship in page props — the crew asks for them here.
+ */
+export async function revealStreamCredentialsAction(): Promise<StreamCredentialsState> {
+  try {
+    await requireMediaProducer();
+    return { credentials: await getStudioStreamCredentials() };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to load stream credentials.",
     };
   }
 }

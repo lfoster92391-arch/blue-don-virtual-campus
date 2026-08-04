@@ -52,7 +52,7 @@ import type {
 import { VideoLibrary } from "@/components/media/video-library";
 import { VideoUploadForm } from "@/components/media/video-upload-form";
 import { Button } from "@/components/ui/button";
-import type { BlueDonLiveRtmpConfig } from "@/config/broadcast-media";
+import type { BlueDonLiveRtmpPublicConfig } from "@/config/broadcast-media";
 import type { BroadcastDailyScriptView } from "@/config/broadcast-script";
 import type {
   BroadcastAnnouncementSubmissionView,
@@ -87,6 +87,7 @@ import {
   FlaskConical,
   GraduationCap,
   Megaphone,
+  MonitorPlay,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -126,7 +127,7 @@ export type ClubTabPanelsProps = {
   dailyAnnouncement?: BroadcastAnnouncementView | null;
   mediaStorageConfigured?: boolean;
   currentUserId?: string;
-  rtmpConfig?: BlueDonLiveRtmpConfig | null;
+  rtmpConfig?: BlueDonLiveRtmpPublicConfig | null;
   financeSnapshot?: ClubFinanceSnapshot | null;
   canManageFinances?: boolean;
   clubInvoices?: ClubInvoiceView[];
@@ -963,6 +964,33 @@ function MediaPanel(props: ClubTabPanelsProps) {
             canManage={Boolean(canManageMedia)}
           />
         </DashboardCard>
+
+        {canManageMedia ? (
+          <DashboardCard
+            title="Broadcast Control Studio"
+            description="Full-screen production console for Studio B — scenes, program, run of show, and transport."
+            icon={<MonitorPlay className="size-5" />}
+            status={{ label: "Crew only", variant: "info" }}
+          >
+            <p className="text-sm text-muted-foreground">
+              Opens the dark 1080p console outside the campus shell. Phase 2 is
+              the operator layout with go live and end broadcast wired to the
+              campus stream.
+            </p>
+            <div className="mt-4">
+              <Button
+                size="sm"
+                nativeButton={false}
+                render={
+                  <Link href="/broadcast/studio">
+                    Open Broadcast Studio
+                    <ArrowRight className="size-3.5" />
+                  </Link>
+                }
+              />
+            </div>
+          </DashboardCard>
+        ) : null}
 
         {canManageMedia && props.rtmpConfig ? (
           <div className="grid gap-6 lg:grid-cols-2">

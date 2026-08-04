@@ -7,7 +7,7 @@ import {
   CAMPUS_MEDIA_MAX_BYTES,
   CAMPUS_MEDIA_VIDEO_TYPES,
   DEMO_SCHOOL_BROADCASTS,
-  getBlueDonLiveRtmpConfig,
+  getBlueDonLiveStreamSecrets,
 } from "@/config/broadcast-media";
 import { isDatabaseConfigured, isSupabaseAdminConfigured } from "@/config/env";
 import type { CampusRole } from "@/config/roles";
@@ -21,6 +21,11 @@ import { hasOrgPermission } from "@/lib/auth/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isPrismaReady, withDatabase } from "@/lib/prisma";
 
+/**
+ * Audience-safe media shape. Deliberately omits `streamKey` — these views are
+ * serialized into client components across the whole campus. Crew fetch stream
+ * credentials through {@link getStudioStreamCredentials} instead.
+ */
 export type CampusMediaItemView = {
   id: string;
   title: string;
@@ -38,7 +43,6 @@ export type CampusMediaItemView = {
   publishedAt: Date | null;
   endedAt: Date | null;
   createdAt: Date;
-  streamKey?: string | null;
 };
 
 export type VideoArchiveFilter =
@@ -67,7 +71,6 @@ function mapMediaRow(row: {
   publishedAt: Date | null;
   endedAt: Date | null;
   createdAt: Date;
-  streamKey?: string | null;
   uploadedBy: {
     displayName: string | null;
     firstName: string | null;
@@ -96,7 +99,6 @@ function mapMediaRow(row: {
     publishedAt: row.publishedAt,
     endedAt: row.endedAt,
     createdAt: row.createdAt,
-    streamKey: row.streamKey ?? null,
   };
 }
 
@@ -116,7 +118,6 @@ const mediaSelect = {
   publishedAt: true,
   endedAt: true,
   createdAt: true,
-  streamKey: true,
   uploadedBy: {
     select: {
       displayName: true,
@@ -325,11 +326,47 @@ function sanitizeFilename(name: string): string {
 }
 
 function resolveSessionStreamKey(): string {
-  const shared = getBlueDonLiveRtmpConfig().streamKey;
+  const shared = getBlueDonLiveStreamSecrets().streamKey;
   if (shared) {
     return shared;
   }
   return `bd-${randomBytes(8).toString("hex")}`;
+}
+
+export type StudioStreamCredentials = {
+  ingestUrl: string;
+  streamKey: string | null;
+  /** Where the key came from, so the UI can explain what the operator is holding. */
+  scope: "session" | "shared" | "none";
+};
+
+/**
+ * Crew-only. Resolve the OBS stream target: the live session key when a stream
+ * is already on air, otherwise the shared school key. Callers must check
+ * {@link canManageCampusMedia} first — this function does not authorize.
+ */
+export async function getStudioStreamCredentials(): Promise<StudioStreamCredentials> {
+  const { ingestUrl, streamKey: sharedKey } = getBlueDonLiveStreamSecrets();
+
+  if (isDatabaseConfigured() && isPrismaReady()) {
+    const row = await withDatabase((prisma) =>
+      prisma.campusMediaItem.findFirst({
+        where: { type: "LIVE_STREAM", status: "LIVE" },
+        orderBy: { publishedAt: "desc" },
+        select: { streamKey: true },
+      }),
+    );
+
+    if (row?.streamKey) {
+      return { ingestUrl, streamKey: row.streamKey, scope: "session" };
+    }
+  }
+
+  return {
+    ingestUrl,
+    streamKey: sharedKey,
+    scope: sharedKey ? "shared" : "none",
+  };
 }
 
 export async function uploadCampusVideoFile(

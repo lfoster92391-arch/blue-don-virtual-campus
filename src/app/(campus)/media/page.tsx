@@ -2,7 +2,7 @@ import { Video } from "lucide-react";
 
 import { MediaHubSections } from "@/components/media/media-hub-sections";
 import { ShellPage } from "@/components/layout/shell-page";
-import { getBlueDonLiveRtmpConfig } from "@/config/broadcast-media";
+import { getBlueDonLiveRtmpPublicConfig } from "@/config/broadcast-media";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { getTodaysBroadcastAnnouncement } from "@/services/broadcast-announcement-service";
 import {
@@ -38,7 +38,9 @@ export default async function MediaPage() {
     getBroadcastSchedule(),
     listCrewCredits({ visibleOnly: true }),
   ]);
-  const rtmp = getBlueDonLiveRtmpConfig();
+  // Audience page: display-safe guidance only. Stream credentials are fetched
+  // by crew through revealStreamCredentialsAction.
+  const rtmp = getBlueDonLiveRtmpPublicConfig();
 
   return (
     <ShellPage

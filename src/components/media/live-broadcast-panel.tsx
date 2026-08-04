@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
-import { Check, Copy, Mic, Monitor, Radio, Video } from "lucide-react";
+import { useActionState, useTransition } from "react";
+import { Mic, Monitor, Radio, Video } from "lucide-react";
 
-import type { BlueDonLiveRtmpConfig } from "@/config/broadcast-media";
+import type { BlueDonLiveRtmpPublicConfig } from "@/config/broadcast-media";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,13 +14,15 @@ import {
 import { toMediaEmbedUrl } from "@/lib/media-embed";
 import type { CampusMediaItemView } from "@/services/media-service";
 
+import { StreamTargetReveal } from "./stream-target-reveal";
+
 const initialState: MediaActionState = {};
 
 type LiveBroadcastPanelProps = {
   activeLive: CampusMediaItemView | null;
   isProducer: boolean;
   currentUserId: string;
-  rtmp: BlueDonLiveRtmpConfig;
+  rtmp: BlueDonLiveRtmpPublicConfig;
 };
 
 export function LiveBroadcastPanel({
@@ -32,8 +34,6 @@ export function LiveBroadcastPanel({
   const [state, formAction, pending] = useActionState(startLiveBroadcastAction, initialState);
   const [ending, startEnd] = useTransition();
   const isLive = Boolean(activeLive);
-  const displayStreamKey =
-    activeLive?.streamKey || state.streamKey || rtmp.streamKey || null;
 
   if (!isProducer) {
     return (
@@ -65,15 +65,7 @@ export function LiveBroadcastPanel({
 
       <div className="rounded-lg border border-border bg-muted/30 p-4">
         <p className="text-sm font-medium text-foreground">OBS / RTMP setup</p>
-        <dl className="mt-3 space-y-3 text-sm">
-          <CopyField label="RTMP server URL" value={rtmp.ingestUrl} />
-          <CopyField
-            label="Stream key"
-            value={displayStreamKey ?? ""}
-            placeholder={rtmp.streamKeyHint}
-            mono={!displayStreamKey}
-          />
-        </dl>
+        <StreamTargetReveal hint={rtmp.streamKeyHint} />
         <ol className="mt-4 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
           {rtmp.obsChecklist.map((step) => (
             <li key={step}>{step}</li>
@@ -166,11 +158,6 @@ export function LiveBroadcastPanel({
           {state.success ? (
             <p className="text-sm text-emerald-600" role="status">
               {state.success}
-              {state.streamKey ? (
-                <span className="mt-1 block font-mono text-xs text-foreground">
-                  Session stream key: {state.streamKey}
-                </span>
-              ) : null}
             </p>
           ) : null}
 
@@ -217,50 +204,6 @@ function ViewerLivePreview({ item }: { item: CampusMediaItemView }) {
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
       />
-    </div>
-  );
-}
-
-function CopyField({
-  label,
-  value,
-  placeholder,
-  mono = true,
-}: {
-  label: string;
-  value: string;
-  placeholder?: string;
-  mono?: boolean;
-}) {
-  const [copied, setCopied] = useState(false);
-  const canCopy = Boolean(value);
-
-  return (
-    <div>
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="mt-1 flex items-start gap-2">
-        <span
-          className={`min-w-0 flex-1 break-all text-xs ${
-            mono ? "font-mono" : ""
-          } ${value ? "text-foreground" : "text-muted-foreground"}`}
-        >
-          {value || placeholder}
-        </span>
-        {canCopy ? (
-          <button
-            type="button"
-            className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
-            onClick={async () => {
-              await navigator.clipboard.writeText(value);
-              setCopied(true);
-              window.setTimeout(() => setCopied(false), 1500);
-            }}
-          >
-            {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-            {copied ? "Copied" : "Copy"}
-          </button>
-        ) : null}
-      </dd>
     </div>
   );
 }
