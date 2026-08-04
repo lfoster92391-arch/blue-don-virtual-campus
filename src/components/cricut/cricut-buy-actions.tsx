@@ -12,12 +12,33 @@ export function CricutBuyActions({ item }: { item: CricutShopItemView }) {
   const cart = useCricutCart();
   const router = useRouter();
   const sold = item.status === "SOLD";
+  const showcaseOnly = !item.availableToSell;
 
   if (sold) {
     return (
       <p className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
         This item has been sold.
       </p>
+    );
+  }
+
+  if (showcaseOnly) {
+    return (
+      <div className="space-y-3">
+        <p className="text-2xl font-bold text-[#0A2342] dark:text-white">
+          {formatShopPrice(item.priceCents)}
+        </p>
+        <p className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          Catalog showcase — not currently available to order. Submit a design
+          idea if you’d like something similar made.
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          nativeButton={false}
+          render={<a href="/cricut/designs">Submit a design idea</a>}
+        />
+      </div>
     );
   }
 
@@ -54,12 +75,12 @@ export function CricutBuyActions({ item }: { item: CricutShopItemView }) {
           }}
         >
           <Zap className="size-4" />
-          Buy now
+          Order now
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Pickup at Madonna (Weirton) is free · shipping from Weirton, WV is extra at
-        checkout.
+        Fill the order form at checkout — Cricut crew gets a Command Center
+        alert. Pickup at Madonna is free · shipping from Weirton is extra.
       </p>
     </div>
   );

@@ -20,7 +20,13 @@ import {
 
 const initialState: CricutShopActionState = {};
 
-export function CricutCheckoutForm() {
+export function CricutCheckoutForm({
+  defaultContactName = "",
+  defaultContactEmail = "",
+}: {
+  defaultContactName?: string;
+  defaultContactEmail?: string;
+}) {
   const cart = useCricutCart();
   const router = useRouter();
   const [fulfillment, setFulfillment] = useState<"PICKUP" | "SHIP">("PICKUP");
@@ -35,7 +41,7 @@ export function CricutCheckoutForm() {
   useEffect(() => {
     if (state.orderId) {
       cart.clear();
-      router.push(`/cricut/shop?ordered=${state.orderId}`);
+      router.push(`/cricut/orders/${state.orderId}`);
     }
   }, [state.orderId, cart, router]);
 
@@ -62,6 +68,41 @@ export function CricutCheckoutForm() {
           cart.lines.map((l) => ({ itemId: l.itemId, quantity: l.quantity })),
         )}
       />
+
+      <fieldset className="space-y-3">
+        <legend className="text-sm font-semibold">Contact</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm sm:col-span-2">
+            <span className="font-medium">Name</span>
+            <input
+              name="contactName"
+              required
+              defaultValue={defaultContactName}
+              className="rounded-md border border-border bg-background px-3 py-2"
+              placeholder="Your name"
+            />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Email</span>
+            <input
+              name="contactEmail"
+              type="email"
+              defaultValue={defaultContactEmail}
+              className="rounded-md border border-border bg-background px-3 py-2"
+              placeholder="you@madonna.edu"
+            />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">Phone</span>
+            <input
+              name="contactPhone"
+              type="tel"
+              className="rounded-md border border-border bg-background px-3 py-2"
+              placeholder="Optional"
+            />
+          </label>
+        </div>
+      </fieldset>
 
       <fieldset className="space-y-3">
         <legend className="text-sm font-semibold">Fulfillment</legend>
@@ -115,6 +156,7 @@ export function CricutCheckoutForm() {
             <input
               name="shipName"
               required
+              defaultValue={defaultContactName}
               className="rounded-md border border-border bg-background px-3 py-2"
             />
           </label>
@@ -163,12 +205,22 @@ export function CricutCheckoutForm() {
       ) : null}
 
       <label className="grid gap-1 text-sm">
-        <span className="font-medium">Order notes</span>
+        <span className="font-medium">Pickup / ship notes</span>
         <textarea
           name="notes"
           rows={2}
           className="rounded-md border border-border bg-background px-3 py-2"
-          placeholder="Color preference, pickup window…"
+          placeholder="Pickup window, locker, porch instructions…"
+        />
+      </label>
+
+      <label className="grid gap-1 text-sm">
+        <span className="font-medium">Customization notes</span>
+        <textarea
+          name="customizationNotes"
+          rows={3}
+          className="rounded-md border border-border bg-background px-3 py-2"
+          placeholder="Colors, names, sizes, special requests…"
         />
       </label>
 
@@ -190,7 +242,7 @@ export function CricutCheckoutForm() {
       </div>
 
       <Button type="submit" size="lg" className="w-full" disabled={pending}>
-        {pending ? "Placing order…" : "Place order"}
+        {pending ? "Sending order…" : "Submit order"}
       </Button>
       {state.error ? (
         <p className="text-sm text-destructive">{state.error}</p>

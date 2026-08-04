@@ -301,8 +301,14 @@ export const ORG_ROLE_PERMISSIONS: Record<OrgMembershipRole, string[]> = {
     "org:resources:edit",
     "org:documents:edit",
     "org:projects:manage",
+    "org:tasks:assign",
+    "org:messages:send",
+    "org:invoice_requests:create",
     "org:finances:view",
     "org:finances:manage",
+    "org:orders:manage",
+    "org:orders:fulfill",
+    "org:catalog:list",
     "org:view",
   ],
   vice_president: [
@@ -315,13 +321,18 @@ export const ORG_ROLE_PERMISSIONS: Record<OrgMembershipRole, string[]> = {
     "org:resources:edit",
     "org:documents:edit",
     "org:projects:manage",
+    "org:tasks:assign",
+    "org:messages:send",
+    "org:invoice_requests:create",
     "org:finances:view",
     "org:finances:manage",
+    "org:orders:manage",
+    "org:orders:fulfill",
+    "org:catalog:list",
     "org:view",
   ],
   secretary: [
     "org:announcements:manage",
-    "org:events:manage",
     "org:members:manage",
     "org:media:manage",
     "org:feed:moderate",
@@ -329,11 +340,14 @@ export const ORG_ROLE_PERMISSIONS: Record<OrgMembershipRole, string[]> = {
     "org:resources:edit",
     "org:documents:edit",
     "org:projects:manage",
+    "org:messages:send",
+    "org:invoice_requests:create",
     "org:finances:view",
-    "org:finances:manage",
+    "org:orders:fulfill",
+    "org:catalog:list",
     "org:view",
   ],
-  member: ["org:view"],
+  member: ["org:view", "org:orders:fulfill", "org:catalog:list"],
 };
 
 /** Officer roles that may view club financials (not Members). */
@@ -343,8 +357,29 @@ export const FINANCE_VIEW_ORG_ROLES: OrgMembershipRole[] = [
   "secretary",
 ];
 
+/** President / VP — assign tasks and schedule club meetings. */
+export const TASK_ASSIGN_ORG_ROLES: OrgMembershipRole[] = [
+  "president",
+  "vice_president",
+];
+
+/** Officers who can message club members (incl. Secretary invoice/receipt requests). */
+export const MESSAGE_SEND_ORG_ROLES: OrgMembershipRole[] = [
+  "president",
+  "vice_president",
+  "secretary",
+];
+
 export function orgRoleCanViewFinances(orgRole: OrgMembershipRole): boolean {
   return FINANCE_VIEW_ORG_ROLES.includes(orgRole);
+}
+
+export function orgRoleCanAssignTasks(orgRole: OrgMembershipRole): boolean {
+  return TASK_ASSIGN_ORG_ROLES.includes(orgRole);
+}
+
+export function orgRoleCanSendMessages(orgRole: OrgMembershipRole): boolean {
+  return MESSAGE_SEND_ORG_ROLES.includes(orgRole);
 }
 
 export function orgRoleIsOfficer(orgRole: OrgMembershipRole): boolean {

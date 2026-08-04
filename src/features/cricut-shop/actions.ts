@@ -5,15 +5,27 @@ import { z } from "zod";
 
 import {
   CRICUT_CLUB_SLUG,
+  CRICUT_ORDER_UPDATE_STATUSES,
   CRICUT_PRICE_MAX_CENTS,
 } from "@/config/cricut-shop";
+import type { CricutDesignStatus, CricutShopOrderStatus } from "@/generated/prisma/client";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import {
+  reviewCricutDesign,
+  submitCricutDesign,
+  uploadCricutDesignImage,
+} from "@/services/cricut-design-service";
+import {
+  assignCricutOrder,
+  canCreateCricutListing,
   canManageCricutShop,
   createCricutShopItem,
   getCricutOrganization,
   isCricutShopStorageConfigured,
   placeCricutShopOrder,
+  setCricutItemAvailableToSell,
+  updateCricutAmazonWishlistUrl,
+  updateCricutOrderStatus,
   uploadCricutShopImage,
 } from "@/services/cricut-shop-service";
 import type { CricutFulfillmentMethod } from "@/generated/prisma/client";
@@ -23,7 +35,19 @@ export type CricutShopActionState = {
   success?: string;
   itemId?: string;
   orderId?: string;
+  designId?: string;
 };
+
+function revalidateCricut() {
+  revalidatePath("/cricut");
+  revalidatePath("/cricut/shop");
+  revalidatePath("/cricut/cart");
+  revalidatePath("/cricut/checkout");
+  revalidatePath("/cricut/orders");
+  revalidatePath("/cricut/designs");
+  revalidatePath("/home");
+  revalidatePath(`/organizations/${CRICUT_CLUB_SLUG}`);
+}
 
 export async function createCricutListingAction(
   _prev: CricutShopActionState,
@@ -36,10 +60,10 @@ export async function createCricutListingAction(
       return { error: "Cricut Club is not seeded yet. Run db:seed." };
     }
 
-    const allowed = await canManageCricutShop(user.id, user.role, org.id);
+    const allowed = await canCreateCricutListing(user.id, user.role, org.id);
     if (!allowed) {
       return {
-        error: "Only Cricut leads, officers, advisors, and admins can list items.",
+        error: "Join Cricut Club to list products in the shop catalog.",
       };
     }
 
@@ -47,6 +71,7 @@ export async function createCricutListingAction(
     const description =
       String(formData.get("description") ?? "").trim() || undefined;
     const price = Number(formData.get("price"));
+    const availableToSell = formData.get("availableToSell") !== "off";
 
     if (title.length < 2) {
       return { error: "Title is required." };
@@ -86,15 +111,20 @@ export async function createCricutListingAction(
       priceCents,
       imageUrl,
       storagePath,
+      availableToSell,
     });
 
     if (!itemId) {
       return { error: "Unable to save the listing." };
     }
 
-    revalidatePath("/cricut/shop");
-    revalidatePath(`/organizations/${CRICUT_CLUB_SLUG}`);
-    return { success: "Item is live in the Cricut Shop.", itemId };
+    revalidateCricut();
+    return {
+      success: availableToSell
+        ? "Item is live and available to sell."
+        : "Item added to the catalog (showcase only).",
+      itemId,
+    };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unable to create listing.",
@@ -102,9 +132,30 @@ export async function createCricutListingAction(
   }
 }
 
+export async function toggleCricutItemSellableAction(
+  formData: FormData,
+): Promise<void> {
+  const user = await requireCompleteProfile();
+  const org = await getCricutOrganization();
+  if (!org) return;
+  if (!(await canManageCricutShop(user.id, user.role, org.id))) return;
+
+  const itemId = String(formData.get("itemId") ?? "");
+  const availableToSell = formData.get("availableToSell") === "true";
+  if (!itemId) return;
+
+  await setCricutItemAvailableToSell({ itemId, availableToSell });
+  revalidateCricut();
+  revalidatePath(`/cricut/shop/${itemId}`);
+}
+
 const checkoutSchema = z.object({
   fulfillment: z.enum(["PICKUP", "SHIP"]),
   cartJson: z.string().min(2),
+  contactName: z.string().trim().min(1).max(120),
+  contactEmail: z.string().trim().email().max(160).optional().or(z.literal("")),
+  contactPhone: z.string().trim().max(40).optional(),
+  customizationNotes: z.string().trim().max(800).optional(),
   shipName: z.string().trim().max(120).optional(),
   shipLine1: z.string().trim().max(160).optional(),
   shipLine2: z.string().trim().max(160).optional(),
@@ -123,6 +174,10 @@ export async function placeCricutOrderAction(
     const parsed = checkoutSchema.safeParse({
       fulfillment: formData.get("fulfillment"),
       cartJson: formData.get("cartJson"),
+      contactName: formData.get("contactName") || "",
+      contactEmail: formData.get("contactEmail") || "",
+      contactPhone: formData.get("contactPhone") || undefined,
+      customizationNotes: formData.get("customizationNotes") || undefined,
       shipName: formData.get("shipName") || undefined,
       shipLine1: formData.get("shipLine1") || undefined,
       shipLine2: formData.get("shipLine2") || undefined,
@@ -133,7 +188,7 @@ export async function placeCricutOrderAction(
     });
 
     if (!parsed.success) {
-      return { error: parsed.error.issues[0]?.message ?? "Check checkout fields." };
+      return { error: parsed.error.issues[0]?.message ?? "Check order form fields." };
     }
 
     let lines: { itemId: string; quantity: number }[];
@@ -159,6 +214,10 @@ export async function placeCricutOrderAction(
       buyerId: user.id,
       fulfillment: parsed.data.fulfillment as CricutFulfillmentMethod,
       lines,
+      contactName: parsed.data.contactName,
+      contactEmail: parsed.data.contactEmail || undefined,
+      contactPhone: parsed.data.contactPhone,
+      customizationNotes: parsed.data.customizationNotes,
       shipName: parsed.data.shipName,
       shipLine1: parsed.data.shipLine1,
       shipLine2: parsed.data.shipLine2,
@@ -172,19 +231,168 @@ export async function placeCricutOrderAction(
       return { error: result.error };
     }
 
-    revalidatePath("/cricut/shop");
-    revalidatePath("/cricut/cart");
-    revalidatePath("/cricut/checkout");
+    revalidateCricut();
+    revalidatePath(`/cricut/orders/${result.orderId}`);
     return {
       success:
         parsed.data.fulfillment === "PICKUP"
-          ? "Order placed — pick up at Madonna High School in Weirton."
-          : "Order placed — shipping from Weirton, WV.",
+          ? "Order sent — track progress on your order page."
+          : "Order sent — shipping from Weirton, WV when ready.",
       orderId: result.orderId,
     };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unable to place order.",
+    };
+  }
+}
+
+export async function updateCricutOrderStatusAction(
+  formData: FormData,
+): Promise<void> {
+  const user = await requireCompleteProfile();
+  const orderId = String(formData.get("orderId") ?? "");
+  const status = String(formData.get("status") ?? "") as CricutShopOrderStatus;
+  if (
+    !orderId ||
+    !(CRICUT_ORDER_UPDATE_STATUSES as readonly string[]).includes(status)
+  ) {
+    return;
+  }
+
+  await updateCricutOrderStatus({
+    orderId,
+    status,
+    actorId: user.id,
+    role: user.role,
+  });
+  revalidateCricut();
+  revalidatePath(`/cricut/orders/${orderId}`);
+}
+
+export async function assignCricutOrderAction(formData: FormData): Promise<void> {
+  const user = await requireCompleteProfile();
+  const orderId = String(formData.get("orderId") ?? "");
+  const assigneeId = String(formData.get("assigneeId") ?? "").trim() || null;
+  if (!orderId) return;
+
+  await assignCricutOrder({
+    orderId,
+    assigneeId,
+    actorId: user.id,
+    role: user.role,
+  });
+  revalidateCricut();
+  revalidatePath(`/cricut/orders/${orderId}`);
+}
+
+export async function submitCricutDesignAction(
+  _prev: CricutShopActionState,
+  formData: FormData,
+): Promise<CricutShopActionState> {
+  try {
+    const user = await requireCompleteProfile();
+    const title = String(formData.get("title") ?? "").trim();
+    const description = String(formData.get("description") ?? "").trim();
+
+    if (title.length < 2) {
+      return { error: "Give your idea a title." };
+    }
+    if (description.length < 4) {
+      return { error: "Describe what you want made." };
+    }
+
+    let imageUrl: string | undefined;
+    let storagePath: string | undefined;
+    const file = formData.get("photo");
+    if (file instanceof File && file.size > 0) {
+      if (!isCricutShopStorageConfigured()) {
+        return {
+          error:
+            "Photo storage isn’t configured — submit without a reference image, or ask an admin.",
+        };
+      }
+      const uploaded = await uploadCricutDesignImage(file, user.id);
+      if (!uploaded) {
+        return { error: "Unable to upload the reference image." };
+      }
+      imageUrl = uploaded.publicUrl;
+      storagePath = uploaded.storagePath;
+    }
+
+    const designId = await submitCricutDesign({
+      submitterId: user.id,
+      title,
+      description,
+      imageUrl,
+      storagePath,
+    });
+
+    if (!designId) {
+      return { error: "Unable to submit your design idea." };
+    }
+
+    revalidateCricut();
+    return { success: "Design submitted — Cricut Club will review it.", designId };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Unable to submit design.",
+    };
+  }
+}
+
+export async function reviewCricutDesignAction(
+  formData: FormData,
+): Promise<void> {
+  const user = await requireCompleteProfile();
+  const designId = String(formData.get("designId") ?? "");
+  const status = String(formData.get("status") ?? "") as CricutDesignStatus;
+  const reviewNote = String(formData.get("reviewNote") ?? "") || undefined;
+  if (!designId || !status) return;
+
+  await reviewCricutDesign({
+    designId,
+    reviewerId: user.id,
+    role: user.role,
+    status,
+    reviewNote,
+  });
+  revalidateCricut();
+}
+
+export async function updateCricutWishlistUrlAction(
+  _prev: CricutShopActionState,
+  formData: FormData,
+): Promise<CricutShopActionState> {
+  try {
+    const user = await requireCompleteProfile();
+    const org = await getCricutOrganization();
+    if (!org) {
+      return { error: "Cricut Club not found." };
+    }
+    if (!(await canManageCricutShop(user.id, user.role, org.id))) {
+      return { error: "Only President / VP can set the Amazon wishlist URL." };
+    }
+
+    const url = String(formData.get("amazonWishlistUrl") ?? "").trim();
+    if (url && !/^https?:\/\//i.test(url)) {
+      return { error: "Enter a full https:// Amazon wishlist URL." };
+    }
+
+    const ok = await updateCricutAmazonWishlistUrl(url || null);
+    if (!ok) {
+      return { error: "Unable to save wishlist URL." };
+    }
+
+    revalidateCricut();
+    return {
+      success: url
+        ? "Amazon wishlist URL saved."
+        : "Amazon wishlist URL cleared (env fallback may still apply).",
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Unable to save wishlist.",
     };
   }
 }

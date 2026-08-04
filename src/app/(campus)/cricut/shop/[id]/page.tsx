@@ -2,11 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ImageIcon } from "lucide-react";
 
+import { CricutAmazonWishlistBanner } from "@/components/cricut/cricut-amazon-wishlist";
 import { CricutBuyActions } from "@/components/cricut/cricut-buy-actions";
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
 import { requireCompleteProfile } from "@/lib/auth/session";
-import { getCricutShopItem } from "@/services/cricut-shop-service";
+import {
+  getCricutAmazonWishlistUrl,
+  getCricutShopItem,
+} from "@/services/cricut-shop-service";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -15,7 +19,10 @@ type PageProps = {
 export default async function CricutProductPage({ params }: PageProps) {
   await requireCompleteProfile();
   const { id } = await params;
-  const item = await getCricutShopItem(id);
+  const [item, wishlistUrl] = await Promise.all([
+    getCricutShopItem(id),
+    getCricutAmazonWishlistUrl(),
+  ]);
 
   if (!item) {
     notFound();
@@ -42,6 +49,7 @@ export default async function CricutProductPage({ params }: PageProps) {
         </div>
       }
     >
+      <CricutAmazonWishlistBanner url={wishlistUrl} className="mb-6" compact />
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-[#DB2777]/10 to-[#0A2342]/5">
           <div className="relative aspect-square">
@@ -67,7 +75,7 @@ export default async function CricutProductPage({ params }: PageProps) {
           ) : (
             <p className="text-sm text-muted-foreground">No description yet.</p>
           )}
-          <p className="text-sm text-muted-foreground">Sold by {item.sellerName}</p>
+          <p className="text-sm text-muted-foreground">Listed by {item.sellerName}</p>
           <CricutBuyActions item={item} />
         </div>
       </div>

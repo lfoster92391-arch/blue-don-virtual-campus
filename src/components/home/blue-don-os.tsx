@@ -8,6 +8,11 @@ import { TodayInMadonnaHistoryWidget } from "@/components/culture/today-in-histo
 import { DashboardHero } from "@/components/dashboard/dashboard-hero";
 import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
 import { CAMPUS_FEED } from "@/config/campus-feed";
+import type {
+  ClubStudentTaskView,
+  CommandCenterMeetingView,
+  StudentMessageView,
+} from "@/lib/command-center";
 import type { BroadcastAnnouncementView } from "@/services/broadcast-announcement-service";
 import type { BlueDonOSViewModel } from "@/services/campus-os-service";
 import type { HubDigest } from "@/services/school-hub-service";
@@ -20,6 +25,9 @@ type BlueDonOSProps = {
   context: StudentContext;
   hub: HubDigest;
   announcement: BroadcastAnnouncementView | null;
+  messages?: StudentMessageView[];
+  meetings?: CommandCenterMeetingView[];
+  tasks?: ClubStudentTaskView[];
 };
 
 export function BlueDonOS({
@@ -28,10 +36,20 @@ export function BlueDonOS({
   context,
   hub,
   announcement,
+  messages = [],
+  meetings = [],
+  tasks = [],
 }: BlueDonOSProps) {
   if (FOCUSED_CLUBS_MODE) {
     return (
-      <TodayAtMadonna user={user} hub={hub} announcement={announcement} />
+      <TodayAtMadonna
+        user={user}
+        hub={hub}
+        announcement={announcement}
+        messages={messages}
+        meetings={meetings}
+        tasks={tasks}
+      />
     );
   }
 

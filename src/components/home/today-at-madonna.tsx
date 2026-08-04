@@ -12,6 +12,9 @@ import {
 import type { ReactNode } from "react";
 
 import { BriefingSection } from "@/components/home/briefing-section";
+import { AdvisorMessagesPanel } from "@/components/home/advisor-messages-panel";
+import { CommandCenterMeetings } from "@/components/home/command-center-meetings";
+import { CommandCenterTasks } from "@/components/home/command-center-tasks";
 import { BellScheduleWidget } from "@/components/school-hub/bell-schedule-widget";
 import { CAMPUS_FEED } from "@/config/campus-feed";
 import { CAMPUS_WEATHER_LOCATION } from "@/config/campus-weather";
@@ -20,6 +23,11 @@ import {
   splitBrainGame,
   type DiscoveryItem,
 } from "@/config/daily-discovery";
+import type {
+  ClubStudentTaskView,
+  CommandCenterMeetingView,
+  StudentMessageView,
+} from "@/lib/command-center";
 import { cn } from "@/lib/utils";
 import type { BroadcastAnnouncementView } from "@/services/broadcast-announcement-service";
 import { getTodayInMadonnaHistory } from "@/services/madonna-culture-service";
@@ -34,6 +42,9 @@ type TodayAtMadonnaProps = {
   user: CampusUser;
   hub: HubDigest;
   announcement: BroadcastAnnouncementView | null;
+  messages?: StudentMessageView[];
+  meetings?: CommandCenterMeetingView[];
+  tasks?: ClubStudentTaskView[];
 };
 
 function getGreeting(hour: number) {
@@ -271,11 +282,14 @@ function MadonnaHistoryBriefing({ date }: { date: Date }) {
   );
 }
 
-/** Focused-mode home — vertical “Today at Madonna” campus briefing. */
+/** Focused-mode home — Command Center + “Today at Madonna” campus briefing. */
 export function TodayAtMadonna({
   user,
   hub,
   announcement,
+  messages = [],
+  meetings = [],
+  tasks = [],
 }: TodayAtMadonnaProps) {
   const preferredName =
     user.firstName ?? user.displayName.split(" ")[0] ?? user.displayName;
@@ -292,14 +306,14 @@ export function TodayAtMadonna({
       <header className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-[#0A2342] via-[#0A2342] to-[#14365f] px-5 py-7 text-white shadow-sm sm:px-8 sm:py-9">
         <div className="relative z-10 max-w-2xl space-y-3">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#C9A227]">
-            Madonna High School
+            Madonna High School · Command Center
           </p>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
             Today at Madonna
           </h1>
           <p className="text-sm text-[#C6CCD6] sm:text-base">
-            {getGreeting(hour)}, {preferredName}. Your daily campus briefing —
-            weather, schedule, announcements, and a little inspiration.
+            {getGreeting(hour)}, {preferredName}. Your hub for advisor messages,
+            club meetings, tasks, and the daily campus briefing.
           </p>
           <p className="text-sm text-[#C6CCD6]/80">{hub.dateLabel}</p>
         </div>
@@ -312,6 +326,14 @@ export function TodayAtMadonna({
           aria-hidden="true"
         />
       </header>
+
+      <div className="mt-6 space-y-4">
+        <AdvisorMessagesPanel messages={messages} />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <CommandCenterMeetings meetings={meetings} />
+          <CommandCenterTasks tasks={tasks} />
+        </div>
+      </div>
 
       <div className="mt-8 space-y-0 rounded-2xl border border-border bg-card/40 px-4 py-6 sm:px-6 sm:py-8">
         <BriefingSection

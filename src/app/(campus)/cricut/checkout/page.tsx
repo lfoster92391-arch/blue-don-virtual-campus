@@ -6,12 +6,16 @@ import { Button } from "@/components/ui/button";
 import { requireCompleteProfile } from "@/lib/auth/session";
 
 export default async function CricutCheckoutPage() {
-  await requireCompleteProfile();
+  const user = await requireCompleteProfile();
+  const defaultContactName =
+    user.displayName?.trim() ||
+    [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+    "";
 
   return (
     <ShellPage
-      title="Checkout"
-      description="Pick up at Madonna High School (Weirton) or add shipping from Weirton, WV."
+      title="Order form"
+      description="Name, contact, quantity (via cart), pickup/ship notes, and customization — Cricut crew gets a Command Center alert."
       actions={
         <Button
           variant="outline"
@@ -22,7 +26,10 @@ export default async function CricutCheckoutPage() {
       }
     >
       <div className="mx-auto max-w-xl">
-        <CricutCheckoutForm />
+        <CricutCheckoutForm
+          defaultContactName={defaultContactName}
+          defaultContactEmail={user.email ?? ""}
+        />
       </div>
     </ShellPage>
   );

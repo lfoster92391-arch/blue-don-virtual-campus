@@ -29,7 +29,11 @@ export const WORKSPACE_TAB_ID = "workspace" as const;
 export type ClubTabId =
   | (typeof CLUB_TABS)[number]["id"]
   | typeof WORKSPACE_TAB_ID
-  | "script";
+  | "script"
+  | "tasks"
+  | "messages"
+  | "designs"
+  | "orders";
 
 function focusedTabsForSlug(
   slug: string,
@@ -44,6 +48,8 @@ function focusedTabsForSlug(
       byId.get("overview")!,
       { id: "documents", label: "Documents" },
       byId.get("invoices")!,
+      { id: "tasks", label: "My Tasks" },
+      { id: "messages", label: "Messages" },
       byId.get("calendar")!,
       byId.get("members")!,
     ];
@@ -65,6 +71,8 @@ function focusedTabsForSlug(
       { id: "script", label: "Daily Rundown" },
       { id: "media", label: "Control Room" },
       byId.get("invoices")!,
+      { id: "tasks", label: "My Tasks" },
+      { id: "messages", label: "Messages" },
       byId.get("calendar")!,
       byId.get("members")!,
     ];
@@ -80,12 +88,17 @@ function focusedTabsForSlug(
       { id: "projects", label: "Projects" },
       { id: "checklists", label: "Checklists" },
       { id: "shop", label: "Shop" },
+      { id: "designs", label: "Designs" },
+      { id: "orders", label: "Orders" },
       byId.get("invoices")!,
+      { id: "tasks", label: "My Tasks" },
+      { id: "messages", label: "Messages" },
       byId.get("calendar")!,
       byId.get("members")!,
     ];
     if (canViewFinances) {
-      tabs.splice(4, 0, byId.get("finances")!);
+      tabs.splice(6, 0, byId.get("finances")!);
+      tabs.splice(7, 0, byId.get("fundraisers")!);
     }
     return tabs;
   }
@@ -134,12 +147,16 @@ export function ClubTabNav({
         const href =
           tab.id === "shop"
             ? "/cricut/shop"
-            : tab.id === "overview"
-              ? base
-              : `${base}?tab=${tab.id}`;
+            : tab.id === "designs"
+              ? "/cricut/designs"
+              : tab.id === "orders"
+                ? "/cricut/orders"
+                : tab.id === "overview"
+                  ? base
+                  : `${base}?tab=${tab.id}`;
         const isActive =
-          tab.id === "shop"
-            ? activeTab === "shop"
+          tab.id === "shop" || tab.id === "designs" || tab.id === "orders"
+            ? activeTab === tab.id
             : activeTab === tab.id;
 
         return (

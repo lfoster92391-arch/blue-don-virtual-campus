@@ -2,6 +2,12 @@ import { AgreementsWidget } from "@/components/home/agreements-widget";
 import { ClubJoinRequestsAlert } from "@/components/home/club-join-requests-alert";
 import { BlueDonOS } from "@/components/home/blue-don-os";
 import { CampusVersionBanner } from "@/components/layout/campus-version-banner";
+import type {
+  ClubStudentTaskView,
+  CommandCenterMeetingView,
+  StudentMessageView,
+} from "@/lib/command-center";
+import { requireCompleteProfile } from "@/lib/auth/session";
 import {
   getTodaysBroadcastAnnouncement,
   type BroadcastAnnouncementView,
@@ -10,6 +16,8 @@ import {
   getTodayDigest,
   type BlueDonOSViewModel,
 } from "@/services/campus-os-service";
+import { listMeetingsForStudent } from "@/services/club-calendar-service";
+import { listTasksForStudent } from "@/services/club-student-task-service";
 import {
   buildEmptyHubDigest,
   getTodayHubDigest,
@@ -18,7 +26,7 @@ import {
   getStudentContext,
   type StudentContext,
 } from "@/services/student-context-service";
-import { requireCompleteProfile } from "@/lib/auth/session";
+import { listStudentMessagesForUser } from "@/services/student-message-service";
 
 const EMPTY_CONTEXT: StudentContext = { clubs: [], teams: [], classes: [] };
 
@@ -46,20 +54,36 @@ async function safeHomeData<T>(
 
 export default async function HomePage() {
   const user = await requireCompleteProfile();
-  const [digest, context, dailyAnnouncement, hub] = await Promise.all([
-    safeHomeData("digest", () => getTodayDigest(user.id), emptyDigest()),
-    safeHomeData("context", () => getStudentContext(user.id), EMPTY_CONTEXT),
-    safeHomeData(
-      "broadcast-announcement",
-      () => getTodaysBroadcastAnnouncement(),
-      null as BroadcastAnnouncementView | null,
-    ),
-    safeHomeData(
-      "hub",
-      () => getTodayHubDigest({ id: user.id, role: user.role }),
-      buildEmptyHubDigest(),
-    ),
-  ]);
+  const [digest, context, dailyAnnouncement, hub, messages, meetings, tasks] =
+    await Promise.all([
+      safeHomeData("digest", () => getTodayDigest(user.id), emptyDigest()),
+      safeHomeData("context", () => getStudentContext(user.id), EMPTY_CONTEXT),
+      safeHomeData(
+        "broadcast-announcement",
+        () => getTodaysBroadcastAnnouncement(),
+        null as BroadcastAnnouncementView | null,
+      ),
+      safeHomeData(
+        "hub",
+        () => getTodayHubDigest({ id: user.id, role: user.role }),
+        buildEmptyHubDigest(),
+      ),
+      safeHomeData(
+        "messages",
+        () => listStudentMessagesForUser(user.id),
+        [] as StudentMessageView[],
+      ),
+      safeHomeData(
+        "meetings",
+        () => listMeetingsForStudent(user.id),
+        [] as CommandCenterMeetingView[],
+      ),
+      safeHomeData(
+        "tasks",
+        () => listTasksForStudent(user.id),
+        [] as ClubStudentTaskView[],
+      ),
+    ]);
 
   const showAgreements = user.role === "student" || user.role === "parent";
   const showClubJoinRequests =
@@ -78,6 +102,9 @@ export default async function HomePage() {
         context={context}
         hub={hub}
         announcement={dailyAnnouncement}
+        messages={messages}
+        meetings={meetings}
+        tasks={tasks}
       />
     </>
   );

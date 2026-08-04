@@ -2,11 +2,13 @@ import { CalendarViewSwitcher } from "@/components/calendar/calendar-view";
 import { AddEventButton } from "@/components/calendar/add-event-button";
 import { ShellPage } from "@/components/layout/shell-page";
 import { FOCUS_CLUBS } from "@/config/focused-clubs";
+import { canBrowseAllFocusClubs } from "@/config/focus-club-access";
 import { canManageEvents } from "@/config/roles";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import {
   clubEventsToCalendarEntries,
   listClubCalendarEvents,
+  listMeetingsForStudent,
 } from "@/services/club-calendar-service";
 import { getCalendarEntries, listAcademies } from "@/services/event-service";
 
@@ -19,7 +21,17 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   const { club: clubFilter } = await searchParams;
   const now = new Date();
   const rangeStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const rangeEnd = new Date(now.getFullYear(), now.getMonth() + 12, 0, 23, 59, 59, 999);
+  const rangeEnd = new Date(
+    now.getFullYear(),
+    now.getMonth() + 12,
+    0,
+    23,
+    59,
+    59,
+    999,
+  );
+
+  const seeAllClubs = canBrowseAllFocusClubs(user.role);
 
   const [entries, academies, clubEvents] = await Promise.all([
     getCalendarEntries({
@@ -28,7 +40,9 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
       rangeEnd,
     }),
     listAcademies(),
-    listClubCalendarEvents({ rangeStart, rangeEnd }),
+    seeAllClubs
+      ? listClubCalendarEvents({ rangeStart, rangeEnd })
+      : listMeetingsForStudent(user.id, { rangeStart, rangeEnd }),
   ]);
 
   const clubEntries = clubEventsToCalendarEntries(clubEvents);
@@ -43,22 +57,25 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   }));
 
   const canCreate = canManageEvents(user.role);
-  const initialClubFilter = clubFilter
-    ? `club:${clubFilter}`
-    : "all";
+  const initialClubFilter = clubFilter ? `club:${clubFilter}` : "all";
 
   return (
     <ShellPage
       title="Calendar"
-      description="Shared school and club calendar — all students can view IT, Broadcasting, and Cricut events."
+      description={
+        seeAllClubs
+          ? "Shared school and club calendar — staff can view every club."
+          : "Your club meetings plus mandatory campus all-hands."
+      }
       actions={canCreate ? <AddEventButton className="hidden sm:inline-flex" /> : null}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {merged.length} item{merged.length === 1 ? "" : "s"} in range
           {canCreate ? " · click a date to schedule an academy event" : null}
-          {" · "}
-          club meetings appear for everyone
+          {seeAllClubs
+            ? " · all club meetings visible"
+            : " · only your clubs (+ mandatory all-hands)"}
         </p>
         {canCreate ? (
           <AddEventButton size="sm" className="sm:hidden" />

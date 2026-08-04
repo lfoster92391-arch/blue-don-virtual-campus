@@ -23,6 +23,7 @@ export function CricutListingForm({
   );
   const [preview, setPreview] = useState<string | null>(null);
   const [priceInput, setPriceInput] = useState("");
+  const [availableToSell, setAvailableToSell] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const priceCents = Math.round((Number(priceInput) || 0) * 100);
 
@@ -114,8 +115,28 @@ export function CricutListingForm({
         />
       </label>
 
+      <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
+        <input
+          type="checkbox"
+          name="availableToSell"
+          value="on"
+          checked={availableToSell}
+          onChange={(e) => setAvailableToSell(e.target.checked)}
+          className="mt-1"
+        />
+        <span>
+          <span className="block text-sm font-medium">Available to sell</span>
+          <span className="block text-xs text-muted-foreground">
+            On = customers can order. Off = catalog showcase only.
+          </span>
+        </span>
+      </label>
+      {!availableToSell ? (
+        <input type="hidden" name="availableToSell" value="off" />
+      ) : null}
+
       <Button type="submit" disabled={pending}>
-        {pending ? "Publishing…" : "List in Cricut Shop"}
+        {pending ? "Publishing…" : "Add to catalog"}
       </Button>
       {state.error ? (
         <p className="text-sm text-destructive">{state.error}</p>

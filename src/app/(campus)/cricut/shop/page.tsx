@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ShoppingBag } from "lucide-react";
 
+import { CricutAmazonWishlistBanner } from "@/components/cricut/cricut-amazon-wishlist";
 import { CricutListingForm } from "@/components/cricut/cricut-listing-form";
 import { CricutProductCard } from "@/components/cricut/cricut-product-card";
 import { ShellPage } from "@/components/layout/shell-page";
@@ -8,11 +8,15 @@ import { Button } from "@/components/ui/button";
 import { CRICUT_CLUB_SLUG, CRICUT_SHIPPING } from "@/config/cricut-shop";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import {
+  canCreateCricutListing,
   canManageCricutShop,
+  getCricutAmazonWishlistUrl,
   getCricutOrganization,
   isCricutShopStorageConfigured,
   listCricutShopItems,
 } from "@/services/cricut-shop-service";
+import { toggleCricutItemSellableAction } from "@/features/cricut-shop/actions";
+import { ShoppingBag } from "lucide-react";
 
 type PageProps = {
   searchParams: Promise<{ ordered?: string }>;
@@ -21,14 +25,22 @@ type PageProps = {
 export default async function CricutShopPage({ searchParams }: PageProps) {
   const user = await requireCompleteProfile();
   const { ordered } = await searchParams;
-  const [items, org] = await Promise.all([
-    listCricutShopItems(),
+  const [items, org, wishlistUrl] = await Promise.all([
+    listCricutShopItems({ manageView: true }),
     getCricutOrganization(),
+    getCricutAmazonWishlistUrl(),
   ]);
 
   const canSell = org
+    ? await canCreateCricutListing(user.id, user.role, org.id)
+    : false;
+  const canManage = org
     ? await canManageCricutShop(user.id, user.role, org.id)
     : false;
+
+  const catalogItems = items.filter(
+    (i) => i.status === "ACTIVE" || canManage,
+  );
 
   return (
     <ShellPage
@@ -36,6 +48,12 @@ export default async function CricutShopPage({ searchParams }: PageProps) {
       description="Handmade spirit wear and maker goods — pickup at Madonna or ship from Weirton, WV."
       actions={
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/cricut">Hub</Link>}
+          />
           <Button
             variant="outline"
             size="sm"
@@ -55,10 +73,17 @@ export default async function CricutShopPage({ searchParams }: PageProps) {
         </div>
       }
     >
+      <CricutAmazonWishlistBanner url={wishlistUrl} className="mb-6" compact />
+
       {ordered ? (
         <p className="mb-6 rounded-xl border border-[#2E8B57]/30 bg-[#2E8B57]/10 px-4 py-3 text-sm text-[#2E8B57]">
-          Order placed ({ordered.slice(0, 8)}…). Cricut Club will confirm
-          pickup or shipment.
+          Order placed.{" "}
+          <Link
+            href={`/cricut/orders/${ordered}`}
+            className="font-medium underline"
+          >
+            Track progress
+          </Link>
         </p>
       ) : null}
 
@@ -70,15 +95,30 @@ export default async function CricutShopPage({ searchParams }: PageProps) {
 
       <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
         <div>
-          {items.length === 0 ? (
+          {catalogItems.length === 0 ? (
             <p className="rounded-xl border border-dashed border-border px-5 py-10 text-center text-sm text-muted-foreground">
               No items listed yet.
             </p>
           ) : (
             <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {items.map((item) => (
-                <li key={item.id}>
+              {catalogItems.map((item) => (
+                <li key={item.id} className="space-y-2">
                   <CricutProductCard item={item} />
+                  {canManage && !item.isSample ? (
+                    <form action={toggleCricutItemSellableAction}>
+                      <input type="hidden" name="itemId" value={item.id} />
+                      <input
+                        type="hidden"
+                        name="availableToSell"
+                        value={item.availableToSell ? "false" : "true"}
+                      />
+                      <Button type="submit" size="sm" variant="outline" className="w-full">
+                        {item.availableToSell
+                          ? "Mark showcase only"
+                          : "Make available to sell"}
+                      </Button>
+                    </form>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -89,10 +129,10 @@ export default async function CricutShopPage({ searchParams }: PageProps) {
           <aside className="rounded-xl border border-border bg-card p-4 shadow-sm">
             <h2 className="flex items-center gap-2 font-semibold">
               <ShoppingBag className="size-4 text-[#DB2777]" />
-              Sell an item
+              Add a product
             </h2>
             <p className="mt-1 mb-4 text-xs text-muted-foreground">
-              Leads, officers, advisors, and admins
+              Members &amp; officers — photo, price, and sell toggle
             </p>
             <CricutListingForm
               storageConfigured={isCricutShopStorageConfigured()}

@@ -64,6 +64,15 @@ import {
   listClubCalendarEvents,
 } from "@/services/club-calendar-service";
 import {
+  canAssignClubTasks,
+  canCreateMandatoryAllMeeting,
+  canRequestInvoiceReceipt,
+  canSendClubMessages,
+  listActiveClubMembers,
+} from "@/lib/command-center-permissions";
+import { listTasksForClub } from "@/services/club-student-task-service";
+import { listInvoiceReceiptRequestsForClub } from "@/services/student-message-service";
+import {
   canManageClubFinances,
   canViewClubFinances,
   getClubFinanceSnapshot,
@@ -93,6 +102,8 @@ const BROADCAST_CREW_ONLY_TABS = new Set([
   "script",
   "finances",
   "invoices",
+  "tasks",
+  "messages",
   "members",
   "calendar",
   "documents",
@@ -330,6 +341,26 @@ export default async function OrganizationPage({
       ? await listPendingMemberships(organization.academy.id)
       : [];
 
+  const [
+    clubMemberOptions,
+    clubStudentTasks,
+    canAssignTasks,
+    canSendMessages,
+    canRequestReceipts,
+    canCreateMandatory,
+    invoiceReceiptRequests,
+  ] = isFallback
+    ? [[], [], false, false, false, false, []]
+    : await Promise.all([
+        listActiveClubMembers(organization.id),
+        listTasksForClub(organization.id),
+        canAssignClubTasks(user.id, user.role, organization.id),
+        canSendClubMessages(user.id, user.role, organization.id),
+        canRequestInvoiceReceipt(user.id, user.role, organization.id),
+        canCreateMandatoryAllMeeting(user.id, user.role, organization.id),
+        listInvoiceReceiptRequestsForClub(organization.id),
+      ]);
+
   const categoryMeta =
     organization.category && organization.category in ORGANIZATION_CATEGORY_META
       ? ORGANIZATION_CATEGORY_META[organization.category as OrganizationCategory]
@@ -371,6 +402,16 @@ export default async function OrganizationPage({
     pendingFocusInvoices,
     clubCalendarEvents,
     canManageClubCalendar: canManageCalendar,
+    canCreateMandatoryAllMeeting: canCreateMandatory,
+    clubStudentTasks,
+    canAssignClubTasks: canAssignTasks,
+    canSendClubMessages: canSendMessages,
+    canRequestInvoiceReceipt: canRequestReceipts,
+    invoiceReceiptRequests,
+    clubMemberOptions: clubMemberOptions.map((m) => ({
+      userId: m.userId,
+      displayName: m.displayName,
+    })),
     dailyScript,
     canEditScriptValues,
     canEditScriptPrayer,

@@ -6,7 +6,7 @@ How Lisa (admin) runs student accounts, club assignment, preview, and analytics.
 
 | Route | Purpose |
 |-------|---------|
-| `/admin/students` | **Students control center** — create, assign club/role, preview, reset password, activate/disable |
+| `/admin/students` | **Students control center** — create, assign club/role, **message students**, preview, reset password, activate/disable |
 | `/admin` | Governance hub (Students + Principal Dashboard cards) |
 | `/admin/leadership` | Principal Dashboard — club funds, invoices, memberships, school pulse |
 | `/service-desk/users` | All campus accounts (broader than students) |
@@ -33,13 +33,15 @@ On each student row (or after create):
 
 Roles (same labels on every focus club):
 
-| Role | Finances | Documents (IT) | Projects / checklists (Cricut) |
-|------|----------|----------------|--------------------------------|
-| **President** | View + manage | Edit | Manage |
-| **Vice President** | View + manage | Edit | Manage |
-| **Secretary** | View + manage | Edit | Manage |
-| **Member** | Hidden | View only | View projects; can complete checklist items |
-| **Admin** (campus) | Always | Always | Always |
+| Role | Finances | Invoice approve | Invoice/receipt **requests** | Messages | Meetings | My Tasks | Documents (IT) | Projects / checklists (Cricut) |
+|------|----------|-----------------|------------------------------|----------|----------|----------|----------------|--------------------------------|
+| **President** | View + manage | Yes | Yes | Yes | Create | Assign | Edit | Manage |
+| **Vice President** | View + manage | Yes | Yes | Yes | Create | Assign | Edit | Manage |
+| **Secretary** | View only | No | **Yes** (collect docs) | Yes | View | View own | Edit | Manage |
+| **Member** | Hidden | No | No | Own inbox | Own club | Update own | View only | View / complete items |
+| **Admin** (campus) | Always | Always | Always | Always | Always | Always | Always | Always |
+
+See also [COMMAND_CENTER.md](./COMMAND_CENTER.md) for Home hub, meetings visibility, and message actions.
 
 Membership drives **nav scoping**: a Broadcasting-only student sees Home + Broadcasting tools — not IT or Cricut.
 

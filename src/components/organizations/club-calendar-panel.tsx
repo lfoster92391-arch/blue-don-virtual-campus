@@ -21,6 +21,8 @@ type ClubCalendarPanelProps = {
   organizationSlug: string;
   events: ClubCalendarEventView[];
   canManage: boolean;
+  /** IT club officers/admin may schedule mandatory all-hands. */
+  canCreateMandatoryAll?: boolean;
 };
 
 export function ClubCalendarPanel({
@@ -29,6 +31,7 @@ export function ClubCalendarPanel({
   organizationSlug,
   events,
   canManage,
+  canCreateMandatoryAll = false,
 }: ClubCalendarPanelProps) {
   const [state, action, pending] = useActionState(
     createClubCalendarEventAction,
@@ -39,12 +42,12 @@ export function ClubCalendarPanel({
     <div className="space-y-6">
       <DashboardCard
         title="Club calendar"
-        description={`Events for ${clubName} — visible to all students on the school calendar`}
+        description={`Events for ${clubName} — club members see their club’s meetings; mandatory all-hands (IT) appear for every club`}
         icon={<Calendar className="size-5" />}
       >
         {events.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No club events yet. Advisors and leads can add meetings and deadlines below.
+            No club events yet. President and Vice President can add meetings below.
           </p>
         ) : (
           <ul className="space-y-3">
@@ -54,7 +57,14 @@ export function ClubCalendarPanel({
                 className="flex flex-col gap-2 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between"
               >
                 <div>
-                  <p className="font-medium">{event.title}</p>
+                  <p className="font-medium">
+                    {event.title}
+                    {event.mandatoryAllClubs ? (
+                      <span className="ml-2 text-xs font-semibold text-[#C0392B]">
+                        Mandatory all clubs
+                      </span>
+                    ) : null}
+                  </p>
                   <p className="text-sm text-muted-foreground">
                     {new Intl.DateTimeFormat("en-US", {
                       weekday: "short",
@@ -146,9 +156,15 @@ export function ClubCalendarPanel({
                 placeholder="Optional details"
               />
             </label>
+            {canCreateMandatoryAll ? (
+              <label className="inline-flex items-center gap-2 text-sm sm:col-span-2">
+                <input type="checkbox" name="mandatoryAllClubs" />
+                Mandatory all-hands (visible to IT, Broadcasting, and Cricut)
+              </label>
+            ) : null}
             <div className="sm:col-span-2">
               <Button type="submit" size="sm" disabled={pending}>
-                {pending ? "Saving…" : "Add event"}
+                {pending ? "Saving…" : "Add meeting"}
               </Button>
               {state.error ? (
                 <p className="mt-2 text-sm text-destructive">{state.error}</p>

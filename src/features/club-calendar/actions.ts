@@ -9,6 +9,7 @@ import {
   createClubCalendarEvent,
   deleteClubCalendarEvent,
 } from "@/services/club-calendar-service";
+import { canCreateMandatoryAllMeeting } from "@/lib/command-center-permissions";
 
 export type ClubCalendarActionState = {
   error?: string;
@@ -23,11 +24,13 @@ const eventSchema = z.object({
   location: z.string().trim().max(120).optional(),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),
+  mandatoryAllClubs: z.boolean().optional(),
 });
 
 function revalidateCalendarPaths(slug: string) {
   revalidatePath(`/organizations/${slug}`);
   revalidatePath("/calendar");
+  revalidatePath("/home");
 }
 
 export async function createClubCalendarEventAction(
@@ -36,6 +39,7 @@ export async function createClubCalendarEventAction(
 ): Promise<ClubCalendarActionState> {
   try {
     const user = await requireCompleteProfile();
+    const mandatoryAllClubs = formData.get("mandatoryAllClubs") === "on";
     const parsed = eventSchema.safeParse({
       organizationId: formData.get("organizationId"),
       organizationSlug: formData.get("organizationSlug"),
@@ -44,19 +48,25 @@ export async function createClubCalendarEventAction(
       location: formData.get("location") || undefined,
       startDate: formData.get("startDate"),
       endDate: formData.get("endDate"),
+      mandatoryAllClubs,
     });
 
     if (!parsed.success) {
       return { error: parsed.error.issues[0]?.message ?? "Invalid event." };
     }
 
-    const allowed = await canManageClubCalendar(
-      user.id,
-      user.role,
-      parsed.data.organizationId,
-    );
-    if (!allowed) {
-      return { error: "You do not have permission to manage club calendar events." };
+    if (mandatoryAllClubs) {
+      const allowed = await canCreateMandatoryAllMeeting(
+        user.id,
+        user.role,
+        parsed.data.organizationId,
+      );
+      if (!allowed) {
+        return {
+          error:
+            "Only IT Club President/VP or admin can create mandatory all-hands meetings.",
+        };
+      }
     }
 
     const startDate = new Date(parsed.data.startDate);
@@ -68,7 +78,7 @@ export async function createClubCalendarEventAction(
       return { error: "End must be after start." };
     }
 
-    const id = await createClubCalendarEvent({
+    const result = await createClubCalendarEvent({
       organizationId: parsed.data.organizationId,
       title: parsed.data.title,
       description: parsed.data.description,
@@ -76,14 +86,20 @@ export async function createClubCalendarEventAction(
       startDate,
       endDate,
       createdById: user.id,
+      role: user.role,
+      mandatoryAllClubs,
     });
 
-    if (!id) {
-      return { error: "Unable to create event." };
+    if (!result.id) {
+      return { error: result.error ?? "Unable to create event." };
     }
 
     revalidateCalendarPaths(parsed.data.organizationSlug);
-    return { success: "Club event added to the shared calendar." };
+    return {
+      success: mandatoryAllClubs
+        ? "Mandatory all-hands meeting scheduled for every club."
+        : "Club meeting added.",
+    };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unable to create event.",
@@ -98,12 +114,21 @@ export async function deleteClubCalendarEventAction(
 ): Promise<ClubCalendarActionState> {
   try {
     const user = await requireCompleteProfile();
-    const allowed = await canManageClubCalendar(user.id, user.role, organizationId);
+    const allowed = await canManageClubCalendar(
+      user.id,
+      user.role,
+      organizationId,
+    );
     if (!allowed) {
       return { error: "You do not have permission to delete club events." };
     }
 
-    const ok = await deleteClubCalendarEvent({ eventId, organizationId });
+    const ok = await deleteClubCalendarEvent({
+      eventId,
+      organizationId,
+      userId: user.id,
+      role: user.role,
+    });
     if (!ok) {
       return { error: "Unable to delete event." };
     }

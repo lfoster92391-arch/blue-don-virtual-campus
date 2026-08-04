@@ -20,6 +20,7 @@ export const CRICUT_SHOP_BUCKET =
   "campus-media";
 
 export const CRICUT_SHOP_STORAGE_PREFIX = "cricut-shop";
+export const CRICUT_DESIGN_STORAGE_PREFIX = "cricut-designs";
 
 export const CRICUT_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
 
@@ -65,6 +66,54 @@ export const CRICUT_PICKUP = {
   blurb: "Collect your order at Madonna High School in Weirton — no shipping charge.",
 } as const;
 
+/** Env fallback for Amazon wishlist; org.amazonWishlistUrl wins when set. */
+export function getCricutAmazonWishlistEnvUrl(): string | null {
+  const url = process.env.CRICUT_AMAZON_WISHLIST_URL?.trim();
+  return url && /^https?:\/\//i.test(url) ? url : null;
+}
+
+/** Live order tracking steps (progress bar). */
+export const CRICUT_ORDER_PROGRESS_STEPS = [
+  { key: "ORDER_SENT", label: "Order sent", statuses: ["PENDING"] },
+  {
+    key: "IN_PRODUCTION",
+    label: "In production",
+    statuses: ["CONFIRMED", "IN_PRODUCTION"],
+  },
+  {
+    key: "READY_FOR_PICKUP",
+    label: "Ready for pickup",
+    statuses: ["READY_FOR_PICKUP"],
+  },
+  {
+    key: "COMPLETED",
+    label: "Completed",
+    statuses: ["FULFILLED", "COMPLETED"],
+  },
+] as const;
+
+export type CricutOrderProgressKey =
+  (typeof CRICUT_ORDER_PROGRESS_STEPS)[number]["key"];
+
+export const CRICUT_ORDER_STATUS_LABELS: Record<string, string> = {
+  PENDING: "Order sent",
+  CONFIRMED: "In production",
+  IN_PRODUCTION: "In production",
+  READY_FOR_PICKUP: "Ready for pickup",
+  FULFILLED: "Completed",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+};
+
+/** Statuses officers/assignees can set from the order desk. */
+export const CRICUT_ORDER_UPDATE_STATUSES = [
+  "PENDING",
+  "IN_PRODUCTION",
+  "READY_FOR_PICKUP",
+  "COMPLETED",
+  "CANCELLED",
+] as const;
+
 export function formatShopPrice(cents: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -76,12 +125,23 @@ export function shippingCentsFor(fulfillment: "PICKUP" | "SHIP"): number {
   return fulfillment === "SHIP" ? CRICUT_SHIPPING.standardFlatCents : 0;
 }
 
+export function orderProgressIndex(status: string): number {
+  if (status === "CANCELLED") {
+    return -1;
+  }
+  const idx = CRICUT_ORDER_PROGRESS_STEPS.findIndex((step) =>
+    (step.statuses as readonly string[]).includes(status),
+  );
+  return idx >= 0 ? idx : 0;
+}
+
 export type CricutSampleItem = {
   id: string;
   title: string;
   description: string;
   priceCents: number;
   imageUrl: string | null;
+  availableToSell?: boolean;
 };
 
 const CRICUT_SAMPLE_ITEMS: CricutSampleItem[] = [
@@ -91,6 +151,7 @@ const CRICUT_SAMPLE_ITEMS: CricutSampleItem[] = [
     description: "Weatherproof vinyl Blue Don logo — 4\" wide. Cut on campus Cricuts.",
     priceCents: 800,
     imageUrl: null,
+    availableToSell: true,
   },
   {
     id: "sample-cricut-tumbler",
@@ -98,6 +159,7 @@ const CRICUT_SAMPLE_ITEMS: CricutSampleItem[] = [
     description: "Custom HTV wrap for 20oz tumblers. Choose navy or white lettering.",
     priceCents: 1800,
     imageUrl: null,
+    availableToSell: true,
   },
   {
     id: "sample-cricut-keychain",
@@ -105,6 +167,7 @@ const CRICUT_SAMPLE_ITEMS: CricutSampleItem[] = [
     description: "Pair of Madonna spirit keychains — engraved + vinyl accent.",
     priceCents: 1200,
     imageUrl: null,
+    availableToSell: false,
   },
 ];
 

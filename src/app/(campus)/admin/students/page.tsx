@@ -8,6 +8,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { AdminComposeStudentMessage } from "@/components/admin/admin-compose-student-message";
 import { CreateStudentForm } from "@/components/admin/create-student-form";
 import { StudentAdminRow } from "@/components/admin/student-admin-row";
 import { ShellPage } from "@/components/layout/shell-page";
@@ -17,6 +18,8 @@ import { isSupabaseAdminConfigured } from "@/config/env";
 import { canManageUsers, canViewLeadershipAnalytics } from "@/config/roles";
 import { startClubPreviewAction } from "@/features/admin/preview-actions";
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { isPrismaReady, withDatabase } from "@/lib/prisma";
+import { FOCUS_CLUB_SLUGS } from "@/config/focused-clubs";
 import { listStudentsForAdmin } from "@/services/student-admin-service";
 
 export default async function AdminStudentsPage() {
@@ -30,10 +33,21 @@ export default async function AdminStudentsPage() {
   const passwordManagementEnabled = isSupabaseAdminConfigured();
   const showLeadership = canViewLeadershipAnalytics(user.role);
 
+  const focusOrgs =
+    isPrismaReady()
+      ? ((await withDatabase((prisma) =>
+          prisma.organization.findMany({
+            where: { slug: { in: [...FOCUS_CLUB_SLUGS] } },
+            select: { id: true, slug: true, name: true },
+            orderBy: { sortOrder: "asc" },
+          }),
+        )) ?? [])
+      : [];
+
   return (
     <ShellPage
       title="Students control center"
-      description="Create accounts, assign club roles, preview what students see, and reset passwords."
+      description="Create accounts, assign club roles, message students, preview what they see, and reset passwords."
       actions={
         <div className="flex flex-wrap gap-2">
           {showLeadership ? (
@@ -87,6 +101,19 @@ export default async function AdminStudentsPage() {
       ) : null}
 
       <CreateStudentForm />
+
+      {focusOrgs.length > 0 ? (
+        <section className="mt-8">
+          <AdminComposeStudentMessage
+            organizations={focusOrgs}
+            students={students.map((s) => ({
+              userId: s.id,
+              displayName: s.displayName,
+              memberships: s.memberships,
+            }))}
+          />
+        </section>
+      ) : null}
 
       <section className="mt-8 space-y-3 rounded-xl border border-border bg-card p-5">
         <div className="flex items-center gap-2">

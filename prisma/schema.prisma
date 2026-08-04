@@ -422,12 +422,19 @@ model User {
   clubInvoicesReviewed   ClubInvoice[]           @relation("ClubInvoiceReviewer")
   cricutShopItems        CricutShopItem[]        @relation("CricutShopSeller")
   cricutShopOrders       CricutShopOrder[]       @relation("CricutShopBuyer")
+  cricutShopOrdersAssigned CricutShopOrder[]     @relation("CricutShopAssignee")
+  cricutDesignsSubmitted CricutDesignSubmission[] @relation("CricutDesignSubmitter")
+  cricutDesignsReviewed  CricutDesignSubmission[] @relation("CricutDesignReviewer")
   clubDocumentsCreated   ClubDocument[]          @relation("ClubDocumentCreator")
   clubDocumentsUpdated   ClubDocument[]          @relation("ClubDocumentUpdater")
   clubProjectsOwned      ClubProject[]           @relation("ClubProjectOwner")
   clubProjectsCreated    ClubProject[]           @relation("ClubProjectCreator")
   clubProjectChecklistsCreated ClubProjectChecklist[] @relation("ClubProjectChecklistCreator")
   clubProjectChecklistItemsDone ClubProjectChecklistItem[] @relation("ClubProjectChecklistItemDoneBy")
+  studentMessagesSent    StudentMessage[]        @relation("StudentMessageSender")
+  studentMessagesReceived StudentMessage[]       @relation("StudentMessageRecipient")
+  clubStudentTasksCreated ClubStudentTask[]      @relation("ClubStudentTaskCreator")
+  clubStudentTasksAssigned ClubStudentTask[]     @relation("ClubStudentTaskAssignee")
 
   @@index([role])
   @@index([schoolId])
@@ -461,6 +468,8 @@ model Organization {
   description String?
   academyId   String?            @unique @map("academy_id")
   visibility  OrgVisibility      @default(SCHOOL)
+  /** External Amazon wishlist URL (Cricut Club donations). Env fallback: CRICUT_AMAZON_WISHLIST_URL. */
+  amazonWishlistUrl String?          @map("amazon_wishlist_url")
   createdAt   DateTime           @default(now()) @map("created_at")
   updatedAt   DateTime           @updatedAt @map("updated_at")
   academy       Academy?           @relation(fields: [academyId], references: [id], onDelete: SetNull)
@@ -474,11 +483,14 @@ model Organization {
   calendarEvents ClubCalendarEvent[]
   clubInvoices ClubInvoice[]
   cricutShopItems CricutShopItem[]
+  cricutDesignSubmissions CricutDesignSubmission[]
   broadcastScriptTemplate BroadcastScriptTemplate?
   broadcastDailyScripts BroadcastDailyScript[]
   clubDocuments ClubDocument[]
   clubProjects ClubProject[]
   clubProjectChecklists ClubProjectChecklist[]
+  studentMessages StudentMessage[]
+  clubStudentTasks ClubStudentTask[]
 
   @@index([type])
   @@map("organizations")
@@ -1747,10 +1759,24 @@ enum CricutFulfillmentMethod {
 }
 
 enum CricutShopOrderStatus {
+  /** Order sent — awaiting production. */
   PENDING
+  /** In production (legacy alias: CONFIRMED still accepted in reads). */
   CONFIRMED
+  IN_PRODUCTION
+  READY_FOR_PICKUP
+  /** Completed / handed off (legacy alias: FULFILLED). */
   FULFILLED
+  COMPLETED
   CANCELLED
+}
+
+enum CricutDesignStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  IN_PRODUCTION
+  COMPLETED
 }
 
 /** Cricut Club branded merch / maker shop listings. */
@@ -1762,6 +1788,8 @@ model CricutShopItem {
   imageUrl       String?              @map("image_url")
   storagePath    String?              @map("storage_path")
   status         CricutShopItemStatus @default(ACTIVE)
+  /** When false, item is catalog showcase only (not purchasable). */
+  availableToSell Boolean             @default(true) @map("available_to_sell")
   sellerId       String               @map("seller_id") @db.Uuid
   organizationId String               @map("organization_id")
   inventoryQty   Int?                 @map("inventory_qty")
@@ -1774,6 +1802,7 @@ model CricutShopItem {
   @@index([status])
   @@index([organizationId])
   @@index([sellerId])
+  @@index([availableToSell])
   @@map("cricut_shop_items")
 }
 
@@ -1785,6 +1814,10 @@ model CricutShopOrder {
   subtotalCents      Int                    @map("subtotal_cents")
   shippingCents      Int                    @default(0) @map("shipping_cents")
   totalCents         Int                    @map("total_cents")
+  contactName        String?                @map("contact_name")
+  contactEmail       String?                @map("contact_email")
+  contactPhone       String?                @map("contact_phone")
+  customizationNotes String?                @map("customization_notes")
   shipName           String?                @map("ship_name")
   shipLine1          String?                @map("ship_line1")
   shipLine2          String?                @map("ship_line2")
@@ -1792,14 +1825,42 @@ model CricutShopOrder {
   shipState          String?                @map("ship_state")
   shipPostal         String?                @map("ship_postal")
   notes              String?
+  assignedToId       String?                @map("assigned_to_id") @db.Uuid
   createdAt          DateTime               @default(now()) @map("created_at")
   updatedAt          DateTime               @updatedAt @map("updated_at")
   buyer              User                   @relation("CricutShopBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  assignedTo         User?                  @relation("CricutShopAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   lines              CricutShopOrderLine[]
 
   @@index([buyerId])
   @@index([status])
+  @@index([assignedToId])
   @@map("cricut_shop_orders")
+}
+
+/** Campus design ideas submitted for Cricut Club to make. */
+model CricutDesignSubmission {
+  id             String             @id @default(cuid())
+  organizationId String             @map("organization_id")
+  submitterId    String             @map("submitter_id") @db.Uuid
+  title          String
+  description    String
+  imageUrl       String?            @map("image_url")
+  storagePath    String?            @map("storage_path")
+  status         CricutDesignStatus @default(PENDING)
+  reviewNote     String?            @map("review_note")
+  reviewedById   String?            @map("reviewed_by_id") @db.Uuid
+  reviewedAt     DateTime?          @map("reviewed_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  submitter      User               @relation("CricutDesignSubmitter", fields: [submitterId], references: [id], onDelete: Cascade)
+  reviewedBy     User?              @relation("CricutDesignReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status])
+  @@index([submitterId])
+  @@index([status])
+  @@map("cricut_design_submissions")
 }
 
 model CricutShopOrderLine {
@@ -1840,23 +1901,99 @@ model ClubFundraiser {
 }
 
 model ClubCalendarEvent {
-  id             String       @id @default(cuid())
-  organizationId String       @map("organization_id")
-  title          String
-  description    String?
-  location       String?
-  startDate      DateTime     @map("start_date")
-  endDate        DateTime     @map("end_date")
-  createdById    String       @map("created_by_id") @db.Uuid
-  createdAt      DateTime     @default(now()) @map("created_at")
-  updatedAt      DateTime     @updatedAt @map("updated_at")
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy      User         @relation("ClubCalendarCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  id                String       @id @default(cuid())
+  organizationId    String       @map("organization_id")
+  title             String
+  description       String?
+  location          String?
+  startDate         DateTime     @map("start_date")
+  endDate           DateTime     @map("end_date")
+  /** IT all-hands: visible to every focus-club member, not only the host club. */
+  mandatoryAllClubs Boolean      @default(false) @map("mandatory_all_clubs")
+  createdById       String       @map("created_by_id") @db.Uuid
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy         User         @relation("ClubCalendarCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([organizationId, startDate])
   @@index([startDate])
   @@index([createdById])
+  @@index([mandatoryAllClubs])
   @@map("club_calendar_events")
+}
+
+enum StudentMessageStatus {
+  UNREAD
+  VIEW_LATER
+  DONE
+  DISMISSED
+}
+
+enum StudentMessageKind {
+  GENERAL
+  ADVISOR_REQUEST
+  INVOICE_RECEIPT_REQUEST
+  CRICUT_ORDER
+}
+
+/** Advisor / officer → student Command Center messages with action buttons. */
+model StudentMessage {
+  id                 String               @id @default(cuid())
+  fromUserId         String               @map("from_user_id") @db.Uuid
+  toUserId           String               @map("to_user_id") @db.Uuid
+  organizationId     String?              @map("organization_id")
+  kind               StudentMessageKind   @default(GENERAL)
+  title              String
+  body               String?
+  status             StudentMessageStatus @default(UNREAD)
+  /** JSON array: [{ label, href?, actionType }] */
+  actions            Json
+  calendarTitle      String?              @map("calendar_title")
+  calendarStart      DateTime?            @map("calendar_start")
+  calendarEnd        DateTime?            @map("calendar_end")
+  calendarLocation   String?              @map("calendar_location")
+  createdAt          DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
+  fromUser           User                 @relation("StudentMessageSender", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser             User                 @relation("StudentMessageRecipient", fields: [toUserId], references: [id], onDelete: Cascade)
+  organization       Organization?        @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([toUserId, status])
+  @@index([fromUserId])
+  @@index([organizationId])
+  @@index([createdAt])
+  @@map("student_messages")
+}
+
+enum ClubStudentTaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  COMPLETED
+}
+
+/** Per-student club tasks shown on Command Center (President/VP assign). */
+model ClubStudentTask {
+  id             String                @id @default(cuid())
+  organizationId String                @map("organization_id")
+  title          String
+  description    String?
+  dueAt          DateTime?             @map("due_at")
+  status         ClubStudentTaskStatus @default(NOT_STARTED)
+  assigneeId     String                @map("assignee_id") @db.Uuid
+  createdById    String                @map("created_by_id") @db.Uuid
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignee       User                  @relation("ClubStudentTaskAssignee", fields: [assigneeId], references: [id], onDelete: Cascade)
+  createdBy      User                  @relation("ClubStudentTaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([assigneeId, status])
+  @@index([dueAt])
+  @@index([createdById])
+  @@map("club_student_tasks")
 }
 
 model CornerStoreItem {

@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Cpu, Radio, Scissors, type LucideIcon } from "lucide-react";
+import { ArrowRight, Cpu, ExternalLink, Gift, Radio, Scissors, type LucideIcon } from "lucide-react";
 
 import { FOCUS_CLUBS } from "@/config/focused-clubs";
+import { getCricutAmazonWishlistUrl } from "@/services/cricut-shop-service";
 import type { CampusUser } from "@/types/auth";
 
 const CLUB_ICONS: Record<string, LucideIcon> = {
@@ -25,10 +26,11 @@ type FocusClubsHeroProps = {
 };
 
 /** Focused-mode home hero — three club destinations as the primary surface. */
-export function FocusClubsHero({ user }: FocusClubsHeroProps) {
+export async function FocusClubsHero({ user }: FocusClubsHeroProps) {
   const preferredName =
     user.firstName ?? user.displayName.split(" ")[0] ?? user.displayName;
   const hour = new Date().getHours();
+  const cricutWishlistUrl = await getCricutAmazonWishlistUrl();
 
   return (
     <section
@@ -89,6 +91,29 @@ export function FocusClubsHero({ user }: FocusClubsHeroProps) {
             );
           })}
         </ul>
+
+        {cricutWishlistUrl ? (
+          <div className="flex flex-col gap-3 rounded-xl border border-[#FF9900]/40 bg-[#FF9900]/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <Gift className="mt-0.5 size-5 shrink-0 text-[#FFB84D]" aria-hidden="true" />
+              <div>
+                <p className="text-sm font-semibold">Support Cricut Club</p>
+                <p className="text-xs text-white/70">
+                  Donate supplies via the Amazon wishlist — vinyl, blanks, and blades.
+                </p>
+              </div>
+            </div>
+            <Link
+              href={cricutWishlistUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#FF9900] px-3 py-1.5 text-sm font-medium text-[#0A2342] hover:bg-[#E88B00]"
+            >
+              Open wishlist
+              <ExternalLink className="size-3.5" />
+            </Link>
+          </div>
+        ) : null}
       </div>
 
       <div

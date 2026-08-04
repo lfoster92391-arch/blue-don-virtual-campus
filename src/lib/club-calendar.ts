@@ -9,4 +9,5 @@ export type ClubCalendarEventView = {
   startDate: Date;
   endDate: Date;
   createdByName: string;
+  mandatoryAllClubs?: boolean;
 };

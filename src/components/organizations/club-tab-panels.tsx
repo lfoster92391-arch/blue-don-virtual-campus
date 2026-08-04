@@ -3,6 +3,7 @@ import {
   ClubChecklistsPanel,
   ClubProjectsPanel,
 } from "@/components/organizations/club-projects-panel";
+import { CricutOverviewExtras } from "@/components/cricut/cricut-overview-extras";
 import type { ClubDocumentView } from "@/lib/club-workspace-types";
 import type {
   ClubChecklistView,
@@ -10,8 +11,14 @@ import type {
 } from "@/lib/club-workspace-types";
 import type { ClubTabId } from "@/components/organizations/club-tab-nav";
 import { ClubCalendarPanel } from "@/components/organizations/club-calendar-panel";
+import { ClubTasksPanel } from "@/components/organizations/club-tasks-panel";
+import { ComposeStudentMessageForm } from "@/components/organizations/compose-student-message-form";
 import { ClubFinancesPanel } from "@/components/organizations/club-finances-panel";
 import { ClubInvoicesPanel } from "@/components/organizations/club-invoices-panel";
+import type {
+  ClubStudentTaskView,
+  StudentMessageView,
+} from "@/lib/command-center";
 import { ClubProgressPanel } from "@/components/organizations/club-workspace/club-progress-panel";
 import {
   AthleticsWorkspacePanel,
@@ -103,6 +110,13 @@ export type ClubTabPanelsProps = {
   pendingFocusInvoices?: ClubInvoiceView[];
   clubCalendarEvents?: ClubCalendarEventView[];
   canManageClubCalendar?: boolean;
+  canCreateMandatoryAllMeeting?: boolean;
+  clubStudentTasks?: ClubStudentTaskView[];
+  canAssignClubTasks?: boolean;
+  canSendClubMessages?: boolean;
+  canRequestInvoiceReceipt?: boolean;
+  invoiceReceiptRequests?: StudentMessageView[];
+  clubMemberOptions?: { userId: string; displayName: string }[];
   dailyScript?: BroadcastDailyScriptView | null;
   canEditScriptValues?: boolean;
   canEditScriptPrayer?: boolean;
@@ -255,11 +269,14 @@ function OverviewPanel(props: ClubTabPanelsProps) {
     props.organizationType === "CLUB" && !FOCUSED_CLUBS_MODE;
   const clubProgress = showClubXp ? getClubProgress(props.organizationSlug) : null;
   const isBroadcasting = props.organizationSlug === "broadcasting";
+  const isCricut = props.organizationSlug === "cricut-club";
   const isBroadcastCrew = props.isBroadcastCrew !== false;
 
   return (
     <div className="space-y-8">
       <ClubHero card={card} profile={profile} match={props.match} />
+
+      {isCricut ? <CricutOverviewExtras /> : null}
 
       {isBroadcasting ? (
         <DashboardCard
@@ -601,7 +618,92 @@ function CalendarPanel(props: ClubTabPanelsProps) {
       organizationSlug={props.organizationSlug}
       events={props.clubCalendarEvents ?? []}
       canManage={props.canManageClubCalendar ?? false}
+      canCreateMandatoryAll={props.canCreateMandatoryAllMeeting ?? false}
     />
+  );
+}
+
+function ClubTasksTabPanel(props: ClubTabPanelsProps) {
+  return (
+    <ClubTasksPanel
+      organizationId={props.organizationId}
+      organizationSlug={props.organizationSlug}
+      clubName={props.card.name}
+      members={props.clubMemberOptions ?? []}
+      tasks={props.clubStudentTasks ?? []}
+      canAssign={props.canAssignClubTasks ?? false}
+    />
+  );
+}
+
+function ClubMessagesTabPanel(props: ClubTabPanelsProps) {
+  const canSend = props.canSendClubMessages ?? false;
+  const canRequest = props.canRequestInvoiceReceipt ?? false;
+  const requests = props.invoiceReceiptRequests ?? [];
+
+  if (!canSend && !canRequest) {
+    return (
+      <DashboardCard title="Messages" description="Advisor requests">
+        <p className="text-sm text-muted-foreground">
+          Club officers (President, Vice President, Secretary) and admins can
+          message members from this tab. Students see messages on their Command
+          Center at Home.
+        </p>
+      </DashboardCard>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {canSend ? (
+        <ComposeStudentMessageForm
+          organizationId={props.organizationId}
+          organizationSlug={props.organizationSlug}
+          clubName={props.card.name}
+          members={props.clubMemberOptions ?? []}
+          mode="advisor"
+        />
+      ) : null}
+      {canRequest ? (
+        <ComposeStudentMessageForm
+          organizationId={props.organizationId}
+          organizationSlug={props.organizationSlug}
+          clubName={props.card.name}
+          members={props.clubMemberOptions ?? []}
+          mode="invoice_receipt"
+        />
+      ) : null}
+      {canRequest ? (
+        <DashboardCard
+          title="Pending invoice / receipt requests"
+          description="Status of documentation requests you and other officers sent."
+        >
+          {requests.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No open invoice or receipt requests yet.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {requests.map((req) => (
+                <li
+                  key={req.id}
+                  className="rounded-lg border border-border px-3 py-2 text-sm"
+                >
+                  <p className="font-medium">{req.title}</p>
+                  <p className="text-muted-foreground">
+                    Status: {req.status.replaceAll("_", " ").toLowerCase()} ·{" "}
+                    {new Intl.DateTimeFormat("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    }).format(new Date(req.createdAt))}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </DashboardCard>
+      ) : null}
+    </div>
   );
 }
 
@@ -706,16 +808,38 @@ function InvoicesPanel(props: ClubTabPanelsProps) {
 
 function ShopPanel() {
   return (
-    <DashboardCard
-      title="Cricut Club Shop"
-      description="Sell handmade goods — pickup at Madonna or ship from Weirton, WV."
-    >
-      <Button
-        size="sm"
-        nativeButton={false}
-        render={<Link href="/cricut/shop">Open shop</Link>}
-      />
-    </DashboardCard>
+    <div className="space-y-4">
+      <DashboardCard
+        title="Cricut Club Shop"
+        description="Catalog, orders, and production — pickup at Madonna or ship from Weirton, WV."
+      >
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/cricut/shop">Open shop</Link>}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/cricut/orders">Orders</Link>}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/cricut/designs">Design hub</Link>}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/cricut">Production hub</Link>}
+          />
+        </div>
+      </DashboardCard>
+    </div>
   );
 }
 
@@ -1053,6 +1177,26 @@ export function ClubTabPanels(props: ClubTabPanelsProps) {
       return <InvoicesPanel {...props} />;
     case "shop":
       return <ShopPanel />;
+    case "designs":
+      return (
+        <DashboardCard title="Design hub">
+          <Button
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/cricut/designs">Open design hub</Link>}
+          />
+        </DashboardCard>
+      );
+    case "orders":
+      return (
+        <DashboardCard title="Orders">
+          <Button
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/cricut/orders">Open orders</Link>}
+          />
+        </DashboardCard>
+      );
     case "script":
       return <ScriptPanel {...props} />;
     case "media":
@@ -1063,6 +1207,10 @@ export function ClubTabPanels(props: ClubTabPanelsProps) {
       return <LeadershipPanel profile={props.profile} />;
     case "members":
       return <MembersPanel members={props.members} memberCount={props.memberCount} />;
+    case "tasks":
+      return <ClubTasksTabPanel {...props} />;
+    case "messages":
+      return <ClubMessagesTabPanel {...props} />;
     case "overview":
     default:
       return <OverviewPanel {...props} />;
@@ -1082,11 +1230,15 @@ export const CLUB_TAB_IDS = [
   "finances",
   "invoices",
   "shop",
+  "designs",
+  "orders",
   "script",
   "media",
   "fundraisers",
   "leadership",
   "members",
+  "tasks",
+  "messages",
 ] as const;
 
 export function isClubTabId(value: string): value is ClubTabId {
