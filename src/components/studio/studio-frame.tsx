@@ -47,7 +47,7 @@ export function StudioPanel({
   );
 }
 
-export function PhaseBadge({ phase = 3 }: { phase?: number }) {
+export function PhaseBadge({ phase = 4 }: { phase?: number }) {
   return (
     <span className="rounded-sm border border-[#C9A227]/40 bg-[#C9A227]/10 px-1.5 py-0.5 font-mono text-[0.6rem] tracking-wider text-[#E0B93B] uppercase">
       Phase {phase}
@@ -55,7 +55,7 @@ export function PhaseBadge({ phase = 3 }: { phase?: number }) {
   );
 }
 
-/** A single hardware-style button face. Inert in the Phase 2 shell. */
+/** A single hardware-style button face. Display-only until the OBS bridge lands. */
 export function StudioTile({
   label,
   detail,
@@ -100,24 +100,38 @@ export function StudioEmptyNote({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function OnAirLamp({ live }: { live: boolean }) {
+/**
+ * Three-state air lamp. PREVIEW means the scheduled air window is open — it is
+ * a BroadcastSchedule signal, not a hardware tally.
+ */
+export function OnAirLamp({ state }: { state: "LIVE" | "PREVIEW" | "OFFLINE" }) {
+  const chrome = {
+    LIVE: {
+      shell: "border-[#E11D48]/60 bg-[#E11D48]/20 text-[#FF7A93]",
+      dot: "animate-pulse bg-[#FF3B5C]",
+      label: "On air",
+    },
+    PREVIEW: {
+      shell: "border-[#C9A227]/60 bg-[#C9A227]/15 text-[#E0B93B]",
+      dot: "bg-[#E0B93B]",
+      label: "Preview",
+    },
+    OFFLINE: {
+      shell: "border-white/15 bg-white/5 text-slate-400",
+      dot: "bg-slate-600",
+      label: "Off air",
+    },
+  }[state];
+
   return (
     <span
       className={cn(
         "inline-flex items-center gap-2 rounded-sm border px-2.5 py-1 font-mono text-[0.7rem] font-semibold tracking-[0.2em] uppercase",
-        live
-          ? "border-[#E11D48]/60 bg-[#E11D48]/20 text-[#FF7A93]"
-          : "border-white/15 bg-white/5 text-slate-400",
+        chrome.shell,
       )}
     >
-      <span
-        className={cn(
-          "size-2 rounded-full",
-          live ? "animate-pulse bg-[#FF3B5C]" : "bg-slate-600",
-        )}
-        aria-hidden="true"
-      />
-      {live ? "On air" : "Off air"}
+      <span className={cn("size-2 rounded-full", chrome.dot)} aria-hidden="true" />
+      {chrome.label}
     </span>
   );
 }

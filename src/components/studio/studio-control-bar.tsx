@@ -19,7 +19,7 @@ type StudioControlBarProps = {
 
 /**
  * Broadcast transport. GO LIVE / END BROADCAST run through the existing campus
- * live-stream actions; START RECORD is staged for the Phase 3 OBS bridge.
+ * live-stream actions; START RECORD is staged for the OBS bridge.
  */
 export function StudioControlBar({
   activeLiveId,
@@ -78,7 +78,7 @@ export function StudioControlBar({
           type="button"
           tone="record"
           disabled
-          title="Recording control arrives with the Phase 3 OBS bridge."
+          title="Recording control arrives with the OBS bridge."
           icon={<Circle className="size-4" aria-hidden="true" />}
           label="Start record"
         />

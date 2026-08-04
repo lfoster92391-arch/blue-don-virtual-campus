@@ -1,31 +1,41 @@
 /**
- * Broadcast Control Studio — Phase 2 shell scaffolding.
+ * Broadcast Control Studio — console scaffolding.
  *
- * Everything here is static console furniture so operators can rehearse the
- * layout before the OBS bridge lands. Nothing in this file talks to hardware;
- * Phase 3 replaces these definitions with live scene/source state from the
- * studio bridge. See docs/BROADCAST_STUDIO.md.
+ * What is left in this file is hardware furniture that has no database source
+ * yet: Studio B scene names, source tiles, fader labels, graphics and sponsor
+ * slots. Panels backed by real campus rows read from
+ * `broadcast-studio-service.ts` instead. Nothing here talks to hardware; scene,
+ * source, and audio state arrive with the OBS bridge.
+ * See docs/BROADCAST_STUDIO.md.
  */
 
 export const STUDIO_ROUTE = "/broadcast/studio";
 
 export const STUDIO_PHASE = {
-  current: 2,
-  label: "Phase 2 · Console shell",
-  note: "Layout and gating only. Scene switching, graphics, audio, and scoreboard control arrive in Phase 3 with the OBS bridge.",
+  current: 3,
+  label: "Phase 3 · Read-only console",
+  note: "Program, run of show, crew, countdown, and scoreboard read live campus data. Scene switching, graphics, audio, and scoreboard control arrive with the OBS bridge.",
 } as const;
+
+/** How often the console re-reads on-air state from the server. */
+export const STUDIO_POLL_INTERVAL_MS = 5_000;
+
+/**
+ * Minutes on either side of the scheduled air time where the console reports
+ * PREVIEW instead of OFFLINE. This is the only honest "armed" signal available
+ * without an OBS bridge — it comes from BroadcastSchedule, not from hardware.
+ */
+export const STUDIO_PREVIEW_WINDOW_MINUTES = 15;
 
 export type StudioSceneDef = {
   id: string;
   label: string;
   /** Shot description shown under the scene name. */
   shot: string;
-  /** Program-ready scenes render as the default on-air candidate. */
-  program?: boolean;
 };
 
 export const STUDIO_SCENES: StudioSceneDef[] = [
-  { id: "open", label: "Open", shot: "Title card + music bed", program: true },
+  { id: "open", label: "Open", shot: "Title card + music bed" },
   { id: "anchor-2shot", label: "Anchor 2-Shot", shot: "Desk cam wide" },
   { id: "anchor-single", label: "Anchor Single", shot: "Desk cam center" },
   { id: "package", label: "Package", shot: "Full-screen VT playback" },
@@ -55,7 +65,7 @@ export type StudioAudioChannelDef = {
   id: string;
   label: string;
   detail: string;
-  /** Nominal fader position, 0–100, for the Phase 2 static meter. */
+  /** Nominal fader position, 0–100, for the static meter. */
   level: number;
   muted?: boolean;
 };
@@ -99,12 +109,48 @@ export type StudioHealthCheckDef = {
   id: string;
   label: string;
   detail: string;
+  /**
+   * What the console can honestly report today. `NONE` means there is no data
+   * source yet, so the row stays "Not linked" rather than claiming a status.
+   */
+  binding: "STREAM_TARGET" | "CAMPUS_RECORD" | "NONE";
 };
 
 export const STUDIO_HEALTH_CHECKS: StudioHealthCheckDef[] = [
-  { id: "obs", label: "OBS bridge", detail: "WebSocket link to Studio B PC" },
-  { id: "encoder", label: "Encoder", detail: "Bitrate / dropped frames" },
-  { id: "ingest", label: "RTMP ingest", detail: "Campus stream target" },
-  { id: "scoreboard", label: "Scoreboard feed", detail: "Daktronics link" },
-  { id: "storage", label: "Recording disk", detail: "Local capture space" },
+  {
+    id: "record",
+    label: "Campus stream record",
+    detail: "CampusMediaItem on-air row",
+    binding: "CAMPUS_RECORD",
+  },
+  {
+    id: "ingest",
+    label: "RTMP ingest",
+    detail: "Campus stream target",
+    binding: "STREAM_TARGET",
+  },
+  {
+    id: "obs",
+    label: "OBS bridge",
+    detail: "WebSocket link to Studio B PC",
+    binding: "NONE",
+  },
+  {
+    id: "encoder",
+    label: "Encoder",
+    detail: "Bitrate / dropped frames",
+    binding: "NONE",
+  },
+  {
+    id: "scoreboard",
+    label: "Scoreboard feed",
+    detail: "Daktronics link",
+    binding: "NONE",
+  },
+  {
+    id: "storage",
+    label: "Recording disk",
+    detail: "Local capture space",
+    binding: "NONE",
+  },
 ];

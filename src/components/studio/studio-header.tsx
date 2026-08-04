@@ -1,31 +1,54 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { LogOut, Radio } from "lucide-react";
 
 import { OnAirLamp } from "@/components/studio/studio-frame";
+import {
+  formatCampusTime,
+  formatClock,
+  formatCountdown,
+  formatElapsed,
+  formatSinceLabel,
+  useSecondTick,
+} from "@/components/studio/studio-time";
 import { STUDIO_PHASE } from "@/config/broadcast-studio";
+import type {
+  StudioAirState,
+  StudioEventContext,
+  StudioNextAirState,
+} from "@/services/broadcast-studio-service";
+import { cn } from "@/lib/utils";
 
 type StudioHeaderProps = {
   operatorName: string;
   operatorRole: string;
-  onAirSince: string | null;
-  nextAirLabel: string | null;
+  airState: StudioAirState;
   programTitle: string | null;
+  onAirSince: string | null;
+  nextAir: StudioNextAirState;
+  event: StudioEventContext;
+  /** ISO time of the last successful console read. */
+  syncedAt: string | null;
+  syncError: string | null;
 };
 
 export function StudioHeader({
   operatorName,
   operatorRole,
-  onAirSince,
-  nextAirLabel,
+  airState,
   programTitle,
+  onAirSince,
+  nextAir,
+  event,
+  syncedAt,
+  syncError,
 }: StudioHeaderProps) {
-  const live = Boolean(onAirSince);
   const tick = useSecondTick();
   const clock = tick ? formatClock(tick) : null;
   const elapsed = formatElapsed(tick, onAirSince);
+  const countdown = formatCountdown(tick, nextAir.at);
+  const nextAirClock = formatCampusTime(nextAir.at);
 
   return (
     <header className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-white/10 bg-[#081426] px-4 py-2.5">
@@ -43,16 +66,29 @@ export function StudioHeader({
         </div>
       </div>
 
-      <OnAirLamp live={live} />
+      <OnAirLamp state={airState} />
 
       <dl className="flex flex-wrap items-center gap-x-5 gap-y-1 font-mono text-[0.7rem] text-slate-400">
         <Readout label="Program" value={programTitle ?? "—"} wide />
-        <Readout label="Elapsed" value={live ? elapsed : "00:00:00"} />
+        <Readout
+          label="Elapsed"
+          value={airState === "LIVE" ? elapsed : "00:00:00"}
+        />
         <Readout label="Clock" value={clock ?? "--:--:--"} />
-        <Readout label="Next air" value={nextAirLabel ?? "Unscheduled"} wide />
+        <Readout
+          label="Next air"
+          value={
+            countdown && nextAirClock
+              ? `${countdown} · ${nextAirClock}`
+              : "Unscheduled"
+          }
+          wide
+        />
+        <Readout label="Event" value={event.label ?? "None set"} wide />
       </dl>
 
       <div className="ml-auto flex items-center gap-3">
+        <SyncLamp tick={tick} syncedAt={syncedAt} syncError={syncError} />
         <span className="hidden rounded-sm border border-white/10 bg-white/5 px-2 py-1 text-[0.65rem] tracking-wider text-slate-400 uppercase sm:inline">
           {STUDIO_PHASE.label}
         </span>
@@ -74,6 +110,35 @@ export function StudioHeader({
   );
 }
 
+/** Shows whether the console is still reading the campus database. */
+function SyncLamp({
+  tick,
+  syncedAt,
+  syncError,
+}: {
+  tick: number | null;
+  syncedAt: string | null;
+  syncError: string | null;
+}) {
+  const since = formatSinceLabel(tick, syncedAt);
+
+  return (
+    <span
+      className="hidden items-center gap-1.5 font-mono text-[0.6rem] tracking-wider text-slate-500 uppercase md:inline-flex"
+      title={syncError ?? "Console data read from the campus database"}
+    >
+      <span
+        className={cn(
+          "size-1.5 rounded-full",
+          syncError ? "bg-[#E0B93B]" : "bg-[#2E8B57]",
+        )}
+        aria-hidden="true"
+      />
+      {syncError ? "Sync stalled" : `Synced ${since ?? "—"}`}
+    </span>
+  );
+}
+
 function Readout({
   label,
   value,
@@ -89,70 +154,14 @@ function Readout({
         {label}
       </dt>
       <dd
-        className={`truncate text-slate-200 ${wide ? "max-w-[16ch]" : "tabular-nums"}`}
+        className={cn(
+          "truncate text-slate-200",
+          wide ? "max-w-[16ch]" : "tabular-nums",
+        )}
+        title={value}
       >
         {value}
       </dd>
     </div>
   );
-}
-
-let tickValue = 0;
-const tickListeners = new Set<() => void>();
-let tickTimer: number | null = null;
-
-function subscribeSecondTick(listener: () => void): () => void {
-  tickListeners.add(listener);
-
-  if (tickTimer === null) {
-    tickValue = Date.now();
-    tickTimer = window.setInterval(() => {
-      tickValue = Date.now();
-      for (const notify of tickListeners) {
-        notify();
-      }
-    }, 1000);
-  }
-
-  return () => {
-    tickListeners.delete(listener);
-    if (tickListeners.size === 0 && tickTimer !== null) {
-      window.clearInterval(tickTimer);
-      tickTimer = null;
-    }
-  };
-}
-
-/**
- * One shared second ticker. Returns null on the server so the console never
- * ships a baked-in wall clock into the HTML.
- */
-function useSecondTick(): number | null {
-  const tick = useSyncExternalStore(
-    subscribeSecondTick,
-    () => tickValue,
-    () => 0,
-  );
-
-  return tick || null;
-}
-
-function formatClock(now: number): string {
-  return new Date(now).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-}
-
-function formatElapsed(now: number | null, since: string | null): string {
-  const startedAt = since ? new Date(since).getTime() : null;
-  const seconds =
-    now && startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
-
-  const hh = String(Math.floor(seconds / 3600)).padStart(2, "0");
-  const mm = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
-  const ss = String(seconds % 60).padStart(2, "0");
-  return `${hh}:${mm}:${ss}`;
 }

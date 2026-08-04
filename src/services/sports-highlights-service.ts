@@ -765,6 +765,49 @@ export async function getSportsBanner(sportId?: string): Promise<{
   };
 }
 
+/**
+ * The game a broadcast would be covering right now: an in-progress game first,
+ * otherwise the next one inside `withinHours`. Returns null when nothing is
+ * close enough to call "current".
+ */
+export async function getCurrentOrNextGame(options?: {
+  withinHours?: number;
+}): Promise<SportsGameView | null> {
+  if (!ready()) {
+    return null;
+  }
+
+  const now = new Date();
+  const horizon = new Date(
+    now.getTime() + (options?.withinHours ?? 24) * 3_600_000,
+  );
+
+  const liveRow = await withDatabase((prisma) =>
+    prisma.sportsGame.findFirst({
+      where: { status: "LIVE" },
+      orderBy: { kickoffAt: "desc" },
+      include: gameInclude,
+    }),
+  );
+
+  if (liveRow) {
+    return toGameView(liveRow as GameRow);
+  }
+
+  const nextRow = await withDatabase((prisma) =>
+    prisma.sportsGame.findFirst({
+      where: {
+        kickoffAt: { gte: now, lte: horizon },
+        status: { notIn: ["CANCELED", "POSTPONED"] },
+      },
+      orderBy: { kickoffAt: "asc" },
+      include: gameInclude,
+    }),
+  );
+
+  return nextRow ? toGameView(nextRow as GameRow) : null;
+}
+
 export async function upsertGame(input: {
   actorId: string;
   role: CampusRole;

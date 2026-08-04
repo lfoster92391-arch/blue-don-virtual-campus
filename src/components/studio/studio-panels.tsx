@@ -1,3 +1,6 @@
+"use client";
+
+import Link from "next/link";
 import { MonitorPlay } from "lucide-react";
 
 import { StreamTargetReveal } from "@/components/media/stream-target-reveal";
@@ -7,7 +10,11 @@ import {
   StudioPanel,
   StudioTile,
 } from "@/components/studio/studio-frame";
-import { DEFAULT_BROADCAST_SCRIPT_SLOTS } from "@/config/broadcast-script";
+import {
+  formatCampusTime,
+  formatSinceLabel,
+  useSecondTick,
+} from "@/components/studio/studio-time";
 import {
   STUDIO_AUDIO_CHANNELS,
   STUDIO_GRAPHICS,
@@ -17,6 +24,13 @@ import {
   STUDIO_SPONSORS,
 } from "@/config/broadcast-studio";
 import { toMediaEmbedUrl } from "@/lib/media-embed";
+import { cn } from "@/lib/utils";
+import type {
+  StudioCrewMember,
+  StudioProgramState,
+  StudioRunOfShowState,
+  StudioScoreboardState,
+} from "@/services/broadcast-studio-service";
 
 export function ScenesPanel() {
   return (
@@ -24,7 +38,6 @@ export function ScenesPanel() {
       title="Scenes"
       meta={`${STUDIO_SCENES.length}`}
       badge={<PhaseBadge />}
-      className="lg:flex-1"
     >
       <div className="space-y-1.5">
         {STUDIO_SCENES.map((scene) => (
@@ -32,38 +45,34 @@ export function ScenesPanel() {
             key={scene.id}
             label={scene.label}
             detail={scene.shot}
-            state={scene.program ? "program" : "idle"}
+            state="idle"
           />
         ))}
       </div>
       <StudioEmptyNote>
-        Scene switching is read-only until the OBS bridge lands. These are the
-        Studio B scene names the console will bind to.
+        Scene names only — no tally until the OBS bridge lands. These are the
+        Studio B scenes the console will bind to.
       </StudioEmptyNote>
     </StudioPanel>
   );
 }
 
-export function ProgramPanel({
-  programTitle,
-  embedUrl,
-  live,
-}: {
-  programTitle: string | null;
-  embedUrl: string | null;
-  live: boolean;
-}) {
+export function ProgramPanel({ program }: { program: StudioProgramState }) {
+  const live = program.state === "LIVE";
+  const meta =
+    program.state === "LIVE"
+      ? "LIVE"
+      : program.state === "PREVIEW"
+        ? "PREVIEW"
+        : "STANDBY";
+
   return (
-    <StudioPanel
-      title="Program"
-      meta={live ? "LIVE" : "STANDBY"}
-      bodyClassName="p-3"
-    >
+    <StudioPanel title="Program" meta={meta} bodyClassName="p-3">
       <div className="relative aspect-video w-full overflow-hidden rounded-sm border border-white/10 bg-black">
-        {embedUrl ? (
+        {program.embedUrl ? (
           <iframe
-            title={programTitle ?? "Program feed"}
-            src={toMediaEmbedUrl(embedUrl)}
+            title={program.title ?? "Program feed"}
+            src={toMediaEmbedUrl(program.embedUrl)}
             className="h-full w-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
@@ -82,10 +91,12 @@ export function ProgramPanel({
       </div>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         <p className="truncate text-xs text-slate-300">
-          {programTitle ?? "Nothing on air"}
+          {program.title ?? "Nothing on air"}
         </p>
         <p className="font-mono text-[0.65rem] text-slate-500">
-          1920 × 1080 · 30p
+          {program.operatorName
+            ? `Started by ${program.operatorName}`
+            : "1920 × 1080 · 30p"}
         </p>
       </div>
     </StudioPanel>
@@ -146,42 +157,85 @@ export function AudioPanel() {
         ))}
       </ul>
       <StudioEmptyNote>
-        Static fader positions. Live meters and mutes need the OBS bridge.
+        Nominal fader positions. Live meters and mutes need the OBS bridge.
       </StudioEmptyNote>
     </StudioPanel>
   );
 }
 
-export function ScoreboardPanel() {
+/**
+ * Display-only score from the Sports Desk (SportsGame). No entry controls and no
+ * Daktronics feed — writing scores from the console is a later phase.
+ */
+export function ScoreboardPanel({
+  scoreboard,
+}: {
+  scoreboard: StudioScoreboardState | null;
+}) {
+  const kickoff = formatCampusTime(scoreboard?.kickoffAt ?? null, {
+    weekday: "short",
+  });
+
   return (
-    <StudioPanel title="Scoreboard" badge={<PhaseBadge phase={4} />}>
+    <StudioPanel
+      title="Scoreboard"
+      meta={scoreboard ? "Display only" : undefined}
+      badge={<PhaseBadge />}
+    >
       <div className="rounded-sm border border-white/10 bg-black/40 p-3">
         <div className="flex items-center justify-between gap-3 font-mono">
-          <ScoreSide label="MHS" />
+          <ScoreSide
+            label={scoreboard?.awayLabel ?? "AWAY"}
+            score={scoreboard?.awayScore ?? null}
+          />
           <span className="text-[0.6rem] tracking-[0.2em] text-slate-600 uppercase">
-            vs
+            at
           </span>
-          <ScoreSide label="VIS" />
+          <ScoreSide
+            label={scoreboard?.homeLabel ?? "HOME"}
+            score={scoreboard?.homeScore ?? null}
+          />
         </div>
-        <div className="mt-3 flex items-center justify-between font-mono text-[0.65rem] text-slate-500">
-          <span>PERIOD —</span>
-          <span>00:00</span>
+        <div className="mt-3 flex items-center justify-between gap-2 font-mono text-[0.65rem] text-slate-500">
+          <span className="truncate uppercase">
+            {scoreboard?.sportName ?? "No game"}
+          </span>
+          <span
+            className={cn(
+              "shrink-0",
+              scoreboard?.isLive ? "text-[#FF8098]" : undefined,
+            )}
+          >
+            {scoreboard?.statusLabel ?? "—"}
+          </span>
         </div>
       </div>
-      <StudioEmptyNote>
-        Manual score entry and the Daktronics feed are Phase 4.
-      </StudioEmptyNote>
+      {scoreboard ? (
+        <StudioEmptyNote>
+          {[scoreboard.level, scoreboard.siteLabel, scoreboard.venue, kickoff]
+            .filter(Boolean)
+            .join(" · ")}
+          . Scores come from the Sports Desk — edit them there, not here.
+        </StudioEmptyNote>
+      ) : (
+        <StudioEmptyNote>
+          No game in progress or scheduled in the next 36 hours. Add one on the
+          Sports Desk and it appears here.
+        </StudioEmptyNote>
+      )}
     </StudioPanel>
   );
 }
 
-function ScoreSide({ label }: { label: string }) {
+function ScoreSide({ label, score }: { label: string; score: number | null }) {
   return (
-    <div className="text-center">
-      <p className="text-[0.6rem] tracking-[0.2em] text-slate-500 uppercase">
+    <div className="min-w-0 text-center">
+      <p className="truncate text-[0.6rem] tracking-[0.2em] text-slate-500 uppercase">
         {label}
       </p>
-      <p className="text-2xl font-semibold text-slate-300 tabular-nums">--</p>
+      <p className="text-2xl font-semibold text-slate-300 tabular-nums">
+        {score ?? "--"}
+      </p>
     </div>
   );
 }
@@ -225,72 +279,219 @@ export function SponsorsPanel() {
         ))}
       </div>
       <StudioEmptyNote>
-        Sponsor rotation and impression logging come with the graphics engine.
+        Slot names only. Sponsor rotation and impression logging come with the
+        graphics engine.
       </StudioEmptyNote>
     </StudioPanel>
   );
 }
 
-export function RunOfShowPanel() {
+/** Today's Daily Rundown (BroadcastDailyScript + org script template). */
+export function RunOfShowPanel({
+  runOfShow,
+}: {
+  runOfShow: StudioRunOfShowState | null;
+}) {
+  const tick = useSecondTick();
+
+  if (!runOfShow) {
+    return (
+      <StudioPanel title="Run of show" className="lg:flex-1">
+        <StudioEmptyNote>
+          Today&apos;s rundown could not be read. Open the{" "}
+          <Link
+            href="/organizations/broadcasting?tab=script"
+            className="text-slate-300 underline"
+          >
+            Daily Rundown
+          </Link>{" "}
+          to check it.
+        </StudioEmptyNote>
+      </StudioPanel>
+    );
+  }
+
+  const updated = formatSinceLabel(tick, runOfShow.updatedAt);
+
   return (
     <StudioPanel
       title="Run of show"
-      meta={`${DEFAULT_BROADCAST_SCRIPT_SLOTS.length} items`}
-      badge={<PhaseBadge />}
+      meta={`${runOfShow.filledCount}/${runOfShow.fillableCount} filled`}
+      className="lg:flex-1"
     >
       <ol className="space-y-1">
-        {DEFAULT_BROADCAST_SCRIPT_SLOTS.map((slot, index) => (
+        {runOfShow.items.map((item, index) => (
           <li
-            key={slot.key}
-            className="flex items-center gap-2 rounded-sm border border-white/5 bg-white/[0.02] px-2 py-1.5"
+            key={item.key}
+            className="rounded-sm border border-white/5 bg-white/[0.02] px-2 py-1.5"
           >
-            <span className="font-mono text-[0.6rem] text-slate-600 tabular-nums">
-              {String(index + 1).padStart(2, "0")}
-            </span>
-            <span className="min-w-0 flex-1 truncate text-[0.7rem] text-slate-300">
-              {slot.label}
-            </span>
-            <span className="font-mono text-[0.6rem] text-slate-600">
-              --:--
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[0.6rem] text-slate-600 tabular-nums">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-[0.7rem] text-slate-300">
+                {item.label}
+              </span>
+              <SlotChip item={item} />
+            </div>
+            <p
+              className={cn(
+                "mt-0.5 pl-6 text-[0.65rem] leading-snug",
+                item.filled ? "text-slate-400" : "text-slate-600 italic",
+              )}
+            >
+              {item.line.length > 140
+                ? `${item.line.slice(0, 140)}…`
+                : item.line}
+            </p>
           </li>
         ))}
       </ol>
       <StudioEmptyNote>
-        Mirrors the Daily Rundown template. Live timing and item advance are
-        Phase 3.
+        {runOfShow.isPersisted
+          ? `Today's rundown${runOfShow.updatedByName ? ` · ${runOfShow.updatedByName}` : ""}${updated ? ` · saved ${updated}` : ""}.`
+          : "No one has saved today's rundown yet — this is the template."}{" "}
+        <Link
+          href="/organizations/broadcasting?tab=script"
+          className="text-slate-300 underline"
+        >
+          Edit in Daily Rundown
+        </Link>
+        . Segment timing and item advance need the OBS bridge.
       </StudioEmptyNote>
+    </StudioPanel>
+  );
+}
+
+function SlotChip({
+  item,
+}: {
+  item: StudioRunOfShowState["items"][number];
+}) {
+  const chrome =
+    item.slotType === "FIXED"
+      ? { label: "Fixed", tone: "border-white/10 bg-white/5 text-slate-500" }
+      : item.slotType === "LOCKED_DAILY"
+        ? {
+            label: "Prayer",
+            tone: "border-[#2F80ED]/40 bg-[#2F80ED]/10 text-[#8FBEFF]",
+          }
+        : item.filled
+          ? {
+              label: "Filled",
+              tone: "border-[#2E8B57]/40 bg-[#2E8B57]/10 text-[#7FE0A8]",
+            }
+          : {
+              label: item.required ? "Needed" : "Open",
+              tone: item.required
+                ? "border-[#E11D48]/40 bg-[#E11D48]/10 text-[#FF8098]"
+                : "border-white/10 bg-white/5 text-slate-500",
+            };
+
+  return (
+    <span
+      className={cn(
+        "shrink-0 rounded-sm border px-1.5 py-0.5 font-mono text-[0.55rem] tracking-wider uppercase",
+        chrome.tone,
+      )}
+    >
+      {chrome.label}
+    </span>
+  );
+}
+
+/** Production roles from BroadcastCrewCredit (the club's credit roll). */
+export function CrewPanel({ crew }: { crew: StudioCrewMember[] }) {
+  return (
+    <StudioPanel title="Crew" meta={crew.length ? `${crew.length}` : undefined}>
+      {crew.length > 0 ? (
+        <ul className="space-y-1">
+          {crew.map((member) => (
+            <li
+              key={member.id}
+              className="rounded-sm border border-white/5 bg-white/[0.02] px-2 py-1.5"
+            >
+              <p className="truncate text-[0.7rem] font-medium text-slate-200">
+                {member.displayName}
+              </p>
+              <p className="truncate font-mono text-[0.6rem] tracking-wider text-slate-500 uppercase">
+                {member.roleLabel}
+              </p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <StudioEmptyNote>
+          No visible crew credits yet. Add them in{" "}
+          <Link
+            href="/organizations/broadcasting?tab=credits"
+            className="text-slate-300 underline"
+          >
+            Production credit roll
+          </Link>
+          .
+        </StudioEmptyNote>
+      )}
     </StudioPanel>
   );
 }
 
 export function SystemHealthPanel({
   streamKeyHint,
+  hasSharedStreamKey,
+  onAir,
 }: {
   streamKeyHint: string;
+  hasSharedStreamKey: boolean;
+  onAir: boolean;
 }) {
   return (
-    <StudioPanel title="System health" badge={<PhaseBadge />}>
+    <StudioPanel title="System health">
       <ul className="space-y-1.5">
-        {STUDIO_HEALTH_CHECKS.map((check) => (
-          <li
-            key={check.id}
-            className="flex items-center justify-between gap-2 rounded-sm border border-white/5 bg-white/[0.02] px-2 py-1.5"
-          >
-            <span className="min-w-0">
-              <span className="block truncate text-[0.7rem] text-slate-300">
-                {check.label}
+        {STUDIO_HEALTH_CHECKS.map((check) => {
+          const status =
+            check.binding === "CAMPUS_RECORD"
+              ? { label: onAir ? "On air" : "Idle", live: onAir }
+              : check.binding === "STREAM_TARGET"
+                ? {
+                    label: hasSharedStreamKey ? "Key set" : "No key",
+                    live: hasSharedStreamKey,
+                  }
+                : { label: "Not linked", live: false };
+
+          return (
+            <li
+              key={check.id}
+              className="flex items-center justify-between gap-2 rounded-sm border border-white/5 bg-white/[0.02] px-2 py-1.5"
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-[0.7rem] text-slate-300">
+                  {check.label}
+                </span>
+                <span className="block truncate text-[0.6rem] text-slate-600">
+                  {check.detail}
+                </span>
               </span>
-              <span className="block truncate text-[0.6rem] text-slate-600">
-                {check.detail}
+              <span
+                className={cn(
+                  "shrink-0 rounded-sm border px-1.5 py-0.5 font-mono text-[0.55rem] tracking-wider uppercase",
+                  status.live
+                    ? "border-[#2E8B57]/40 bg-[#2E8B57]/10 text-[#7FE0A8]"
+                    : "border-white/10 bg-white/5 text-slate-500",
+                )}
+              >
+                {status.label}
               </span>
-            </span>
-            <span className="shrink-0 rounded-sm border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[0.55rem] tracking-wider text-slate-500 uppercase">
-              Not linked
-            </span>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
+      <StudioEmptyNote>
+        Only the campus stream record and stream target are readable today.
+        Encoder, OBS, scoreboard, and disk telemetry stay &quot;not linked&quot;
+        until the bridge exists — the console will not claim a status it cannot
+        measure.
+      </StudioEmptyNote>
       <div className="mt-3 border-t border-white/10 pt-3">
         <p className="text-[0.65rem] font-semibold tracking-[0.18em] text-slate-400 uppercase">
           OBS stream target

@@ -973,9 +973,9 @@ function MediaPanel(props: ClubTabPanelsProps) {
             status={{ label: "Crew only", variant: "info" }}
           >
             <p className="text-sm text-muted-foreground">
-              Opens the dark 1080p console outside the campus shell. Phase 2 is
-              the operator layout with go live and end broadcast wired to the
-              campus stream.
+              Opens the dark 1080p console outside the campus shell. On-air
+              state, today&apos;s run of show, the crew roster, the next air
+              countdown, and tonight&apos;s score read live campus data.
             </p>
             <div className="mt-4">
               <Button
