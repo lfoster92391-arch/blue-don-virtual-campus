@@ -1,6 +1,7 @@
 import { AgreementsWidget } from "@/components/home/agreements-widget";
 import { ClubJoinRequestsAlert } from "@/components/home/club-join-requests-alert";
 import { BlueDonOS } from "@/components/home/blue-don-os";
+import { CricutAmazonWishlistBanner } from "@/components/cricut/cricut-amazon-wishlist";
 import { CampusVersionBanner } from "@/components/layout/campus-version-banner";
 import type {
   ClubStudentTaskView,
@@ -27,6 +28,8 @@ import {
   type StudentContext,
 } from "@/services/student-context-service";
 import { listStudentMessagesForUser } from "@/services/student-message-service";
+import { getCricutAmazonWishlistUrl } from "@/services/cricut-shop-service";
+import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
 
 const EMPTY_CONTEXT: StudentContext = { clubs: [], teams: [], classes: [] };
 
@@ -54,36 +57,45 @@ async function safeHomeData<T>(
 
 export default async function HomePage() {
   const user = await requireCompleteProfile();
-  const [digest, context, dailyAnnouncement, hub, messages, meetings, tasks] =
-    await Promise.all([
-      safeHomeData("digest", () => getTodayDigest(user.id), emptyDigest()),
-      safeHomeData("context", () => getStudentContext(user.id), EMPTY_CONTEXT),
-      safeHomeData(
-        "broadcast-announcement",
-        () => getTodaysBroadcastAnnouncement(),
-        null as BroadcastAnnouncementView | null,
-      ),
-      safeHomeData(
-        "hub",
-        () => getTodayHubDigest({ id: user.id, role: user.role }),
-        buildEmptyHubDigest(),
-      ),
-      safeHomeData(
-        "messages",
-        () => listStudentMessagesForUser(user.id),
-        [] as StudentMessageView[],
-      ),
-      safeHomeData(
-        "meetings",
-        () => listMeetingsForStudent(user.id),
-        [] as CommandCenterMeetingView[],
-      ),
-      safeHomeData(
-        "tasks",
-        () => listTasksForStudent(user.id),
-        [] as ClubStudentTaskView[],
-      ),
-    ]);
+  const [
+    digest,
+    context,
+    dailyAnnouncement,
+    hub,
+    messages,
+    meetings,
+    tasks,
+    cricutWishlistUrl,
+  ] = await Promise.all([
+    safeHomeData("digest", () => getTodayDigest(user.id), emptyDigest()),
+    safeHomeData("context", () => getStudentContext(user.id), EMPTY_CONTEXT),
+    safeHomeData(
+      "broadcast-announcement",
+      () => getTodaysBroadcastAnnouncement(),
+      null as BroadcastAnnouncementView | null,
+    ),
+    safeHomeData(
+      "hub",
+      () => getTodayHubDigest({ id: user.id, role: user.role }),
+      buildEmptyHubDigest(),
+    ),
+    safeHomeData(
+      "messages",
+      () => listStudentMessagesForUser(user.id),
+      [] as StudentMessageView[],
+    ),
+    safeHomeData(
+      "meetings",
+      () => listMeetingsForStudent(user.id),
+      [] as CommandCenterMeetingView[],
+    ),
+    safeHomeData(
+      "tasks",
+      () => listTasksForStudent(user.id),
+      [] as ClubStudentTaskView[],
+    ),
+    safeHomeData("cricut-wishlist", () => getCricutAmazonWishlistUrl(), null),
+  ]);
 
   const showAgreements = user.role === "student" || user.role === "parent";
   const showClubJoinRequests =
@@ -96,6 +108,11 @@ export default async function HomePage() {
       <CampusVersionBanner />
       {showAgreements ? <AgreementsWidget user={user} /> : null}
       {showClubJoinRequests ? <ClubJoinRequestsAlert user={user} /> : null}
+      {FOCUSED_CLUBS_MODE && cricutWishlistUrl ? (
+        <div className="mb-6">
+          <CricutAmazonWishlistBanner url={cricutWishlistUrl} compact />
+        </div>
+      ) : null}
       <BlueDonOS
         user={user}
         digest={digest}
