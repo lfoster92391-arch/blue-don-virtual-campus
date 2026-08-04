@@ -435,6 +435,15 @@ model User {
   studentMessagesReceived StudentMessage[]       @relation("StudentMessageRecipient")
   clubStudentTasksCreated ClubStudentTask[]      @relation("ClubStudentTaskCreator")
   clubStudentTasksAssigned ClubStudentTask[]     @relation("ClubStudentTaskAssignee")
+  broadcastSchedulesUpdated BroadcastSchedule[] @relation("BroadcastScheduleUpdater")
+  broadcastBookingsRequested BroadcastBookingRequest[] @relation("BroadcastBookingRequester")
+  broadcastBookingsReviewed  BroadcastBookingRequest[] @relation("BroadcastBookingReviewer")
+  broadcastAnnouncementSubmissions BroadcastAnnouncementSubmission[] @relation("BroadcastAnnouncementSubmitter")
+  broadcastAnnouncementReviews     BroadcastAnnouncementSubmission[] @relation("BroadcastAnnouncementReviewer")
+  broadcastCrewCredits       BroadcastCrewCredit[]
+  broadcastEquipmentChecked  BroadcastEquipmentItem[] @relation("BroadcastEquipmentChecker")
+  broadcastJoinApplications  BroadcastJoinApplication[] @relation("BroadcastJoinApplicant")
+  broadcastJoinReviews       BroadcastJoinApplication[] @relation("BroadcastJoinReviewer")
 
   @@index([role])
   @@index([schoolId])
@@ -491,6 +500,12 @@ model Organization {
   clubProjectChecklists ClubProjectChecklist[]
   studentMessages StudentMessage[]
   clubStudentTasks ClubStudentTask[]
+  broadcastSchedule BroadcastSchedule?
+  broadcastBookingRequests BroadcastBookingRequest[]
+  broadcastAnnouncementSubmissions BroadcastAnnouncementSubmission[]
+  broadcastCrewCredits BroadcastCrewCredit[]
+  broadcastEquipmentItems BroadcastEquipmentItem[]
+  broadcastJoinApplications BroadcastJoinApplication[]
 
   @@index([type])
   @@map("organizations")
@@ -1572,29 +1587,42 @@ enum CampusMediaStatus {
   ENDED
 }
 
+enum CampusMediaCategory {
+  MORNING_ANNOUNCEMENTS
+  SPORTS_HIGHLIGHTS
+  STUDENT_SPOTLIGHT
+  SPECIAL_EVENTS
+  HIGHLIGHT_REEL
+  OTHER
+}
+
 model CampusMediaItem {
-  id             String            @id @default(cuid())
+  id             String              @id @default(cuid())
   title          String
   description    String?
   type           CampusMediaType
-  status         CampusMediaStatus @default(DRAFT)
-  storagePath    String?           @map("storage_path")
-  publicUrl      String?           @map("public_url")
-  thumbnailUrl   String?           @map("thumbnail_url")
-  embedUrl       String?           @map("embed_url")
-  streamKey      String?           @map("stream_key")
-  organizationId String?           @map("organization_id")
-  uploadedById   String            @map("uploaded_by_id") @db.Uuid
-  publishedAt    DateTime?         @map("published_at")
-  endedAt        DateTime?         @map("ended_at")
-  createdAt      DateTime          @default(now()) @map("created_at")
-  updatedAt      DateTime          @updatedAt @map("updated_at")
-  uploadedBy     User              @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
-  organization   Organization?     @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  status         CampusMediaStatus   @default(DRAFT)
+  category       CampusMediaCategory?
+  isHighlightReel Boolean            @default(false) @map("is_highlight_reel")
+  storagePath    String?             @map("storage_path")
+  publicUrl      String?             @map("public_url")
+  thumbnailUrl   String?             @map("thumbnail_url")
+  embedUrl       String?             @map("embed_url")
+  streamKey      String?             @map("stream_key")
+  organizationId String?             @map("organization_id")
+  uploadedById   String              @map("uploaded_by_id") @db.Uuid
+  publishedAt    DateTime?           @map("published_at")
+  endedAt        DateTime?           @map("ended_at")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  uploadedBy     User                @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  organization   Organization?       @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   announcements  BroadcastAnnouncement[]
 
   @@index([status])
   @@index([type])
+  @@index([category])
+  @@index([isHighlightReel])
   @@index([organizationId])
   @@index([uploadedById])
   @@map("campus_media_items")
@@ -1655,6 +1683,190 @@ model BroadcastDailyScript {
   @@index([organizationId, scriptDate])
   @@index([updatedById])
   @@map("broadcast_daily_scripts")
+}
+
+
+/** Singleton-per-org next live air time for the countdown timer. */
+model BroadcastSchedule {
+  id             String       @id @default(cuid())
+  organizationId String       @unique @map("organization_id")
+  nextAirAt      DateTime?    @map("next_air_at")
+  title          String?
+  notes          String?
+  updatedById    String?      @map("updated_by_id") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  updatedBy      User?        @relation("BroadcastScheduleUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([nextAirAt])
+  @@map("broadcast_schedules")
+}
+
+enum BroadcastBookingService {
+  FILM_COVERAGE
+  PHOTOGRAPHY
+  LIVE_STREAMING
+}
+
+enum BroadcastBookingStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  COMPLETED
+}
+
+model BroadcastBookingRequest {
+  id             String                     @id @default(cuid())
+  organizationId String                     @map("organization_id")
+  requesterId    String                     @map("requester_id") @db.Uuid
+  requesterName  String                     @map("requester_name")
+  requesterEmail String?                    @map("requester_email")
+  clubOrTeam     String                     @map("club_or_team")
+  eventName      String                     @map("event_name")
+  eventAt        DateTime                   @map("event_at")
+  location       String?
+  services       BroadcastBookingService[]
+  details        String?
+  status         BroadcastBookingStatus     @default(PENDING)
+  reviewedById   String?                    @map("reviewed_by_id") @db.Uuid
+  reviewedAt     DateTime?                  @map("reviewed_at")
+  reviewNote     String?                    @map("review_note")
+  createdAt      DateTime                   @default(now()) @map("created_at")
+  updatedAt      DateTime                   @updatedAt @map("updated_at")
+  organization   Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requester      User                       @relation("BroadcastBookingRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  reviewedBy     User?                      @relation("BroadcastBookingReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status])
+  @@index([requesterId])
+  @@index([eventAt])
+  @@map("broadcast_booking_requests")
+}
+
+enum BroadcastSubmissionStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  AIRED
+}
+
+model BroadcastAnnouncementSubmission {
+  id               String                     @id @default(cuid())
+  organizationId   String                     @map("organization_id")
+  submitterId      String                     @map("submitter_id") @db.Uuid
+  submitterName    String                     @map("submitter_name")
+  submitterRole    String?                    @map("submitter_role")
+  title            String
+  body             String
+  preferredAirDate DateTime?                  @map("preferred_air_date")
+  status           BroadcastSubmissionStatus  @default(PENDING)
+  reviewedById     String?                    @map("reviewed_by_id") @db.Uuid
+  reviewedAt       DateTime?                  @map("reviewed_at")
+  reviewNote       String?                    @map("review_note")
+  createdAt        DateTime                   @default(now()) @map("created_at")
+  updatedAt        DateTime                   @updatedAt @map("updated_at")
+  organization     Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  submitter        User                       @relation("BroadcastAnnouncementSubmitter", fields: [submitterId], references: [id], onDelete: Cascade)
+  reviewedBy       User?                      @relation("BroadcastAnnouncementReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status])
+  @@index([submitterId])
+  @@map("broadcast_announcement_submissions")
+}
+
+enum BroadcastProductionRole {
+  HOST
+  CAMERA
+  EDITOR
+  PRODUCER
+  GRAPHICS
+  AUDIO
+  FLOOR_DIRECTOR
+  WRITER
+  OTHER
+}
+
+model BroadcastCrewCredit {
+  id             String                  @id @default(cuid())
+  organizationId String                  @map("organization_id")
+  userId         String                  @map("user_id") @db.Uuid
+  displayName    String                  @map("display_name")
+  productionRole BroadcastProductionRole @map("production_role")
+  sortOrder      Int                     @default(0) @map("sort_order")
+  isVisible      Boolean                 @default(true) @map("is_visible")
+  createdAt      DateTime                @default(now()) @map("created_at")
+  updatedAt      DateTime                @updatedAt @map("updated_at")
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId, productionRole])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("broadcast_crew_credits")
+}
+
+model BroadcastEquipmentItem {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  name           String
+  category       String?
+  notes          String?
+  isChecked      Boolean      @default(false) @map("is_checked")
+  checkedById    String?      @map("checked_by_id") @db.Uuid
+  checkedAt      DateTime?    @map("checked_at")
+  sortOrder      Int          @default(0) @map("sort_order")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  checkedBy      User?        @relation("BroadcastEquipmentChecker", fields: [checkedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([checkedById])
+  @@map("broadcast_equipment_items")
+}
+
+enum BroadcastJoinTrack {
+  HOST
+  CAMERA
+  EDITOR
+  GRAPHICS
+  AUDIO
+  PRODUCER
+  WRITER
+  FLEXIBLE
+}
+
+enum BroadcastJoinStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model BroadcastJoinApplication {
+  id             String               @id @default(cuid())
+  organizationId String               @map("organization_id")
+  applicantId    String               @map("applicant_id") @db.Uuid
+  applicantName  String               @map("applicant_name")
+  applicantEmail String?              @map("applicant_email")
+  gradeOrYear    String?              @map("grade_or_year")
+  desiredTracks  BroadcastJoinTrack[] @map("desired_tracks")
+  experience     String?
+  availability   String?
+  whyJoin        String               @map("why_join")
+  status         BroadcastJoinStatus  @default(PENDING)
+  reviewedById   String?              @map("reviewed_by_id") @db.Uuid
+  reviewedAt     DateTime?            @map("reviewed_at")
+  reviewNote     String?              @map("review_note")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  applicant      User                 @relation("BroadcastJoinApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
+  reviewedBy     User?                @relation("BroadcastJoinReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status])
+  @@index([applicantId])
+  @@map("broadcast_join_applications")
 }
 
 enum CornerStoreStatus {
@@ -1935,6 +2147,9 @@ enum StudentMessageKind {
   ADVISOR_REQUEST
   INVOICE_RECEIPT_REQUEST
   CRICUT_ORDER
+  BROADCAST_BOOKING
+  BROADCAST_ANNOUNCEMENT_SUBMISSION
+  BROADCAST_JOIN_APPLICATION
 }
 
 /** Advisor / officer → student Command Center messages with action buttons. */

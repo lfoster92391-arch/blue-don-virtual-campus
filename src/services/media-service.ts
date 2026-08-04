@@ -13,6 +13,7 @@ import { isDatabaseConfigured, isSupabaseAdminConfigured } from "@/config/env";
 import type { CampusRole } from "@/config/roles";
 import { canManageAcademy } from "@/config/roles";
 import type {
+  CampusMediaCategory,
   CampusMediaStatus,
   CampusMediaType,
 } from "@/generated/prisma/client";
@@ -26,6 +27,8 @@ export type CampusMediaItemView = {
   description: string | null;
   type: CampusMediaType;
   status: CampusMediaStatus;
+  category: CampusMediaCategory | null;
+  isHighlightReel: boolean;
   publicUrl: string | null;
   embedUrl: string | null;
   thumbnailUrl: string | null;
@@ -38,7 +41,15 @@ export type CampusMediaItemView = {
   streamKey?: string | null;
 };
 
-export type VideoArchiveFilter = "all" | "videos" | "past_lives";
+export type VideoArchiveFilter =
+  | "all"
+  | "videos"
+  | "past_lives"
+  | "MORNING_ANNOUNCEMENTS"
+  | "SPORTS_HIGHLIGHTS"
+  | "STUDENT_SPOTLIGHT"
+  | "SPECIAL_EVENTS"
+  | "HIGHLIGHT_REEL";
 
 function mapMediaRow(row: {
   id: string;
@@ -46,6 +57,8 @@ function mapMediaRow(row: {
   description: string | null;
   type: CampusMediaType;
   status: CampusMediaStatus;
+  category?: CampusMediaCategory | null;
+  isHighlightReel?: boolean;
   publicUrl: string | null;
   embedUrl: string | null;
   thumbnailUrl: string | null;
@@ -72,6 +85,8 @@ function mapMediaRow(row: {
     description: row.description,
     type: row.type,
     status: row.status,
+    category: row.category ?? null,
+    isHighlightReel: Boolean(row.isHighlightReel),
     publicUrl: row.publicUrl,
     embedUrl: row.embedUrl,
     thumbnailUrl: row.thumbnailUrl,
@@ -91,6 +106,8 @@ const mediaSelect = {
   description: true,
   type: true,
   status: true,
+  category: true,
+  isHighlightReel: true,
   publicUrl: true,
   embedUrl: true,
   thumbnailUrl: true,
@@ -155,12 +172,17 @@ export async function canManageCampusMedia(
 }
 
 function demoBroadcastViews(): CampusMediaItemView[] {
-  return DEMO_SCHOOL_BROADCASTS.map((item) => ({
+  return DEMO_SCHOOL_BROADCASTS.map((item, index) => ({
     id: item.id,
     title: item.title,
     description: item.description,
     type: item.type,
     status: item.status,
+    category:
+      index === 0
+        ? ("MORNING_ANNOUNCEMENTS" as const)
+        : ("SPORTS_HIGHLIGHTS" as const),
+    isHighlightReel: index === 1,
     publicUrl: item.publicUrl,
     embedUrl: item.embedUrl,
     thumbnailUrl: null,
@@ -363,6 +385,8 @@ export async function createCampusVideoUpload(input: {
   publicUrl: string;
   storagePath?: string;
   organizationId?: string;
+  category?: CampusMediaCategory | null;
+  isHighlightReel?: boolean;
 }): Promise<string | null> {
   if (!isDatabaseConfigured() || !isPrismaReady()) {
     return null;
@@ -375,6 +399,9 @@ export async function createCampusVideoUpload(input: {
         description: input.description,
         type: "VIDEO_UPLOAD",
         status: "PUBLISHED",
+        category: input.category ?? null,
+        isHighlightReel:
+          input.isHighlightReel ?? input.category === "HIGHLIGHT_REEL",
         publicUrl: input.publicUrl,
         storagePath: input.storagePath,
         organizationId: input.organizationId,

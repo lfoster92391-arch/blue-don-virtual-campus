@@ -21,7 +21,10 @@ export type StudentMessageKind =
   | "GENERAL"
   | "ADVISOR_REQUEST"
   | "INVOICE_RECEIPT_REQUEST"
-  | "CRICUT_ORDER";
+  | "CRICUT_ORDER"
+  | "BROADCAST_BOOKING"
+  | "BROADCAST_ANNOUNCEMENT_SUBMISSION"
+  | "BROADCAST_JOIN_APPLICATION";
 
 export type StudentMessageView = {
   id: string;

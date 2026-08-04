@@ -25,6 +25,18 @@ const uploadSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(120),
   description: z.string().trim().max(500).optional(),
   videoUrl: z.string().trim().url("Enter a valid video URL").optional().or(z.literal("")),
+  category: z
+    .enum([
+      "MORNING_ANNOUNCEMENTS",
+      "SPORTS_HIGHLIGHTS",
+      "STUDENT_SPOTLIGHT",
+      "SPECIAL_EVENTS",
+      "HIGHLIGHT_REEL",
+      "OTHER",
+    ])
+    .optional()
+    .nullable(),
+  isHighlightReel: z.boolean().optional(),
 });
 
 const liveSchema = z.object({
@@ -69,6 +81,11 @@ export async function uploadCampusVideoAction(
       title: formData.get("title"),
       description: formData.get("description") || undefined,
       videoUrl: formData.get("videoUrl") || "",
+      category: (() => {
+        const raw = String(formData.get("category") ?? "").trim();
+        return raw || null;
+      })(),
+      isHighlightReel: formData.get("isHighlightReel") === "1",
     });
 
     if (!parsed.success) {
@@ -99,6 +116,7 @@ export async function uploadCampusVideoAction(
     }
 
     const organizationId = await resolveBroadcastOrganizationId();
+    const category = parsed.data.category ?? null;
     const itemId = await createCampusVideoUpload({
       userId: user.id,
       title: parsed.data.title,
@@ -106,6 +124,9 @@ export async function uploadCampusVideoAction(
       publicUrl,
       storagePath,
       organizationId: organizationId ?? undefined,
+      category,
+      isHighlightReel:
+        parsed.data.isHighlightReel || category === "HIGHLIGHT_REEL",
     });
 
     if (!itemId) {

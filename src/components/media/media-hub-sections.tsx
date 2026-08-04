@@ -1,7 +1,24 @@
 import Link from "next/link";
-import { ArrowRight, Megaphone, Radio, Upload, Video } from "lucide-react";
+import {
+  ArrowRight,
+  Clapperboard,
+  Clock,
+  Megaphone,
+  Radio,
+  Sparkles,
+  Upload,
+  Users,
+  Video,
+} from "lucide-react";
 
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
+import { BroadcastCountdown } from "@/components/media/broadcast-countdown";
+import {
+  AnnouncementSubmitForm,
+  BookingRequestForm,
+  CrewCreditRoll,
+  JoinClubPortal,
+} from "@/components/media/broadcast-suite-panels";
 import { DailyAnnouncement } from "@/components/media/daily-announcement";
 import { LiveBroadcastPanel } from "@/components/media/live-broadcast-panel";
 import { VideoLibrary } from "@/components/media/video-library";
@@ -12,6 +29,10 @@ import {
   type BlueDonLiveRtmpConfig,
 } from "@/config/broadcast-media";
 import type { BroadcastAnnouncementView } from "@/services/broadcast-announcement-service";
+import type {
+  BroadcastCrewCreditView,
+  BroadcastScheduleView,
+} from "@/services/broadcast-production-service";
 import type { CampusMediaItemView } from "@/services/media-service";
 
 type MediaHubSectionsProps = {
@@ -23,6 +44,8 @@ type MediaHubSectionsProps = {
   currentUserId: string;
   rtmp: BlueDonLiveRtmpConfig;
   dailyAnnouncement: BroadcastAnnouncementView | null;
+  schedule: BroadcastScheduleView;
+  crewCredits: BroadcastCrewCreditView[];
 };
 
 export function MediaHubSections({
@@ -34,6 +57,8 @@ export function MediaHubSections({
   currentUserId,
   rtmp,
   dailyAnnouncement,
+  schedule,
+  crewCredits,
 }: MediaHubSectionsProps) {
   return (
     <>
@@ -66,6 +91,19 @@ export function MediaHubSections({
             }
           />
         ) : null}
+      </DashboardCard>
+
+      <DashboardCard
+        title="Next live"
+        description="Countdown to the next Blue Don Live air time."
+        icon={<Clock className="size-5" />}
+        status={
+          schedule.nextAirAt
+            ? { label: "Scheduled", variant: "info" }
+            : { label: "TBD", variant: "info" }
+        }
+      >
+        <BroadcastCountdown schedule={schedule} canSet={canManageMedia} />
       </DashboardCard>
 
       <DashboardCard
@@ -134,14 +172,74 @@ export function MediaHubSections({
       )}
 
       <DashboardCard
-        title="Past Broadcasts"
-        description="Published videos and ended live streams — newest first."
-        icon={<Radio className="size-5" />}
+        title="Highlight Reel"
+        description="Montage clips showcasing recent campus moments."
+        icon={<Sparkles className="size-5" />}
+      >
+        <VideoLibrary
+          items={schoolBroadcasts}
+          highlightOnly
+          title="Featured montages"
+          emptyLabel="No highlight reels yet — check back after the next edit session."
+          canCategorize={canManageMedia}
+        />
+      </DashboardCard>
+
+      <DashboardCard
+        title="On-demand library"
+        description="Morning announcements, sports, spotlights, and special events."
+        icon={<Clapperboard className="size-5" />}
       >
         <VideoLibrary
           items={schoolBroadcasts}
           emptyLabel="No school broadcasts yet — check back after the next studio session."
+          canCategorize={canManageMedia}
         />
+      </DashboardCard>
+
+      <DashboardCard
+        title="Production credit roll"
+        description="Hosts, camera, editors, producers, and more."
+        icon={<Users className="size-5" />}
+      >
+        <CrewCreditRoll credits={crewCredits} />
+        <Button
+          className="mt-4"
+          size="sm"
+          variant="outline"
+          nativeButton={false}
+          render={
+            <Link href={`/organizations/${BROADCAST_ORG_SLUG}?tab=credits`}>
+              Full credit roll
+              <ArrowRight className="size-3.5" />
+            </Link>
+          }
+        />
+      </DashboardCard>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <DashboardCard
+          title="Request coverage"
+          description="Film, photography, or live streaming for your club or team."
+          icon={<Video className="size-5" />}
+        >
+          <BookingRequestForm />
+        </DashboardCard>
+        <DashboardCard
+          title="Submit a morning announcement"
+          description="Faculty and students — request an item for the daily show."
+          icon={<Megaphone className="size-5" />}
+        >
+          <AnnouncementSubmitForm />
+        </DashboardCard>
+      </div>
+
+      <DashboardCard
+        title="Join Broadcasting"
+        description="Apply for Host, Camera, Editor, Graphics, and more."
+        icon={<Users className="size-5" />}
+      >
+        <JoinClubPortal />
       </DashboardCard>
 
       {canManageMedia ? (
@@ -152,8 +250,8 @@ export function MediaHubSections({
         >
           <VideoLibrary
             items={myUploads}
-            title="Your published media"
-            emptyLabel="You have not published any media yet."
+            emptyLabel="You have not published any videos yet."
+            canCategorize
           />
         </DashboardCard>
       ) : null}

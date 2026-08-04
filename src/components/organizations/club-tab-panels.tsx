@@ -28,12 +28,31 @@ import {
 import { WishlistSection } from "@/components/wishlist/wishlist-section";
 import { DailyAnnouncement } from "@/components/media/daily-announcement";
 import { DailyRundownPanel } from "@/components/media/daily-rundown-panel";
+import { BroadcastCountdown } from "@/components/media/broadcast-countdown";
+import {
+  AnnouncementSubmissionReviewList,
+  AnnouncementSubmitForm,
+  BookingRequestForm,
+  BookingReviewList,
+  CrewCreditRoll,
+  EquipmentChecklist,
+  JoinApplicationReviewList,
+  JoinClubPortal,
+} from "@/components/media/broadcast-suite-panels";
 import { LiveBroadcastPanel } from "@/components/media/live-broadcast-panel";
 import { VideoLibrary } from "@/components/media/video-library";
 import { VideoUploadForm } from "@/components/media/video-upload-form";
 import { Button } from "@/components/ui/button";
 import type { BlueDonLiveRtmpConfig } from "@/config/broadcast-media";
 import type { BroadcastDailyScriptView } from "@/config/broadcast-script";
+import type {
+  BroadcastAnnouncementSubmissionView,
+  BroadcastBookingView,
+  BroadcastCrewCreditView,
+  BroadcastEquipmentView,
+  BroadcastJoinApplicationView,
+  BroadcastScheduleView,
+} from "@/services/broadcast-production-service";
 import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
 import { getClubTheme, getClubType } from "@/config/club-workspaces";
 import type { OrganizationProfile } from "@/config/organization-profiles";
@@ -128,6 +147,12 @@ export type ClubTabPanelsProps = {
   clubChecklists?: ClubChecklistView[];
   canManageProjects?: boolean;
   canCompleteChecklists?: boolean;
+  broadcastSchedule?: BroadcastScheduleView | null;
+  broadcastBookings?: BroadcastBookingView[];
+  announcementSubmissions?: BroadcastAnnouncementSubmissionView[];
+  crewCredits?: BroadcastCrewCreditView[];
+  broadcastEquipment?: BroadcastEquipmentView[];
+  joinApplications?: BroadcastJoinApplicationView[];
 };
 
 function memberLabel(member: MemberPreview): string {
@@ -280,6 +305,34 @@ function OverviewPanel(props: ClubTabPanelsProps) {
 
       {isBroadcasting ? (
         <DashboardCard
+          title="Next live"
+          description="Countdown to the next Blue Don Live."
+          icon={<Megaphone className="size-5" />}
+          status={
+            props.broadcastSchedule?.nextAirAt
+              ? { label: "Scheduled", variant: "info" }
+              : { label: "TBD", variant: "info" }
+          }
+        >
+          <BroadcastCountdown
+            schedule={
+              props.broadcastSchedule ?? {
+                id: null,
+                organizationId: null,
+                nextAirAt: null,
+                title: null,
+                notes: null,
+                updatedByName: null,
+              }
+            }
+            canSet={Boolean(props.canManageMedia)}
+            compact
+          />
+        </DashboardCard>
+      ) : null}
+
+      {isBroadcasting ? (
+        <DashboardCard
           title={isBroadcastCrew ? "Crew workspace" : "Watch Broadcasting"}
           description={
             isBroadcastCrew
@@ -305,8 +358,8 @@ function OverviewPanel(props: ClubTabPanelsProps) {
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 Open Watch to see Blue Don Live when Studio B is on air, plus
-                the archive of past broadcasts. Join the club if you want to
-                produce shows, run the Daily Rundown, or manage invoices.
+                the archive of past broadcasts. Book coverage, submit
+                announcements, or apply to join from the tabs above.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -326,6 +379,16 @@ function OverviewPanel(props: ClubTabPanelsProps) {
                   render={
                     <Link href="/organizations/broadcasting?tab=media">
                       Watch on this page
+                    </Link>
+                  }
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  nativeButton={false}
+                  render={
+                    <Link href="/organizations/broadcasting?tab=join">
+                      Join the club
                     </Link>
                   }
                 />
@@ -857,6 +920,26 @@ function MediaPanel(props: ClubTabPanelsProps) {
     return (
       <div className="space-y-8">
         <DashboardCard
+          title="Next live"
+          description="Countdown visible to the whole campus on Watch Broadcasting."
+          icon={<Megaphone className="size-5" />}
+        >
+          <BroadcastCountdown
+            schedule={
+              props.broadcastSchedule ?? {
+                id: null,
+                organizationId: null,
+                nextAirAt: null,
+                title: null,
+                notes: null,
+                updatedByName: null,
+              }
+            }
+            canSet={Boolean(canManageMedia)}
+          />
+        </DashboardCard>
+
+        <DashboardCard
           title="Daily Announcement"
           description="Title and body for today’s campus message."
           icon={<Megaphone className="size-5" />}
@@ -871,7 +954,7 @@ function MediaPanel(props: ClubTabPanelsProps) {
           <div className="grid gap-6 lg:grid-cols-2">
             <DashboardCard
               title="Media archive"
-              description="Publish clips to the video library (hosted on campus)."
+              description="Publish clips with on-demand categories or mark a highlight reel."
               icon={<Camera className="size-5" />}
             >
               <VideoUploadForm
@@ -913,41 +996,40 @@ function MediaPanel(props: ClubTabPanelsProps) {
         )}
 
         <DashboardCard
-          title="Past Broadcasts"
-          description="Published videos and ended lives — newest first."
+          title="Highlight Reel"
+          description="Montage clips showcasing recent campus moments."
           icon={<Camera className="size-5" />}
         >
           <VideoLibrary
             items={organizationMedia}
-            emptyLabel="No Broadcasting uploads yet."
+            highlightOnly
+            title="Featured montages"
+            emptyLabel="No highlight reels yet."
+            canCategorize={Boolean(canManageMedia)}
           />
         </DashboardCard>
 
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            nativeButton={false}
-            render={
-              <Link href="/media">
-                <Camera className="size-4" />
-                Watch Broadcasting
-              </Link>
-            }
+        <DashboardCard
+          title="On-demand library"
+          description="Filter by morning announcements, sports, spotlights, and special events."
+          icon={<Camera className="size-5" />}
+        >
+          <VideoLibrary
+            items={organizationMedia}
+            emptyLabel="No past broadcasts yet."
+            canCategorize={Boolean(canManageMedia)}
           />
-          {isCrew ? (
-            <Button
-              variant="outline"
-              size="sm"
-              nativeButton={false}
-              render={
-                <Link href="/organizations/broadcasting?tab=script">
-                  Daily Rundown
-                </Link>
-              }
-            />
-          ) : null}
-        </div>
+        </DashboardCard>
+
+        {!isCrew ? (
+          <p className="text-sm text-muted-foreground">
+            Prefer the full audience hub?{" "}
+            <Link href="/media" className="text-[#2F80ED] underline">
+              Open Watch Broadcasting
+            </Link>
+            .
+          </p>
+        ) : null}
       </div>
     );
   }
@@ -1201,6 +1283,102 @@ export function ClubTabPanels(props: ClubTabPanelsProps) {
       return <ScriptPanel {...props} />;
     case "media":
       return <MediaPanel {...props} />;
+    case "book":
+      return (
+        <DashboardCard
+          title="Request coverage"
+          description="Film, photography, or live streaming for your club, team, or event."
+          icon={<Megaphone className="size-5" />}
+        >
+          <BookingRequestForm />
+        </DashboardCard>
+      );
+    case "bookings":
+      return (
+        <DashboardCard
+          title="Coverage bookings"
+          description="Review and update requests from campus clubs and teams."
+          icon={<Megaphone className="size-5" />}
+        >
+          <BookingReviewList
+            bookings={props.broadcastBookings ?? []}
+            canManage={Boolean(props.canManageMedia)}
+          />
+        </DashboardCard>
+      );
+    case "announce":
+      return (
+        <DashboardCard
+          title="Submit a morning announcement"
+          description="Request an item for the daily morning announcements show."
+          icon={<Megaphone className="size-5" />}
+        >
+          <AnnouncementSubmitForm />
+        </DashboardCard>
+      );
+    case "submissions":
+      return (
+        <DashboardCard
+          title="Announcement submissions"
+          description="Approve items for the Daily Rundown / morning announcements."
+          icon={<Megaphone className="size-5" />}
+        >
+          <AnnouncementSubmissionReviewList
+            submissions={props.announcementSubmissions ?? []}
+            canManage={Boolean(props.canManageMedia)}
+          />
+        </DashboardCard>
+      );
+    case "credits":
+      return (
+        <DashboardCard
+          title="Production credit roll"
+          description="Hosts, camera, editors, producers, and studio crew."
+          icon={<Megaphone className="size-5" />}
+        >
+          <CrewCreditRoll
+            credits={props.crewCredits ?? []}
+            canManage={Boolean(props.canManageMedia)}
+            memberOptions={props.clubMemberOptions}
+          />
+        </DashboardCard>
+      );
+    case "equipment":
+      return (
+        <DashboardCard
+          title="Equipment checklist"
+          description="Pre-show inventory check-in for Studio B gear."
+          icon={<Megaphone className="size-5" />}
+        >
+          <EquipmentChecklist
+            items={props.broadcastEquipment ?? []}
+            canManage={Boolean(props.canManageMedia)}
+          />
+        </DashboardCard>
+      );
+    case "join":
+      return (
+        <DashboardCard
+          title="Join Broadcasting"
+          description="Apply for Host, Camera, Editor, Graphics, and other production tracks."
+          icon={<Megaphone className="size-5" />}
+        >
+          <JoinClubPortal canManage={Boolean(props.canManageMedia)} />
+        </DashboardCard>
+      );
+    case "applications":
+      return (
+        <DashboardCard
+          title="Join applications"
+          description="Review student applications and add accepted members to the roster."
+          icon={<Megaphone className="size-5" />}
+        >
+          <JoinApplicationReviewList
+            applications={props.joinApplications ?? []}
+            canManage={Boolean(props.canManageMedia)}
+          />
+        </DashboardCard>
+      );
     case "fundraisers":
       return <FundraisersPanel {...props} />;
     case "leadership":
@@ -1234,6 +1412,14 @@ export const CLUB_TAB_IDS = [
   "orders",
   "script",
   "media",
+  "book",
+  "bookings",
+  "announce",
+  "submissions",
+  "credits",
+  "equipment",
+  "join",
+  "applications",
   "fundraisers",
   "leadership",
   "members",

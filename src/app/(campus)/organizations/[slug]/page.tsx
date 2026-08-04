@@ -53,6 +53,14 @@ import {
 } from "@/services/media-service";
 import { getTodaysBroadcastAnnouncement } from "@/services/broadcast-announcement-service";
 import {
+  getBroadcastSchedule,
+  listAnnouncementSubmissions,
+  listBroadcastBookings,
+  listBroadcastEquipment,
+  listCrewCredits,
+  listJoinApplications,
+} from "@/services/broadcast-production-service";
+import {
   canEditBroadcastScriptPrayer,
   canEditBroadcastScriptTemplate,
   canEditBroadcastScriptValues,
@@ -97,7 +105,7 @@ import {
 } from "@/services/club-invoice-service";
 import { userHasActiveFocusClubMembership } from "@/services/org-membership-service";
 
-/** Production tabs — audience may watch Overview + Watch only. */
+/** Production tabs — audience may watch Overview + public suite tabs only. */
 const BROADCAST_CREW_ONLY_TABS = new Set([
   "script",
   "finances",
@@ -110,6 +118,10 @@ const BROADCAST_CREW_ONLY_TABS = new Set([
   "projects",
   "checklists",
   "fundraisers",
+  "bookings",
+  "submissions",
+  "equipment",
+  "applications",
 ]);
 
 type OrganizationPageProps = {
@@ -302,6 +314,35 @@ export default async function OrganizationPage({
     isBroadcastCrew = true;
   }
 
+  const [
+    broadcastSchedule,
+    broadcastBookings,
+    announcementSubmissions,
+    crewCredits,
+    broadcastEquipment,
+    joinApplications,
+  ] =
+    !isFallback && slug === "broadcasting"
+      ? await Promise.all([
+          getBroadcastSchedule(),
+          isBroadcastCrew
+            ? listBroadcastBookings()
+            : Promise.resolve([]),
+          isBroadcastCrew
+            ? listAnnouncementSubmissions()
+            : Promise.resolve([]),
+          listCrewCredits({
+            visibleOnly: !isBroadcastCrew,
+          }),
+          isBroadcastCrew
+            ? listBroadcastEquipment()
+            : Promise.resolve([]),
+          isBroadcastCrew
+            ? listJoinApplications()
+            : Promise.resolve([]),
+        ])
+      : [null, [], [], [], [], []];
+
   if (
     slug === "broadcasting" &&
     !isBroadcastCrew &&
@@ -423,6 +464,12 @@ export default async function OrganizationPage({
     clubChecklists,
     canManageProjects,
     canCompleteChecklists,
+    broadcastSchedule,
+    broadcastBookings,
+    announcementSubmissions,
+    crewCredits,
+    broadcastEquipment,
+    joinApplications,
   };
 
   return (

@@ -72,6 +72,31 @@ export function VideoUploadForm({ storageConfigured }: VideoUploadFormProps) {
         />
       </div>
 
+      <div className="space-y-2">
+        <label htmlFor="media-category" className="text-sm font-medium">
+          On-demand category
+        </label>
+        <select
+          id="media-category"
+          name="category"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          defaultValue=""
+        >
+          <option value="">Uncategorized</option>
+          <option value="MORNING_ANNOUNCEMENTS">Morning Announcements</option>
+          <option value="SPORTS_HIGHLIGHTS">Sports Highlights</option>
+          <option value="STUDENT_SPOTLIGHT">Student Spotlight</option>
+          <option value="SPECIAL_EVENTS">Special Events</option>
+          <option value="HIGHLIGHT_REEL">Highlight Reel</option>
+          <option value="OTHER">Other</option>
+        </select>
+      </div>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="isHighlightReel" value="1" className="size-4" />
+        Feature in Highlight Reel
+      </label>
+
       {state.error ? (
         <p className="text-sm text-destructive" role="alert">
           {state.error}

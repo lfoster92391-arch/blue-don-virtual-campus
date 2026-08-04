@@ -81,3 +81,15 @@ Past-due = `dueAt` in the past and status not Submitted/Completed.
 `prisma/migrations/20260804120000_command_center_messages_tasks_meetings`
 
 Tables: `student_messages`, `club_student_tasks`; column `club_calendar_events.mandatory_all_clubs`.
+
+### Broadcasting production suite messages
+
+Kinds added in `20260804160000_broadcast_production_suite`:
+
+| Kind | Trigger | Deep link |
+|------|---------|-----------|
+| `BROADCAST_BOOKING` | Club/team coverage request | `?tab=bookings` |
+| `BROADCAST_ANNOUNCEMENT_SUBMISSION` | Morning announcement submit | `?tab=submissions` |
+| `BROADCAST_JOIN_APPLICATION` | Join portal application | `?tab=applications` |
+
+See `docs/BROADCASTING_PRODUCTION_SUITE.md`.

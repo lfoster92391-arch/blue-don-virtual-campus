@@ -33,7 +33,15 @@ export type ClubTabId =
   | "tasks"
   | "messages"
   | "designs"
-  | "orders";
+  | "orders"
+  | "book"
+  | "bookings"
+  | "announce"
+  | "submissions"
+  | "credits"
+  | "equipment"
+  | "join"
+  | "applications";
 
 function focusedTabsForSlug(
   slug: string,
@@ -64,12 +72,21 @@ function focusedTabsForSlug(
       return [
         byId.get("overview")!,
         { id: "media", label: "Watch" },
+        { id: "book", label: "Book coverage" },
+        { id: "announce", label: "Submit announcement" },
+        { id: "credits", label: "Credits" },
+        { id: "join", label: "Join" },
       ];
     }
     const tabs = [
       byId.get("overview")!,
       { id: "script", label: "Daily Rundown" },
       { id: "media", label: "Control Room" },
+      { id: "bookings", label: "Bookings" },
+      { id: "submissions", label: "Submissions" },
+      { id: "equipment", label: "Equipment" },
+      { id: "applications", label: "Applications" },
+      { id: "credits", label: "Credits" },
       byId.get("invoices")!,
       { id: "tasks", label: "My Tasks" },
       { id: "messages", label: "Messages" },
@@ -77,7 +94,7 @@ function focusedTabsForSlug(
       byId.get("members")!,
     ];
     if (canViewFinances) {
-      tabs.splice(3, 0, byId.get("finances")!);
+      tabs.splice(8, 0, byId.get("finances")!);
     }
     return tabs;
   }
