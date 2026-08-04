@@ -1,6 +1,11 @@
+import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
 import { getCurrentWave, siteConfig } from "@/config/site";
 
 export function CampusVersionBanner() {
+  if (FOCUSED_CLUBS_MODE) {
+    return null;
+  }
+
   const wave = getCurrentWave();
 
   return (

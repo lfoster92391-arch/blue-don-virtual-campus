@@ -23,20 +23,33 @@ import { redirect } from "next/navigation";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
-import { canAccessAdmin, canApproveForms, canManageUsers, canViewLeadershipAnalytics, canViewSuccessAnalytics } from "@/config/roles";
+import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
+import {
+  canAccessAdmin,
+  canApproveForms,
+  canManageUsers,
+  canViewLeadershipAnalytics,
+  canViewSuccessAnalytics,
+} from "@/config/roles";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import {
   getComplianceIssues,
   listArchivedForms,
   listPendingApprovals,
 } from "@/services/form-service";
-import {
-  listPendingMemberships,
-} from "@/services/academy-service";
+import { listPendingMemberships } from "@/services/academy-service";
 import { countPendingPartners } from "@/services/business-partner-service";
 import { countPendingCommunityPartners } from "@/services/partner-service";
 import { countPendingMentorItems } from "@/services/mentor-network-service";
 import { listPendingParents } from "@/services/parent-student-service";
+
+type AdminSection = {
+  title: string;
+  description: string;
+  href: string;
+  icon: typeof Users;
+  count: number | null;
+};
 
 export default async function AdminPage() {
   const user = await requireCompleteProfile();
@@ -45,30 +58,102 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
-  const [pendingApprovals, complianceIssues, archivedForms, pendingMemberships, pendingParents, pendingBusinessPartners, pendingCommunityPartners, pendingMentors] =
-    await Promise.all([
-      listPendingApprovals(),
-      getComplianceIssues(),
-      listArchivedForms(),
-      listPendingMemberships(),
-      listPendingParents(),
-      countPendingPartners(),
-      countPendingCommunityPartners(),
-      countPendingMentorItems(),
-    ]);
-
-  const pendingPartners = pendingBusinessPartners + pendingCommunityPartners;
-
   const canManageAccounts = canManageUsers(user.role);
   const showSuccessAnalytics = canViewSuccessAnalytics(user.role);
   const showLeadershipDashboard = canViewLeadershipAnalytics(user.role);
 
-  const sections = [
+  if (FOCUSED_CLUBS_MODE) {
+    const focusedSections: AdminSection[] = [
+      ...(showLeadershipDashboard
+        ? [
+            {
+              title: "Principal Dashboard",
+              description:
+                "Club funds, invoices, memberships, and school pulse",
+              href: "/admin/leadership",
+              icon: BarChart3,
+              count: null,
+            },
+          ]
+        : []),
+      ...(canManageAccounts
+        ? [
+            {
+              title: "Students",
+              description:
+                "Create students, assign clubs and roles, preview their view",
+              href: "/admin/students",
+              icon: Users,
+              count: null,
+            },
+          ]
+        : []),
+    ];
+
+    return (
+      <ShellPage
+        title="Admin"
+        description="Students and leadership tools for Blue Don clubs."
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          {focusedSections.map((section) => {
+            const Icon = section.icon;
+
+            return (
+              <DashboardCard
+                key={section.title}
+                title={section.title}
+                description={section.description}
+                icon={<Icon className="size-4" />}
+                actions={
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    nativeButton={false}
+                    render={<Link href={section.href}>Open</Link>}
+                  />
+                }
+              >
+                <p className="text-sm text-muted-foreground">
+                  Open this tool to manage campus operations.
+                </p>
+              </DashboardCard>
+            );
+          })}
+        </div>
+      </ShellPage>
+    );
+  }
+
+  const [
+    pendingApprovals,
+    complianceIssues,
+    archivedForms,
+    pendingMemberships,
+    pendingParents,
+    pendingBusinessPartners,
+    pendingCommunityPartners,
+    pendingMentors,
+  ] = await Promise.all([
+    listPendingApprovals(),
+    getComplianceIssues(),
+    listArchivedForms(),
+    listPendingMemberships(),
+    listPendingParents(),
+    countPendingPartners(),
+    countPendingCommunityPartners(),
+    countPendingMentorItems(),
+  ]);
+
+  const pendingPartners = pendingBusinessPartners + pendingCommunityPartners;
+
+  const sections: AdminSection[] = [
     ...(showLeadershipDashboard
       ? [
           {
             title: "Principal Dashboard",
-            description: "Leadership command center — club funds, invoices, memberships, and school pulse",
+            description:
+              "Leadership command center — club funds, invoices, memberships, and school pulse",
             href: "/admin/leadership",
             icon: BarChart3,
             count: null,
@@ -79,7 +164,8 @@ export default async function AdminPage() {
       ? [
           {
             title: "Success Analytics",
-            description: "Support students — celebrate wins and close opportunity gaps",
+            description:
+              "Support students — celebrate wins and close opportunity gaps",
             href: "/counselor/analytics",
             icon: BarChart3,
             count: null,
@@ -90,7 +176,8 @@ export default async function AdminPage() {
       ? [
           {
             title: "Students control center",
-            description: "Create students, assign clubs/roles, preview their view, reset passwords",
+            description:
+              "Create students, assign clubs/roles, preview their view, reset passwords",
             href: "/admin/students",
             icon: Users,
             count: null,

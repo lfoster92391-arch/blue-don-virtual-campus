@@ -342,7 +342,7 @@ export default async function OrganizationPage({
               {categoryMeta.emoji} {categoryMeta.label}
             </span>
           ) : null}
-          {match ? (
+          {!FOCUSED_CLUBS_MODE && match ? (
             <span className="rounded-full bg-[#C9A227]/15 px-3 py-1 text-xs font-semibold text-[#0A2342] dark:text-white">
               {match.matchScore}% match
             </span>

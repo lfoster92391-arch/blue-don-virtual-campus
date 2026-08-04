@@ -321,13 +321,6 @@ export const focusedClubsNavigation: NavEntry[] = [
         enabled: true,
         roles: ["admin"],
       },
-      {
-        label: "Administration",
-        href: "/admin",
-        icon: LayoutGrid,
-        enabled: true,
-        roles: ["admin", "advisor", "staff"],
-      },
     ],
   },
 ];

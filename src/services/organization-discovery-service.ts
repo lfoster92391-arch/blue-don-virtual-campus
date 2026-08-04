@@ -207,7 +207,7 @@ function scoreOrganization(
   }
 
   if (reasons.length === 0) {
-    reasons.push("Popular with students exploring campus life.");
+    reasons.push("A strong fit based on your campus activity.");
   }
 
   return { score: Math.min(99, score), reasons: reasons.slice(0, 4) };

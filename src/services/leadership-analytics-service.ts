@@ -186,12 +186,10 @@ function emptyData(): LeadershipAnalyticsData {
       equipmentAvailable: 0,
     },
     drillDown: [
-      { label: "Governance Center", href: "/admin" },
-      { label: "Success Analytics", href: "/counselor/analytics" },
-      { label: "Impact Fund admin", href: "/admin/impact-fund" },
-      { label: "Service Center", href: "/service" },
-      { label: "Forms Center", href: "/admin/forms-center" },
-      { label: "Equipment", href: "/equipment" },
+      { label: "Students", href: "/admin/students" },
+      { label: "Principal Dashboard", href: "/admin/leadership" },
+      { label: "IT Finances", href: "/organizations/it-club?tab=finances" },
+      { label: "Service Desk", href: "/service-desk" },
     ],
   };
 }
@@ -637,46 +635,24 @@ export async function getLeadershipAnalytics(): Promise<LeadershipAnalyticsData>
   };
 }
 
-function buildDrillDown(counts: {
+function buildDrillDown(_counts: {
   pendingApprovals: number;
   complianceIssues: number;
   pendingMemberships: number;
   pendingParents: number;
 }): LeadershipDrillDown[] {
   return [
-    { label: "Students control center", href: "/admin/students" },
-    { label: "Governance Center", href: "/admin" },
-    {
-      label: "Success Analytics",
-      href: "/counselor/analytics",
-    },
+    { label: "Students", href: "/admin/students" },
+    { label: "Principal Dashboard", href: "/admin/leadership" },
     {
       label: "IT Finances & approvals",
       href: "/organizations/it-club?tab=finances",
     },
-    { label: "Impact Fund admin", href: "/admin/impact-fund" },
-    { label: "Service Center", href: "/service" },
-    {
-      label: "Forms approvals",
-      href: "/admin/approvals",
-      count: counts.pendingApprovals,
-    },
-    {
-      label: "Compliance",
-      href: "/admin/compliance",
-      count: counts.complianceIssues,
-    },
-    {
-      label: "Academy memberships",
-      href: "/admin/academies",
-      count: counts.pendingMemberships,
-    },
+    { label: "Service Desk", href: "/service-desk" },
     {
       label: "Parent approvals",
       href: "/admin/parent-approvals",
-      count: counts.pendingParents,
+      count: _counts.pendingParents,
     },
-    { label: "Equipment", href: "/equipment" },
-    { label: "Campus Operations", href: "/operations" },
   ];
 }

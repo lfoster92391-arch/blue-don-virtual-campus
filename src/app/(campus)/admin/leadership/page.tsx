@@ -24,20 +24,12 @@ export default async function LeadershipAnalyticsPage() {
       actions={
         <div className="flex flex-wrap gap-2">
           {canAccessAdmin(user.role) ? (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                nativeButton={false}
-                render={<Link href="/admin/students">Students</Link>}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                nativeButton={false}
-                render={<Link href="/admin">Governance Center</Link>}
-              />
-            </>
+            <Button
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              render={<Link href="/admin/students">Students</Link>}
+            />
           ) : null}
           <Button
             variant="ghost"

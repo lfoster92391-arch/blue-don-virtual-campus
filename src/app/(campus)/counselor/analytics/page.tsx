@@ -27,7 +27,7 @@ export default async function CounselorAnalyticsPage() {
             variant="ghost"
             size="sm"
             nativeButton={false}
-            render={<Link href="/admin">Governance Center</Link>}
+            render={<Link href="/admin/students">Students</Link>}
           />
         ) : undefined
       }

@@ -131,6 +131,8 @@ function ClubHero({
   profile: OrganizationProfile;
   match: OrganizationMatch | null;
 }) {
+  const showMatch = Boolean(match) && !FOCUSED_CLUBS_MODE;
+
   return (
     <section className="rounded-xl border border-border bg-gradient-to-br from-[#0A2342]/5 to-[#2F80ED]/5 p-6">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -152,7 +154,7 @@ function ClubHero({
           </div>
         </div>
 
-        {match ? (
+        {showMatch && match ? (
           <div className="shrink-0 rounded-2xl border border-[#C9A227]/30 bg-[#C9A227]/10 p-5 text-center lg:min-w-[10rem]">
             <p className="flex items-center justify-center gap-1 text-xs font-semibold uppercase tracking-wide text-[#C9A227]">
               <Sparkles className="size-3.5" aria-hidden="true" />
