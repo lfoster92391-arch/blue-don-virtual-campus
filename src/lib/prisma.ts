@@ -48,29 +48,48 @@ function supabaseProjectRefFromEnv(): string | null {
  * Normalize Supabase connection strings for Prisma:
  * - On Vercel, direct `db.*.supabase.co` → transaction pooler with `postgres.<ref>`
  * - Pooler URLs that still use bare `postgres` → `postgres.<ref>` (fixes P1000)
+ * - On Vercel, session pooler `:5432` → transaction pooler `:6543?pgbouncer=true`
  */
 function rewriteSupabaseConnectionString(raw: string): string {
   const envRef = supabaseProjectRefFromEnv();
+  let url = raw;
 
-  const directMatch = raw.match(
+  const directMatch = url.match(
     /^postgresql:\/\/postgres:([^@]+)@db\.([a-z0-9]+)\.supabase\.co:5432\/([^?]+)/i,
   );
   if (directMatch && process.env.VERCEL) {
     const [, password, projectRef, database] = directMatch;
     const region = process.env.SUPABASE_POOLER_REGION ?? "us-east-1";
-    return `postgresql://postgres.${projectRef}:${password}@aws-0-${region}.pooler.supabase.com:6543/${database}?pgbouncer=true`;
+    url = `postgresql://postgres.${projectRef}:${password}@aws-0-${region}.pooler.supabase.com:6543/${database}?pgbouncer=true`;
   }
 
   // Common misconfig: pooler host with bare user `postgres` (must be postgres.<ref>).
-  const barePoolerMatch = raw.match(
+  const barePoolerMatch = url.match(
     /^(postgresql:\/\/)postgres(:[^@]+)(@aws-0-[a-z0-9-]+\.pooler\.supabase\.com:\d+\/[^?]*)(\?.*)?$/i,
   );
   if (barePoolerMatch && envRef) {
     const [, scheme, password, rest, query = ""] = barePoolerMatch;
-    return `${scheme}postgres.${envRef}${password}${rest}${query}`;
+    url = `${scheme}postgres.${envRef}${password}${rest}${query}`;
   }
 
-  return raw;
+  // Serverless prefers transaction mode (6543) over session mode (5432).
+  if (process.env.VERCEL && /pooler\.supabase\.com:5432\//i.test(url)) {
+    try {
+      const parsed = new URL(url);
+      parsed.port = "6543";
+      parsed.searchParams.set("pgbouncer", "true");
+      parsed.searchParams.delete("sslmode");
+      parsed.searchParams.set("sslmode", "require");
+      url = parsed.toString();
+    } catch {
+      url = url.replace(/:5432\//, ":6543/");
+      if (!/[?&]pgbouncer=true/i.test(url)) {
+        url += url.includes("?") ? "&pgbouncer=true" : "?pgbouncer=true";
+      }
+    }
+  }
+
+  return url;
 }
 
 function resolveConnectionString(raw: string): string {
@@ -81,10 +100,24 @@ function resolveConnectionString(raw: string): string {
 function createPool(connectionString: string): Pool {
   const needsSsl =
     connectionString.includes("supabase.co") ||
+    connectionString.includes("supabase.com") ||
     connectionString.includes("sslmode=require");
 
+  // Avoid pg treating sslmode=require as verify-full on Node 24+.
+  let normalized = connectionString;
+  try {
+    const parsed = new URL(connectionString);
+    if (needsSsl) {
+      parsed.searchParams.set("uselibpqcompat", "true");
+      parsed.searchParams.set("sslmode", "require");
+      normalized = parsed.toString();
+    }
+  } catch {
+    // keep raw
+  }
+
   return new Pool({
-    connectionString,
+    connectionString: normalized,
     max: 1,
     idleTimeoutMillis: 20_000,
     connectionTimeoutMillis: 10_000,
