@@ -1,17 +1,10 @@
-import Link from "next/link";
-import { ArrowRight, Video } from "lucide-react";
+import { Video } from "lucide-react";
 
 import { MediaHubSections } from "@/components/media/media-hub-sections";
-import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { ShellPage } from "@/components/layout/shell-page";
-import { Button } from "@/components/ui/button";
 import { getBlueDonLiveRtmpConfig } from "@/config/broadcast-media";
-import { getModuleShell } from "@/config/module-shells";
-import { enforceFocusClubAccess } from "@/lib/auth/focus-club-guard";
-import { resolveAccessIdentity } from "@/lib/auth/preview";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { getTodaysBroadcastAnnouncement } from "@/services/broadcast-announcement-service";
-import { getMemoryHighlights } from "@/services/madonna-culture-service";
 import {
   canManageCampusMedia,
   getActiveLiveStream,
@@ -21,19 +14,9 @@ import {
 } from "@/services/media-service";
 
 export default async function MediaPage() {
-  const config = getModuleShell("media")!;
+  // Audience surface: any signed-in campus user may watch. Production tools
+  // remain gated by canManageCampusMedia inside MediaHubSections.
   const user = await requireCompleteProfile();
-  const identity = await resolveAccessIdentity(user);
-  await enforceFocusClubAccess({
-    userId: user.id,
-    role: identity.navRole,
-    clubSlug: "broadcasting",
-    options: {
-      forceScoped: identity.isPreviewing,
-      membershipUserId: identity.membershipUserId,
-      forcedMembershipSlugs: identity.forcedMembershipSlugs,
-    },
-  });
   const [canManageMedia, schoolBroadcasts, myUploads, activeLive, dailyAnnouncement] =
     await Promise.all([
       canManageCampusMedia(user.id, user.role),
@@ -42,17 +25,16 @@ export default async function MediaPage() {
       getActiveLiveStream(),
       getTodaysBroadcastAnnouncement(),
     ]);
-  const memories = getMemoryHighlights();
   const rtmp = getBlueDonLiveRtmpConfig();
 
   return (
     <ShellPage
-      title={config.title}
-      description={config.description}
+      title="Watch Broadcasting"
+      description="Live streams and past broadcasts from Studio B — open to everyone on campus."
       actions={
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#2F80ED]/10 px-3 py-1 text-xs font-medium text-[#2F80ED]">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0A2342]/10 px-3 py-1 text-xs font-medium text-[#0A2342] dark:bg-[#C9A227]/15 dark:text-[#C9A227]">
           <Video className="size-3.5" aria-hidden="true" />
-          Media + Live
+          Campus audience
         </span>
       }
     >
@@ -66,37 +48,6 @@ export default async function MediaPage() {
         rtmp={rtmp}
         dailyAnnouncement={dailyAnnouncement}
       />
-
-      <DashboardCard
-        title="Madonna Memories"
-        description="Photo of the Week, Throwback Thursday, and event highlights."
-        status={{ label: "W18", variant: "info" }}
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
-          {memories.map((item) => (
-            <div key={item.id} className="rounded-lg border border-border px-3 py-3">
-              <p className="flex items-center gap-2 font-medium text-foreground">
-                <span>{item.emoji}</span>
-                {item.title}
-              </p>
-              <p className="text-xs text-muted-foreground">{item.dateLabel}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
-            </div>
-          ))}
-        </div>
-        <Button
-          className="mt-4"
-          variant="outline"
-          size="sm"
-          nativeButton={false}
-          render={
-            <Link href="/memories">
-              All memories
-              <ArrowRight className="size-3.5" />
-            </Link>
-          }
-        />
-      </DashboardCard>
     </ShellPage>
   );
 }

@@ -33,10 +33,11 @@ export type ClubTabId =
 
 function focusedTabsForSlug(
   slug: string,
-  options?: { canViewFinances?: boolean },
+  options?: { canViewFinances?: boolean; isBroadcastCrew?: boolean },
 ): { id: string; label: string }[] {
   const byId = new Map(FOCUS_CLUB_TABS.map((t) => [t.id, t]));
   const canViewFinances = options?.canViewFinances !== false;
+  const isBroadcastCrew = options?.isBroadcastCrew !== false;
 
   if (slug === "it-club") {
     const tabs = [
@@ -53,6 +54,12 @@ function focusedTabsForSlug(
   }
 
   if (slug === "broadcasting") {
+    if (!isBroadcastCrew) {
+      return [
+        byId.get("overview")!,
+        { id: "media", label: "Watch" },
+      ];
+    }
     const tabs = [
       byId.get("overview")!,
       { id: "script", label: "Daily Rundown" },
@@ -93,6 +100,7 @@ export function ClubTabNav({
   accent,
   focusedMode = false,
   canViewFinances = true,
+  isBroadcastCrew = true,
 }: {
   slug: string;
   activeTab: string;
@@ -100,11 +108,13 @@ export function ClubTabNav({
   accent?: string;
   focusedMode?: boolean;
   canViewFinances?: boolean;
+  /** When false on Broadcasting, only Overview + Watch tabs show. */
+  isBroadcastCrew?: boolean;
 }) {
   const base = `/organizations/${slug}`;
 
   const tabs: { id: string; label: string }[] = focusedMode
-    ? focusedTabsForSlug(slug, { canViewFinances })
+    ? focusedTabsForSlug(slug, { canViewFinances, isBroadcastCrew })
     : [...CLUB_TABS];
 
   if (workspaceTab && !focusedMode) {

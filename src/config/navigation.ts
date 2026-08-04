@@ -209,6 +209,14 @@ export const focusedClubsNavigation: NavEntry[] = [
     primary: true,
   },
   {
+    label: "Watch Broadcasting",
+    href: "/media",
+    icon: Headphones,
+    enabled: true,
+    mobile: true,
+    primary: true,
+  },
+  {
     label: FOCUS_CLUBS[0].name,
     icon: Cpu,
     defaultOpen: true,

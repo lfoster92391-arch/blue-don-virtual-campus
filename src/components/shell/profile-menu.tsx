@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { Gift, Headphones, ListChecks, Settings, User } from "lucide-react";
 
-import { PartnerBackLink } from "@/components/layout/partner-back-link";
-import { isPartnerLinked } from "@/config/partner";
 import { ROLE_LABELS } from "@/config/roles";
 import { Button } from "@/components/ui/button";
 import {
@@ -100,14 +98,6 @@ export function ProfileMenu({ user }: { user: CampusUser }) {
               Class wishlists
             </Link>
           </DropdownMenuItem>
-        ) : null}
-        {isPartnerLinked() ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <PartnerBackLink variant="menu" />
-            </DropdownMenuItem>
-          </>
         ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem>

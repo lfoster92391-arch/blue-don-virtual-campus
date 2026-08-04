@@ -84,6 +84,8 @@ export type ClubTabPanelsProps = {
   organizationType: string;
   showJoinSection?: boolean;
   canManageMedia?: boolean;
+  /** Broadcasting club members / faculty with production access. */
+  isBroadcastCrew?: boolean;
   organizationMedia?: CampusMediaItemView[];
   activeLive?: CampusMediaItemView | null;
   dailyAnnouncement?: BroadcastAnnouncementView | null;
@@ -253,10 +255,68 @@ function OverviewPanel(props: ClubTabPanelsProps) {
     props.organizationType === "CLUB" && !FOCUSED_CLUBS_MODE;
   const clubProgress = showClubXp ? getClubProgress(props.organizationSlug) : null;
   const isBroadcasting = props.organizationSlug === "broadcasting";
+  const isBroadcastCrew = props.isBroadcastCrew !== false;
 
   return (
     <div className="space-y-8">
       <ClubHero card={card} profile={profile} match={props.match} />
+
+      {isBroadcasting ? (
+        <DashboardCard
+          title={isBroadcastCrew ? "Crew workspace" : "Watch Broadcasting"}
+          description={
+            isBroadcastCrew
+              ? "You have production access — Daily Rundown, Control Room, and uploads."
+              : "Anyone on campus can watch live and browse past broadcasts."
+          }
+          icon={<Megaphone className="size-5" />}
+          status={{
+            label: isBroadcastCrew ? "Crew" : "Audience",
+            variant: "info",
+          }}
+        >
+          {isBroadcastCrew ? (
+            <p className="text-sm text-muted-foreground">
+              Use Daily Rundown for the morning script and Control Room to
+              upload videos or go live. The whole school watches on{" "}
+              <Link href="/media" className="text-[#2F80ED] underline">
+                Watch Broadcasting
+              </Link>
+              .
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Open Watch to see Blue Don Live when Studio B is on air, plus
+                the archive of past broadcasts. Join the club if you want to
+                produce shows, run the Daily Rundown, or manage invoices.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  nativeButton={false}
+                  render={
+                    <Link href="/media">
+                      Watch live &amp; archive
+                      <ArrowRight className="size-3.5" />
+                    </Link>
+                  }
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  nativeButton={false}
+                  render={
+                    <Link href="/organizations/broadcasting?tab=media">
+                      Watch on this page
+                    </Link>
+                  }
+                />
+              </div>
+            </div>
+          )}
+        </DashboardCard>
+      ) : null}
 
       {isBroadcasting ? (
         <DashboardCard
@@ -272,7 +332,7 @@ function OverviewPanel(props: ClubTabPanelsProps) {
         </DashboardCard>
       ) : null}
 
-      {isBroadcasting ? (
+      {isBroadcasting && isBroadcastCrew ? (
         <DashboardCard
           title="Daily Rundown"
           description="Shared show script for this morning’s broadcast."
@@ -669,6 +729,7 @@ function MediaPanel(props: ClubTabPanelsProps) {
   const isBroadcasting = organizationSlug === "broadcasting";
 
   if (isBroadcasting) {
+    const isCrew = props.isBroadcastCrew !== false;
     return (
       <div className="space-y-8">
         <DashboardCard
@@ -686,7 +747,7 @@ function MediaPanel(props: ClubTabPanelsProps) {
           <div className="grid gap-6 lg:grid-cols-2">
             <DashboardCard
               title="Media archive"
-              description="Publish clips to the video library."
+              description="Publish clips to the video library (hosted on campus)."
               icon={<Camera className="size-5" />}
             >
               <VideoUploadForm
@@ -721,14 +782,14 @@ function MediaPanel(props: ClubTabPanelsProps) {
               />
             ) : (
               <p className="text-sm text-muted-foreground">
-                Live stream status loads with the Media Hub.
+                Live stream status loads with Watch Broadcasting.
               </p>
             )}
           </DashboardCard>
         )}
 
         <DashboardCard
-          title="Past Broadcasts / Video Library"
+          title="Past Broadcasts"
           description="Published videos and ended lives — newest first."
           icon={<Camera className="size-5" />}
         >
@@ -746,20 +807,22 @@ function MediaPanel(props: ClubTabPanelsProps) {
             render={
               <Link href="/media">
                 <Camera className="size-4" />
-                Full Media Hub
+                Watch Broadcasting
               </Link>
             }
           />
-          <Button
-            variant="outline"
-            size="sm"
-            nativeButton={false}
-            render={
-              <Link href="/organizations/broadcasting?tab=script">
-                Daily Rundown
-              </Link>
-            }
-          />
+          {isCrew ? (
+            <Button
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              render={
+                <Link href="/organizations/broadcasting?tab=script">
+                  Daily Rundown
+                </Link>
+              }
+            />
+          ) : null}
         </div>
       </div>
     );

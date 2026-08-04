@@ -18,6 +18,9 @@ import {
 } from "@/config/club-workspaces";
 import { ORGANIZATION_CATEGORY_META } from "@/config/madonna-organizations";
 import type { OrganizationCategory } from "@/config/madonna-organizations";
+import {
+  canBrowseAllFocusClubs,
+} from "@/config/focus-club-access";
 import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
 import {
   FOCUS_CLUB_SLUGS,
@@ -83,6 +86,20 @@ import {
   listClubInvoices,
   listPendingInvoicesForFocusClubs,
 } from "@/services/club-invoice-service";
+import { userHasActiveFocusClubMembership } from "@/services/org-membership-service";
+
+/** Production tabs — audience may watch Overview + Watch only. */
+const BROADCAST_CREW_ONLY_TABS = new Set([
+  "script",
+  "finances",
+  "invoices",
+  "members",
+  "calendar",
+  "documents",
+  "projects",
+  "checklists",
+  "fundraisers",
+]);
 
 type OrganizationPageProps = {
   params: Promise<{ slug: string }>;
@@ -97,16 +114,21 @@ export default async function OrganizationPage({
   const { tab: tabParam } = await searchParams;
   const user = await requireCompleteProfile();
   const identity = await resolveAccessIdentity(user);
-  await enforceFocusClubAccessBySlug({
-    userId: user.id,
-    role: identity.navRole,
-    slug,
-    options: {
-      forceScoped: identity.isPreviewing,
-      membershipUserId: identity.membershipUserId,
-      forcedMembershipSlugs: identity.forcedMembershipSlugs,
-    },
-  });
+
+  // Broadcasting is audience-open: any signed-in user may view Overview + Watch.
+  // IT / Cricut stay membership-scoped. Production tabs are gated below.
+  if (slug !== "broadcasting") {
+    await enforceFocusClubAccessBySlug({
+      userId: user.id,
+      role: identity.navRole,
+      slug,
+      options: {
+        forceScoped: identity.isPreviewing,
+        membershipUserId: identity.membershipUserId,
+        forcedMembershipSlugs: identity.forcedMembershipSlugs,
+      },
+    });
+  }
   let detail = await getOrganizationDiscoveryDetail(slug);
 
   // Focus clubs (IT / Broadcasting / Cricut) must never 404 — even when
@@ -124,13 +146,31 @@ export default async function OrganizationPage({
 
   const { organization, profile, card, isFallback } = detail;
 
-  // W20 · Club Worlds — resolve this org's workspace personality (accent +
-  // whether the immersive workspace tab is available for its type).
+  // W20 Club Worlds workspace theme (accent) — still used for focused club chrome.
   const workspace = resolveWorkspace(organization.type, organization.slug);
 
   let activeTab = tabParam && isClubTabId(tabParam) ? tabParam : "overview";
   if (activeTab === "workspace" && !workspace.hasWorkspace) {
     activeTab = "overview";
+  }
+
+  const membershipUserId = identity.membershipUserId ?? user.id;
+  const forced = identity.forcedMembershipSlugs;
+  let isBroadcastCrew = true;
+  if (slug === "broadcasting") {
+    if (forced) {
+      isBroadcastCrew = forced.includes("broadcasting");
+    } else if (
+      !identity.isPreviewing &&
+      canBrowseAllFocusClubs(identity.navRole)
+    ) {
+      isBroadcastCrew = true;
+    } else {
+      isBroadcastCrew = await userHasActiveFocusClubMembership(
+        membershipUserId,
+        "broadcasting",
+      );
+    }
   }
 
   // Skip DB-backed panels when serving catalog fallback (broken DATABASE_URL /
@@ -247,6 +287,18 @@ export default async function OrganizationPage({
             : Promise.resolve(false),
         ]);
 
+  if (slug === "broadcasting" && canManageMedia) {
+    isBroadcastCrew = true;
+  }
+
+  if (
+    slug === "broadcasting" &&
+    !isBroadcastCrew &&
+    BROADCAST_CREW_ONLY_TABS.has(activeTab)
+  ) {
+    redirect("/organizations/broadcasting");
+  }
+
   if (activeTab === "finances" && !canViewFinances) {
     redirect(`/organizations/${slug}`);
   }
@@ -301,6 +353,7 @@ export default async function OrganizationPage({
     showJoinSection:
       !isFallback && canRequestOrganizationMembership(user.role),
     canManageMedia,
+    isBroadcastCrew: slug === "broadcasting" ? isBroadcastCrew : true,
     organizationMedia,
     activeLive,
     dailyAnnouncement,
@@ -402,6 +455,16 @@ export default async function OrganizationPage({
         {FOCUSED_CLUBS_MODE && organization.slug === "broadcasting" ? (
           <Button
             size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/media">Watch live &amp; archive</Link>}
+          />
+        ) : null}
+        {FOCUSED_CLUBS_MODE &&
+        organization.slug === "broadcasting" &&
+        isBroadcastCrew ? (
+          <Button
+            size="sm"
             nativeButton={false}
             render={
               <Link href="/organizations/broadcasting?tab=script">
@@ -418,9 +481,9 @@ export default async function OrganizationPage({
           />
         ) : null}
         {FOCUSED_CLUBS_MODE &&
-        (organization.slug === "broadcasting" ||
+        (organization.slug === "it-club" ||
           organization.slug === "cricut-club" ||
-          organization.slug === "it-club") ? (
+          (organization.slug === "broadcasting" && isBroadcastCrew)) ? (
           <Button
             variant="outline"
             size="sm"
@@ -462,6 +525,7 @@ export default async function OrganizationPage({
           accent={workspace.accent}
           focusedMode={FOCUSED_CLUBS_MODE}
           canViewFinances={Boolean(canViewFinances)}
+          isBroadcastCrew={slug === "broadcasting" ? isBroadcastCrew : true}
           workspaceTab={
             workspace.hasWorkspace ? { label: workspace.tabLabel } : null
           }

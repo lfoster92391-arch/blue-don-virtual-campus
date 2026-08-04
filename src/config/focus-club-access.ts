@@ -75,10 +75,7 @@ export function focusClubSlugFromPathname(pathname: string): FocusClubSlug | nul
     return "it-club";
   }
 
-  if (path === "/media" || path.startsWith("/media/")) {
-    return "broadcasting";
-  }
-
+  // /media is the campus-wide watch surface — not membership-gated.
   return null;
 }
 

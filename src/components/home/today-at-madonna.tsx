@@ -198,6 +198,13 @@ function AnnouncementsBriefing({
               day: "numeric",
             })}
           </p>
+          <Link
+            href="/media"
+            className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[#2F80ED] hover:underline"
+          >
+            Watch Broadcasting
+            <ArrowRight className="size-3.5" aria-hidden="true" />
+          </Link>
         </article>
       ) : null}
 

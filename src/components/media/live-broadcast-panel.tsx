@@ -43,8 +43,8 @@ export function LiveBroadcastPanel({
           <ViewerLivePreview item={activeLive} />
         ) : (
           <p className="text-sm text-muted-foreground">
-            Broadcasting students can start a live stream from here. Join the Broadcasting
-            organization or Broadcast Academy to get studio access.
+            Nothing on air right now. When Broadcasting goes live, the stream
+            appears here for everyone on campus.
           </p>
         )}
       </div>

@@ -1,8 +1,6 @@
 import Link from "next/link";
 
-import { PartnerBackLink } from "@/components/layout/partner-back-link";
 import { siteConfig } from "@/config/site";
-import { isPartnerLinked } from "@/config/partner";
 
 export function EmbedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,14 +10,13 @@ export function EmbedLayout({ children }: { children: React.ReactNode }) {
           {siteConfig.shortName}
         </p>
         <div className="flex items-center gap-3">
-          {isPartnerLinked() ? <PartnerBackLink variant="inline" /> : null}
           <Link
-            href="/dashboard"
+            href="/home"
             className="text-muted-foreground underline-offset-4 hover:underline"
             target="_blank"
             rel="noopener noreferrer"
           >
-            Open full campus
+            Open campus
           </Link>
         </div>
       </header>
