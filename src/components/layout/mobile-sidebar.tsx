@@ -7,6 +7,7 @@ import { NavMembershipSections } from "@/components/layout/nav-membership-sectio
 import { NavTree } from "@/components/layout/nav-tree";
 import { resolveGroupedNavigation } from "@/config/navigation";
 import type { CampusRole } from "@/config/roles";
+import { normalizeOrgRole, orgRoleCanViewFinances } from "@/config/roles";
 import { siteConfig } from "@/config/site";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -19,6 +20,15 @@ import {
 import { useShellStore } from "@/stores/shell-store";
 import type { StudentContext } from "@/services/student-context-service";
 import type { CampusUser } from "@/types/auth";
+
+function financeClubSlugsFromContext(context: StudentContext): string[] {
+  return context.clubs
+    .filter((club) => {
+      const role = normalizeOrgRole(club.role);
+      return role ? orgRoleCanViewFinances(role) : false;
+    })
+    .map((club) => club.slug);
+}
 
 export function MobileSidebar({
   user,
@@ -37,6 +47,7 @@ export function MobileSidebar({
     membershipSlugsProp ?? context.clubs.map((club) => club.slug);
   const navEntries = resolveGroupedNavigation(navRole ?? user.role, {
     membershipSlugs,
+    financeClubSlugs: financeClubSlugsFromContext(context),
   });
 
   return (

@@ -66,6 +66,9 @@ export const FOCUS_CLUB_TABS = [
   { id: "fundraisers", label: "Fundraisers" },
   { id: "media", label: "Control Room" },
   { id: "shop", label: "Shop" },
+  { id: "documents", label: "Documents" },
+  { id: "projects", label: "Projects" },
+  { id: "checklists", label: "Checklists" },
   { id: "members", label: "Members" },
 ] as const;
 

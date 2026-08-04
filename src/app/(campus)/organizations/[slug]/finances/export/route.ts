@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import {
+  canViewClubFinances,
   getClubFinanceSnapshot,
   ledgerToCsv,
 } from "@/services/club-finance-service";
@@ -12,7 +13,7 @@ type RouteContext = {
 };
 
 export async function GET(_request: Request, context: RouteContext) {
-  await requireCompleteProfile();
+  const user = await requireCompleteProfile();
   const { slug } = await context.params;
 
   const org = await prisma.organization.findUnique({
@@ -22,6 +23,11 @@ export async function GET(_request: Request, context: RouteContext) {
 
   if (!org) {
     return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+  }
+
+  const canView = await canViewClubFinances(user.id, user.role, org.id);
+  if (!canView) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const snapshot = await getClubFinanceSnapshot(org.id);

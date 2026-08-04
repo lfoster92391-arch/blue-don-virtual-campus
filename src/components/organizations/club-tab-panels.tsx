@@ -1,18 +1,13 @@
-import Link from "next/link";
+import { ClubDocumentsPanel } from "@/components/organizations/club-documents-panel";
 import {
-  ArrowRight,
-  Award,
-  Calendar,
-  Camera,
-  FlaskConical,
-  GraduationCap,
-  Megaphone,
-  Sparkles,
-  Users,
-} from "lucide-react";
-
-import { AcademyJoinButton } from "@/components/academies/academy-join-button";
-import { DashboardCard } from "@/components/dashboard/dashboard-card";
+  ClubChecklistsPanel,
+  ClubProjectsPanel,
+} from "@/components/organizations/club-projects-panel";
+import type { ClubDocumentView } from "@/lib/club-workspace-types";
+import type {
+  ClubChecklistView,
+  ClubProjectView,
+} from "@/lib/club-workspace-types";
 import type { ClubTabId } from "@/components/organizations/club-tab-nav";
 import { ClubCalendarPanel } from "@/components/organizations/club-calendar-panel";
 import { ClubFinancesPanel } from "@/components/organizations/club-finances-panel";
@@ -48,6 +43,21 @@ import type {
 import type { WishlistItemView } from "@/services/wishlist-service";
 import type { BroadcastAnnouncementView } from "@/services/broadcast-announcement-service";
 import type { CampusMediaItemView } from "@/services/media-service";
+import Link from "next/link";
+import {
+  ArrowRight,
+  Award,
+  Calendar,
+  Camera,
+  FlaskConical,
+  GraduationCap,
+  Megaphone,
+  Sparkles,
+  Users,
+} from "lucide-react";
+
+import { AcademyJoinButton } from "@/components/academies/academy-join-button";
+import { DashboardCard } from "@/components/dashboard/dashboard-card";
 
 type MemberPreview = {
   user: {
@@ -95,6 +105,13 @@ export type ClubTabPanelsProps = {
   canEditScriptValues?: boolean;
   canEditScriptPrayer?: boolean;
   canEditScriptTemplate?: boolean;
+  canViewFinances?: boolean;
+  clubDocuments?: ClubDocumentView[];
+  canEditDocuments?: boolean;
+  clubProjects?: ClubProjectView[];
+  clubChecklists?: ClubChecklistView[];
+  canManageProjects?: boolean;
+  canCompleteChecklists?: boolean;
 };
 
 function memberLabel(member: MemberPreview): string {
@@ -380,8 +397,23 @@ function AnnouncementsPanel({ card }: Pick<ClubTabPanelsProps, "card">) {
   );
 }
 
-function ProjectsPanel({ profile }: Pick<ClubTabPanelsProps, "profile">) {
-  const projects = profile.projects ?? [];
+function ProjectsPanel(props: ClubTabPanelsProps) {
+  if (
+    FOCUSED_CLUBS_MODE &&
+    props.organizationSlug === "cricut-club" &&
+    props.clubProjects
+  ) {
+    return (
+      <ClubProjectsPanel
+        organizationId={props.organizationId}
+        organizationSlug={props.organizationSlug}
+        projects={props.clubProjects}
+        canManage={props.canManageProjects ?? false}
+      />
+    );
+  }
+
+  const projects = props.profile.projects ?? [];
 
   if (projects.length === 0) {
     return (
@@ -401,6 +433,30 @@ function ProjectsPanel({ profile }: Pick<ClubTabPanelsProps, "profile">) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function DocumentsPanel(props: ClubTabPanelsProps) {
+  return (
+    <ClubDocumentsPanel
+      organizationId={props.organizationId}
+      organizationSlug={props.organizationSlug}
+      documents={props.clubDocuments ?? []}
+      canEdit={props.canEditDocuments ?? false}
+    />
+  );
+}
+
+function ChecklistsPanel(props: ClubTabPanelsProps) {
+  return (
+    <ClubChecklistsPanel
+      organizationId={props.organizationId}
+      organizationSlug={props.organizationSlug}
+      checklists={props.clubChecklists ?? []}
+      projects={props.clubProjects ?? []}
+      canManage={props.canManageProjects ?? false}
+      canComplete={props.canCompleteChecklists ?? false}
+    />
   );
 }
 
@@ -488,6 +544,20 @@ function CalendarPanel(props: ClubTabPanelsProps) {
 }
 
 function FinancesPanel(props: ClubTabPanelsProps) {
+  if (props.canViewFinances === false) {
+    return (
+      <DashboardCard
+        title="Club finances"
+        description="Restricted to club officers"
+      >
+        <p className="text-sm text-muted-foreground">
+          Financial records are available to the President, Vice President,
+          Secretary, and campus administrators.
+        </p>
+      </DashboardCard>
+    );
+  }
+
   if (!props.financeSnapshot) {
     return (
       <DashboardCard title="Club finances" description="Ledger and fundraisers">
@@ -901,7 +971,11 @@ export function ClubTabPanels(props: ClubTabPanelsProps) {
     case "announcements":
       return <AnnouncementsPanel card={props.card} />;
     case "projects":
-      return <ProjectsPanel profile={props.profile} />;
+      return <ProjectsPanel {...props} />;
+    case "documents":
+      return <DocumentsPanel {...props} />;
+    case "checklists":
+      return <ChecklistsPanel {...props} />;
     case "certifications":
       return <CertificationsPanel profile={props.profile} />;
     case "labs":
@@ -935,6 +1009,8 @@ export const CLUB_TAB_IDS = [
   "workspace",
   "announcements",
   "projects",
+  "documents",
+  "checklists",
   "certifications",
   "labs",
   "calendar",

@@ -59,7 +59,11 @@ export type EquipmentFilters = {
   organizationId?: string;
 };
 
-const MANAGER_ORG_ROLES: OrgMembershipRole[] = ["LEAD", "OFFICER", "MODERATOR"];
+const MANAGER_ORG_ROLES: OrgMembershipRole[] = [
+  "PRESIDENT",
+  "VICE_PRESIDENT",
+  "SECRETARY",
+];
 
 function displayName(
   user: {

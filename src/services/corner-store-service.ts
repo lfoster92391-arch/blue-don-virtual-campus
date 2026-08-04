@@ -227,7 +227,7 @@ export async function listSellableOrganizations(
       where: {
         userId,
         status: "ACTIVE",
-        orgRole: { in: ["LEAD", "OFFICER"] },
+        orgRole: { in: ["PRESIDENT", "VICE_PRESIDENT", "SECRETARY"] },
       },
       select: { organization: { select: { id: true, name: true } } },
       orderBy: { organization: { name: "asc" } },

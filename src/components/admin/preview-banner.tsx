@@ -14,20 +14,26 @@ export function PreviewBanner({
   studentName?: string | null;
   clubSlug?: FocusClubSlug | null;
 }) {
-  const label = studentName
-    ? `Previewing as ${studentName}`
+  const who = studentName
+    ? studentName
     : clubSlug
-      ? `Previewing ${focusClubName(clubSlug)} member view`
-      : "Preview mode";
+      ? `${focusClubName(clubSlug)} member view`
+      : "member view";
 
   return (
-    <div className="sticky top-0 z-50 border-b border-[#D4A017]/40 bg-[#D4A017] text-[#0A2342]">
-      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2 px-4 py-2 lg:px-6">
-        <p className="text-sm font-medium">
-          <span className="font-semibold">{label}</span>
-          <span className="ml-2 font-normal opacity-90">
+    <div
+      className="sticky top-0 z-50 border-b-2 border-[#0A2342]/20 bg-[#D4A017] text-[#0A2342] shadow-sm"
+      role="status"
+      aria-live="polite"
+    >
+      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-6">
+        <p className="text-sm font-semibold sm:text-base">
+          Previewing as {who}
+          <span className="mx-2 font-normal opacity-80">—</span>
+          <span className="font-medium">Exit preview</span>
+          <span className="mt-1 block text-xs font-normal opacity-90 sm:mt-0 sm:ml-2 sm:inline">
             Nav and club access match their membership. Your admin session is
-            unchanged — exit anytime.
+            unchanged.
           </span>
         </p>
         <form action={exitPreviewAction}>
@@ -35,7 +41,7 @@ export function PreviewBanner({
             type="submit"
             size="sm"
             variant="outline"
-            className="border-[#0A2342]/30 bg-white/90 text-[#0A2342] hover:bg-white"
+            className="border-[#0A2342]/40 bg-white font-semibold text-[#0A2342] hover:bg-white"
           >
             <EyeOff className="size-4" />
             Exit preview

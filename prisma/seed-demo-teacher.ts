@@ -188,19 +188,19 @@ export async function seedDemoTeacher(prisma: PrismaClient) {
     },
     update: {
       status: "ACTIVE",
-      orgRole: "LEAD",
+      orgRole: "PRESIDENT",
       joinedAt: new Date(),
     },
     create: {
       organizationId: DEMO_TEACHER_ORGANIZATION_ID,
       userId: user.id,
       status: "ACTIVE",
-      orgRole: "LEAD",
+      orgRole: "PRESIDENT",
       joinedAt: new Date(),
     },
   });
 
   console.log(
-    `Seeded demo teacher ${DEMO_TEACHER_DISPLAY_NAME} (${DEMO_TEACHER_EMAIL}) as IT Club advisor (LEAD).`,
+    `Seeded demo teacher ${DEMO_TEACHER_DISPLAY_NAME} (${DEMO_TEACHER_EMAIL}) as IT Club advisor (PRESIDENT).`,
   );
 }

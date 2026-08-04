@@ -18,28 +18,28 @@ export function canBrowseAllFocusClubs(role: CampusRole): boolean {
   return isFacultyClubLookupRole(role);
 }
 
-/** Club-specific display labels for org roles (maps onto LEAD/OFFICER/MODERATOR/MEMBER). */
+/** Focus-club officer titles — same four roles across IT, Broadcasting, and Cricut. */
 export const FOCUS_CLUB_ROLE_LABELS: Record<
   FocusClubSlug,
   Record<OrgMembershipRole, string>
 > = {
   "it-club": {
-    lead: "IT Lead",
-    officer: "IT Officer",
-    moderator: "IT Moderator",
-    member: "IT Member",
+    president: "President",
+    vice_president: "Vice President",
+    secretary: "Secretary",
+    member: "Member",
   },
   broadcasting: {
-    lead: "Producer",
-    officer: "Host",
-    moderator: "Camera / Editor",
-    member: "Crew",
+    president: "President",
+    vice_president: "Vice President",
+    secretary: "Secretary",
+    member: "Member",
   },
   "cricut-club": {
-    lead: "Cricut Lead",
-    officer: "Seller / Officer",
-    moderator: "Shop Moderator",
-    member: "Cricut Member",
+    president: "President",
+    vice_president: "Vice President",
+    secretary: "Secretary",
+    member: "Member",
   },
 };
 

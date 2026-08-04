@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { ClubTabNav } from "@/components/organizations/club-tab-nav";
 import {
@@ -62,9 +62,20 @@ import {
 } from "@/services/club-calendar-service";
 import {
   canManageClubFinances,
+  canViewClubFinances,
   getClubFinanceSnapshot,
   listFocusClubFinanceSnapshots,
 } from "@/services/club-finance-service";
+import {
+  canEditClubDocuments,
+  listClubDocuments,
+} from "@/services/club-document-service";
+import {
+  canCompleteClubChecklistItems,
+  canManageClubProjects,
+  listClubChecklists,
+  listClubProjects,
+} from "@/services/club-project-service";
 import {
   canReviewClubInvoice,
   canSubmitClubInvoice,
@@ -124,7 +135,7 @@ export default async function OrganizationPage({
 
   // Skip DB-backed panels when serving catalog fallback (broken DATABASE_URL /
   // circuit breaker) so we don't hammer Prisma or throw via the proxy.
-  const [match, items, canManage, canManageMedia, organizationMedia, academyMembership, canReview, joinPipeline, financeSnapshot, canManageFinances, clubCalendarEvents, canManageCalendar, activeLive, dailyAnnouncement, clubInvoices, canSubmitInvoices, canReviewInvoices, dailyScript, canEditScriptValues, canEditScriptPrayer, canEditScriptTemplate] =
+  const [match, items, canManage, canManageMedia, organizationMedia, academyMembership, canReview, joinPipeline, financeSnapshot, canManageFinances, canViewFinances, clubCalendarEvents, canManageCalendar, activeLive, dailyAnnouncement, clubInvoices, canSubmitInvoices, canReviewInvoices, dailyScript, canEditScriptValues, canEditScriptPrayer, canEditScriptTemplate, clubDocuments, canEditDocuments, clubProjects, clubChecklists, canManageProjects, canCompleteChecklists] =
     isFallback
       ? [
           null,
@@ -137,6 +148,7 @@ export default async function OrganizationPage({
           null,
           null,
           false,
+          false,
           [],
           false,
           null,
@@ -146,6 +158,12 @@ export default async function OrganizationPage({
           false,
           null,
           false,
+          false,
+          false,
+          [],
+          false,
+          [],
+          [],
           false,
           false,
         ]
@@ -185,6 +203,7 @@ export default async function OrganizationPage({
             : Promise.resolve(null),
           getClubFinanceSnapshot(organization.id),
           canManageClubFinances(user.id, user.role, organization.id),
+          canViewClubFinances(user.id, user.role, organization.id),
           listClubCalendarEvents({ organizationId: organization.id }),
           canManageClubCalendar(user.id, user.role, organization.id),
           slug === "broadcasting"
@@ -208,7 +227,29 @@ export default async function OrganizationPage({
           slug === "broadcasting"
             ? canEditBroadcastScriptTemplate(user.role)
             : Promise.resolve(false),
+          slug === "it-club"
+            ? listClubDocuments(organization.id)
+            : Promise.resolve([]),
+          slug === "it-club"
+            ? canEditClubDocuments(user.id, user.role, organization.id)
+            : Promise.resolve(false),
+          slug === "cricut-club"
+            ? listClubProjects(organization.id)
+            : Promise.resolve([]),
+          slug === "cricut-club"
+            ? listClubChecklists(organization.id)
+            : Promise.resolve([]),
+          slug === "cricut-club"
+            ? canManageClubProjects(user.id, user.role, organization.id)
+            : Promise.resolve(false),
+          slug === "cricut-club"
+            ? canCompleteClubChecklistItems(user.id, user.role, organization.id)
+            : Promise.resolve(false),
         ]);
+
+  if (activeTab === "finances" && !canViewFinances) {
+    redirect(`/organizations/${slug}`);
+  }
 
   let focusClubSnapshots: Awaited<
     ReturnType<typeof listFocusClubFinanceSnapshots>
@@ -281,6 +322,13 @@ export default async function OrganizationPage({
     canEditScriptValues,
     canEditScriptPrayer,
     canEditScriptTemplate,
+    canViewFinances,
+    clubDocuments,
+    canEditDocuments,
+    clubProjects,
+    clubChecklists,
+    canManageProjects,
+    canCompleteChecklists,
   };
 
   return (
@@ -340,7 +388,7 @@ export default async function OrganizationPage({
             ) : null}
           </>
         ) : null}
-        {FOCUSED_CLUBS_MODE && organization.slug === "it-club" ? (
+        {FOCUSED_CLUBS_MODE && organization.slug === "it-club" && canViewFinances ? (
           <Button
             size="sm"
             nativeButton={false}
@@ -413,6 +461,7 @@ export default async function OrganizationPage({
           activeTab={activeTab}
           accent={workspace.accent}
           focusedMode={FOCUSED_CLUBS_MODE}
+          canViewFinances={Boolean(canViewFinances)}
           workspaceTab={
             workspace.hasWorkspace ? { label: workspace.tabLabel } : null
           }

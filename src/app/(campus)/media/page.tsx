@@ -7,6 +7,8 @@ import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
 import { getBlueDonLiveRtmpConfig } from "@/config/broadcast-media";
 import { getModuleShell } from "@/config/module-shells";
+import { enforceFocusClubAccess } from "@/lib/auth/focus-club-guard";
+import { resolveAccessIdentity } from "@/lib/auth/preview";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { getTodaysBroadcastAnnouncement } from "@/services/broadcast-announcement-service";
 import { getMemoryHighlights } from "@/services/madonna-culture-service";
@@ -21,6 +23,17 @@ import {
 export default async function MediaPage() {
   const config = getModuleShell("media")!;
   const user = await requireCompleteProfile();
+  const identity = await resolveAccessIdentity(user);
+  await enforceFocusClubAccess({
+    userId: user.id,
+    role: identity.navRole,
+    clubSlug: "broadcasting",
+    options: {
+      forceScoped: identity.isPreviewing,
+      membershipUserId: identity.membershipUserId,
+      forcedMembershipSlugs: identity.forcedMembershipSlugs,
+    },
+  });
   const [canManageMedia, schoolBroadcasts, myUploads, activeLive, dailyAnnouncement] =
     await Promise.all([
       canManageCampusMedia(user.id, user.role),

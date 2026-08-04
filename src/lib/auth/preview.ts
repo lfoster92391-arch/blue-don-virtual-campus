@@ -6,6 +6,7 @@ import {
 } from "@/config/focused-clubs";
 import { canManageUsers } from "@/config/roles";
 import type { CampusRole } from "@/config/roles";
+import { previewCookieDeleteOptions } from "@/lib/auth/preview-cookies";
 import type { CampusUser } from "@/types/auth";
 import { getUserById } from "@/services/user-service";
 
@@ -66,6 +67,8 @@ export async function resolveAccessIdentity(
         previewLabel: target.displayName,
       };
     }
+    // Stale / inactive preview cookie — clear so UI does not look "broken".
+    jar.delete(previewCookieDeleteOptions(PREVIEW_AS_COOKIE));
   }
 
   const clubSlug = jar.get(PREVIEW_CLUB_COOKIE)?.value?.trim();
@@ -80,6 +83,10 @@ export async function resolveAccessIdentity(
       previewClubSlug: clubSlug,
       previewLabel: null,
     };
+  }
+
+  if (clubSlug) {
+    jar.delete(previewCookieDeleteOptions(PREVIEW_CLUB_COOKIE));
   }
 
   return base;

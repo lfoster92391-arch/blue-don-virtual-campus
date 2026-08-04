@@ -48,6 +48,8 @@ export type NavItem = {
   primary?: boolean;
   /** When set, focused-mode nav hides this item unless the user belongs to the club. */
   clubSlug?: FocusClubSlug;
+  /** When true, hide unless the user can view that club’s finances (or browses all clubs). */
+  requiresFinanceAccess?: boolean;
 };
 
 
@@ -68,6 +70,8 @@ export type NavGroup = {
 export type ResolveNavigationOptions = {
   /** Active organization membership slugs (e.g. it-club, broadcasting). */
   membershipSlugs?: readonly string[];
+  /** Focus-club slugs where the user may view finances (President / VP / Secretary). */
+  financeClubSlugs?: readonly string[];
 };
 
 /** A top-level sidebar entry is either a direct link or a collapsible group. */
@@ -227,6 +231,7 @@ export const focusedClubsNavigation: NavEntry[] = [
         enabled: true,
         primary: true,
         clubSlug: FOCUS_CLUBS[0].slug,
+        requiresFinanceAccess: true,
       },
       {
         label: "IT Help Desk",
@@ -341,7 +346,26 @@ function entryAllowedForMemberships(
   }
 
   return (membershipSlugs ?? []).includes(clubSlug);
-}/**
+}
+
+function entryAllowedForFinances(
+  item: NavItem,
+  role: CampusRole,
+  financeClubSlugs: readonly string[] | undefined,
+): boolean {
+  if (!item.requiresFinanceAccess) {
+    return true;
+  }
+  if (canBrowseAllFocusClubs(role)) {
+    return true;
+  }
+  if (!item.clubSlug) {
+    return true;
+  }
+  return (financeClubSlugs ?? []).includes(item.clubSlug);
+}
+
+/**
  * Phase 18 · Condensed grouped navigation.
  *
  * The sidebar renders this tree: a short set of top-level entries where most
@@ -525,6 +549,7 @@ export function resolveGroupedNavigation(
   options?: ResolveNavigationOptions,
 ): NavEntry[] {
   const membershipSlugs = options?.membershipSlugs;
+  const financeClubSlugs = options?.financeClubSlugs;
   const source = FOCUSED_CLUBS_MODE ? focusedClubsNavigation : groupedNavigation;
   const entries: NavEntry[] = [];
 
@@ -534,6 +559,9 @@ export function resolveGroupedNavigation(
         FOCUSED_CLUBS_MODE &&
         !entryAllowedForMemberships(entry.clubSlug, role, membershipSlugs)
       ) {
+        continue;
+      }
+      if (!entryAllowedForFinances(entry, role, financeClubSlugs)) {
         continue;
       }
       const [item] = resolveNavigationForRole([entry], role);
@@ -557,8 +585,9 @@ export function resolveGroupedNavigation(
     const children = resolveNavigationForRole(
       entry.children.filter(
         (child) =>
-          !FOCUSED_CLUBS_MODE ||
-          entryAllowedForMemberships(child.clubSlug, role, membershipSlugs),
+          (!FOCUSED_CLUBS_MODE ||
+            entryAllowedForMemberships(child.clubSlug, role, membershipSlugs)) &&
+          entryAllowedForFinances(child, role, financeClubSlugs),
       ),
       role,
     );

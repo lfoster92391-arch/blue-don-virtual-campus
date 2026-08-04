@@ -32,10 +32,23 @@ enum OrganizationType {
 }
 
 enum OrgMembershipRole {
-  LEAD
-  OFFICER
-  MODERATOR
+  PRESIDENT
+  VICE_PRESIDENT
+  SECRETARY
   MEMBER
+}
+
+enum ClubDocumentType {
+  BYLAWS
+  CONSTITUTION
+  OTHER
+}
+
+enum ClubProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
 }
 
 enum OrgVisibility {
@@ -409,6 +422,12 @@ model User {
   clubInvoicesReviewed   ClubInvoice[]           @relation("ClubInvoiceReviewer")
   cricutShopItems        CricutShopItem[]        @relation("CricutShopSeller")
   cricutShopOrders       CricutShopOrder[]       @relation("CricutShopBuyer")
+  clubDocumentsCreated   ClubDocument[]          @relation("ClubDocumentCreator")
+  clubDocumentsUpdated   ClubDocument[]          @relation("ClubDocumentUpdater")
+  clubProjectsOwned      ClubProject[]           @relation("ClubProjectOwner")
+  clubProjectsCreated    ClubProject[]           @relation("ClubProjectCreator")
+  clubProjectChecklistsCreated ClubProjectChecklist[] @relation("ClubProjectChecklistCreator")
+  clubProjectChecklistItemsDone ClubProjectChecklistItem[] @relation("ClubProjectChecklistItemDoneBy")
 
   @@index([role])
   @@index([schoolId])
@@ -457,6 +476,9 @@ model Organization {
   cricutShopItems CricutShopItem[]
   broadcastScriptTemplate BroadcastScriptTemplate?
   broadcastDailyScripts BroadcastDailyScript[]
+  clubDocuments ClubDocument[]
+  clubProjects ClubProject[]
+  clubProjectChecklists ClubProjectChecklist[]
 
   @@index([type])
   @@map("organizations")
@@ -1859,4 +1881,83 @@ model CornerStoreItem {
   @@index([organizationId])
   @@index([category])
   @@map("corner_store_items")
+}
+
+model ClubDocument {
+  id             String           @id @default(cuid())
+  organizationId String           @map("organization_id")
+  title          String
+  docType        ClubDocumentType @map("doc_type")
+  body           String?
+  fileUrl        String?          @map("file_url")
+  createdById    String           @map("created_by_id") @db.Uuid
+  updatedById    String?          @map("updated_by_id") @db.Uuid
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User             @relation("ClubDocumentCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  updatedBy      User?            @relation("ClubDocumentUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([docType])
+  @@index([createdById])
+  @@map("club_documents")
+}
+
+model ClubProject {
+  id             String            @id @default(cuid())
+  organizationId String            @map("organization_id")
+  title          String
+  description    String?
+  status         ClubProjectStatus @default(PLANNING)
+  ownerUserId    String?           @map("owner_user_id") @db.Uuid
+  createdById    String            @map("created_by_id") @db.Uuid
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner          User?             @relation("ClubProjectOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  createdBy      User              @relation("ClubProjectCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  checklists     ClubProjectChecklist[]
+
+  @@index([organizationId])
+  @@index([ownerUserId])
+  @@index([status])
+  @@map("club_projects")
+}
+
+model ClubProjectChecklist {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  projectId      String?      @map("project_id")
+  title          String
+  createdById    String       @map("created_by_id") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        ClubProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdBy      User         @relation("ClubProjectChecklistCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  items          ClubProjectChecklistItem[]
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([createdById])
+  @@map("club_project_checklists")
+}
+
+model ClubProjectChecklistItem {
+  id          String               @id @default(cuid())
+  checklistId String               @map("checklist_id")
+  title       String
+  done        Boolean              @default(false)
+  doneById    String?              @map("done_by_id") @db.Uuid
+  doneAt      DateTime?            @map("done_at")
+  sortOrder   Int                  @default(0) @map("sort_order")
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt @map("updated_at")
+  checklist   ClubProjectChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  doneBy      User?                @relation("ClubProjectChecklistItemDoneBy", fields: [doneById], references: [id], onDelete: SetNull)
+
+  @@index([checklistId])
+  @@index([doneById])
+  @@map("club_project_checklist_items")
 }

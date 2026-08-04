@@ -9,7 +9,7 @@ import {
 } from "@/config/focus-club-access";
 import { FOCUS_CLUBS, type FocusClubSlug } from "@/config/focused-clubs";
 import { SCHOOL_EMAIL_DOMAIN } from "@/lib/auth/email-domain";
-import { ORG_MEMBERSHIP_ROLES } from "@/config/roles";
+import { ORG_MEMBERSHIP_ROLES, ORG_ROLE_LABELS } from "@/config/roles";
 import {
   createStudentWithClubAction,
   type StudentAdminActionState,
@@ -28,7 +28,7 @@ export function CreateStudentForm() {
     if (!clubSlug) {
       return ORG_MEMBERSHIP_ROLES.map((role) => ({
         value: role,
-        label: role,
+        label: ORG_ROLE_LABELS[role],
       }));
     }
     return ORG_MEMBERSHIP_ROLES.map((role) => ({

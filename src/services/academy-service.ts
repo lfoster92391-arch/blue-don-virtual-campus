@@ -354,7 +354,7 @@ export async function listPendingMembershipsForLedOrgs(
       where: {
         userId,
         status: "ACTIVE",
-        orgRole: { in: ["LEAD", "OFFICER"] },
+        orgRole: { in: ["PRESIDENT", "VICE_PRESIDENT", "SECRETARY"] },
       },
       include: {
         organization: { select: { academyId: true } },

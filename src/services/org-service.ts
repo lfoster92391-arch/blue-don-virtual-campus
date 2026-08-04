@@ -106,7 +106,7 @@ export async function listLedOrganizations(userId: string) {
     where: {
       userId,
       status: "ACTIVE",
-      orgRole: { in: ["LEAD", "OFFICER"] },
+      orgRole: { in: ["PRESIDENT", "VICE_PRESIDENT", "SECRETARY"] },
     },
     include: {
       organization: true,

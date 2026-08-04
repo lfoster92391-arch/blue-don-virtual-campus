@@ -46,6 +46,19 @@ export async function canManageClubFinances(
   return hasOrgPermission(userId, organizationId, "org:finances:manage");
 }
 
+/** View club financials (President / VP / Secretary / admin). Members cannot. */
+export async function canViewClubFinances(
+  userId: string,
+  role: CampusRole,
+  organizationId: string,
+): Promise<boolean> {
+  if (hasPermission(role, "admin:access") || canManageAcademy(role)) {
+    return true;
+  }
+
+  return hasOrgPermission(userId, organizationId, "org:finances:view");
+}
+
 async function computeRaisedCents(
   organizationId: string,
   fundraiserId: string,

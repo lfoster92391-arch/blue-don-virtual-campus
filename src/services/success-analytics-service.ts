@@ -268,7 +268,7 @@ export async function getSuccessAnalytics(): Promise<SuccessAnalyticsData> {
     }
 
     metrics.clubCount += 1;
-    if (["LEAD", "OFFICER", "MODERATOR"].includes(membership.orgRole)) {
+    if (["PRESIDENT", "VICE_PRESIDENT", "SECRETARY"].includes(membership.orgRole)) {
       metrics.leadershipRoles += 1;
     }
   }

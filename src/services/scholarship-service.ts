@@ -43,7 +43,14 @@ const STEM_ACADEMY_SLUGS = new Set([
 
 const STEM_CLUB_SLUGS = new Set(["it-club", "science-club", "geek-club"]);
 
-const LEADERSHIP_ROLES = new Set(["LEAD", "OFFICER", "MODERATOR", "PRESIDENT", "VICE_PRESIDENT"]);
+const LEADERSHIP_ROLES = new Set([
+  "LEAD",
+  "OFFICER",
+  "MODERATOR",
+  "PRESIDENT",
+  "VICE_PRESIDENT",
+  "SECRETARY",
+]);
 
 type ScholarshipSignals = {
   grade: number;

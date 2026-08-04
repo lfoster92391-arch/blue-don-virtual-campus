@@ -11,6 +11,10 @@ import {
   PREVIEW_AS_COOKIE,
   PREVIEW_CLUB_COOKIE,
 } from "@/lib/auth/preview";
+import {
+  previewCookieDeleteOptions,
+  previewCookieOptions,
+} from "@/lib/auth/preview-cookies";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { listActiveFocusClubSlugsForUser } from "@/services/org-membership-service";
 import { getUserById } from "@/services/user-service";
@@ -35,22 +39,17 @@ export async function startStudentPreviewAction(
     userId: formData.get("userId"),
   });
   if (!parsed.success) {
-    redirect("/admin/students");
+    redirect("/admin/students?preview=invalid");
   }
 
   const target = await getUserById(parsed.data.userId);
-  if (!target) {
-    redirect("/admin/students");
+  if (!target || target.status === "inactive") {
+    redirect("/admin/students?preview=inactive");
   }
 
   const jar = await cookies();
-  jar.set(PREVIEW_AS_COOKIE, target.id, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 4,
-  });
-  jar.delete(PREVIEW_CLUB_COOKIE);
+  jar.set(PREVIEW_AS_COOKIE, target.id, previewCookieOptions());
+  jar.delete(previewCookieDeleteOptions(PREVIEW_CLUB_COOKIE));
 
   const slugs = await listActiveFocusClubSlugsForUser(target.id);
   redirect(firstFocusClubHref(slugs) ?? "/home");
@@ -68,22 +67,17 @@ export async function startClubPreviewAction(
     clubSlug: formData.get("clubSlug"),
   });
   if (!parsed.success) {
-    redirect("/admin/students");
+    redirect("/admin/students?preview=invalid");
   }
 
   const club = FOCUS_CLUBS.find((c) => c.slug === parsed.data.clubSlug);
   if (!club) {
-    redirect("/admin/students");
+    redirect("/admin/students?preview=invalid");
   }
 
   const jar = await cookies();
-  jar.set(PREVIEW_CLUB_COOKIE, club.slug, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 4,
-  });
-  jar.delete(PREVIEW_AS_COOKIE);
+  jar.set(PREVIEW_CLUB_COOKIE, club.slug, previewCookieOptions());
+  jar.delete(previewCookieDeleteOptions(PREVIEW_AS_COOKIE));
   redirect(club.href);
 }
 
@@ -94,7 +88,7 @@ export async function exitPreviewAction(): Promise<void> {
   }
 
   const jar = await cookies();
-  jar.delete(PREVIEW_AS_COOKIE);
-  jar.delete(PREVIEW_CLUB_COOKIE);
+  jar.delete(previewCookieDeleteOptions(PREVIEW_AS_COOKIE));
+  jar.delete(previewCookieDeleteOptions(PREVIEW_CLUB_COOKIE));
   redirect("/admin/students");
 }

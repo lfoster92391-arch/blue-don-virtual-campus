@@ -19,6 +19,8 @@ export const CLUB_TABS = [
   { id: "fundraisers", label: "Fundraisers" },
   { id: "leadership", label: "Leadership" },
   { id: "members", label: "Members" },
+  { id: "documents", label: "Documents" },
+  { id: "checklists", label: "Checklists" },
 ] as const;
 
 /** W20 · Club Worlds — the immersive per-club workspace tab id. */
@@ -29,21 +31,29 @@ export type ClubTabId =
   | typeof WORKSPACE_TAB_ID
   | "script";
 
-function focusedTabsForSlug(slug: string): { id: string; label: string }[] {
+function focusedTabsForSlug(
+  slug: string,
+  options?: { canViewFinances?: boolean },
+): { id: string; label: string }[] {
   const byId = new Map(FOCUS_CLUB_TABS.map((t) => [t.id, t]));
+  const canViewFinances = options?.canViewFinances !== false;
 
   if (slug === "it-club") {
-    return [
+    const tabs = [
       byId.get("overview")!,
-      byId.get("finances")!,
+      { id: "documents", label: "Documents" },
       byId.get("invoices")!,
       byId.get("calendar")!,
       byId.get("members")!,
     ];
+    if (canViewFinances) {
+      tabs.splice(1, 0, byId.get("finances")!);
+    }
+    return tabs;
   }
 
   if (slug === "broadcasting") {
-    return [
+    const tabs = [
       byId.get("overview")!,
       { id: "script", label: "Daily Rundown" },
       { id: "media", label: "Control Room" },
@@ -51,16 +61,26 @@ function focusedTabsForSlug(slug: string): { id: string; label: string }[] {
       byId.get("calendar")!,
       byId.get("members")!,
     ];
+    if (canViewFinances) {
+      tabs.splice(3, 0, byId.get("finances")!);
+    }
+    return tabs;
   }
 
   if (slug === "cricut-club") {
-    return [
+    const tabs = [
       byId.get("overview")!,
+      { id: "projects", label: "Projects" },
+      { id: "checklists", label: "Checklists" },
       { id: "shop", label: "Shop" },
       byId.get("invoices")!,
       byId.get("calendar")!,
       byId.get("members")!,
     ];
+    if (canViewFinances) {
+      tabs.splice(4, 0, byId.get("finances")!);
+    }
+    return tabs;
   }
 
   return [...FOCUS_CLUB_TABS];
@@ -72,17 +92,19 @@ export function ClubTabNav({
   workspaceTab,
   accent,
   focusedMode = false,
+  canViewFinances = true,
 }: {
   slug: string;
   activeTab: string;
   workspaceTab?: { label: string } | null;
   accent?: string;
   focusedMode?: boolean;
+  canViewFinances?: boolean;
 }) {
   const base = `/organizations/${slug}`;
 
   const tabs: { id: string; label: string }[] = focusedMode
-    ? focusedTabsForSlug(slug)
+    ? focusedTabsForSlug(slug, { canViewFinances })
     : [...CLUB_TABS];
 
   if (workspaceTab && !focusedMode) {

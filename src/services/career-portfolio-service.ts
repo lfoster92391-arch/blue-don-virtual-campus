@@ -56,7 +56,14 @@ export type CareerPortfolioData = {
   completionPercent: number;
 };
 
-const LEADERSHIP_ROLES = new Set(["LEAD", "OFFICER", "MODERATOR"]);
+const LEADERSHIP_ROLES = new Set([
+  "PRESIDENT",
+  "VICE_PRESIDENT",
+  "SECRETARY",
+  "LEAD",
+  "OFFICER",
+  "MODERATOR",
+]);
 
 function sectionMeta(id: CareerPortfolioSectionId) {
   const meta = CAREER_PORTFOLIO_SECTIONS.find((s) => s.id === id);

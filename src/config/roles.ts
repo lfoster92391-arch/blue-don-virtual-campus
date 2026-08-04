@@ -10,7 +10,11 @@ export type CampusRole =
   | "coach"
   | "counselor";
 
-export type OrgMembershipRole = "lead" | "officer" | "moderator" | "member";
+export type OrgMembershipRole =
+  | "president"
+  | "vice_president"
+  | "secretary"
+  | "member";
 
 export const CAMPUS_ROLES: CampusRole[] = [
   "admin",
@@ -26,11 +30,22 @@ export const CAMPUS_ROLES: CampusRole[] = [
 ];
 
 export const ORG_MEMBERSHIP_ROLES: OrgMembershipRole[] = [
-  "lead",
-  "officer",
-  "moderator",
+  "president",
+  "vice_president",
+  "secretary",
   "member",
 ];
+
+/** Legacy org-role strings still accepted when normalizing older rows/seeds. */
+const ORG_ROLE_ALIASES: Record<string, OrgMembershipRole> = {
+  president: "president",
+  vice_president: "vice_president",
+  secretary: "secretary",
+  member: "member",
+  lead: "president",
+  officer: "vice_president",
+  moderator: "secretary",
+};
 
 export const ROLE_LABELS: Record<CampusRole, string> = {
   admin: "Administrator",
@@ -46,9 +61,9 @@ export const ROLE_LABELS: Record<CampusRole, string> = {
 };
 
 export const ORG_ROLE_LABELS: Record<OrgMembershipRole, string> = {
-  lead: "Lead / President",
-  officer: "Officer",
-  moderator: "Moderator",
+  president: "President",
+  vice_president: "Vice President",
+  secretary: "Secretary",
   member: "Member",
 };
 
@@ -276,7 +291,7 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
 };
 
 export const ORG_ROLE_PERMISSIONS: Record<OrgMembershipRole, string[]> = {
-  lead: [
+  president: [
     "org:announcements:manage",
     "org:events:manage",
     "org:members:manage",
@@ -284,10 +299,13 @@ export const ORG_ROLE_PERMISSIONS: Record<OrgMembershipRole, string[]> = {
     "org:feed:moderate",
     "org:store:manage",
     "org:resources:edit",
+    "org:documents:edit",
+    "org:projects:manage",
+    "org:finances:view",
     "org:finances:manage",
     "org:view",
   ],
-  officer: [
+  vice_president: [
     "org:announcements:manage",
     "org:events:manage",
     "org:members:manage",
@@ -295,16 +313,43 @@ export const ORG_ROLE_PERMISSIONS: Record<OrgMembershipRole, string[]> = {
     "org:feed:moderate",
     "org:store:manage",
     "org:resources:edit",
+    "org:documents:edit",
+    "org:projects:manage",
+    "org:finances:view",
     "org:finances:manage",
     "org:view",
   ],
-  moderator: [
+  secretary: [
+    "org:announcements:manage",
+    "org:events:manage",
+    "org:members:manage",
     "org:media:manage",
     "org:feed:moderate",
+    "org:store:manage",
+    "org:resources:edit",
+    "org:documents:edit",
+    "org:projects:manage",
+    "org:finances:view",
+    "org:finances:manage",
     "org:view",
   ],
   member: ["org:view"],
 };
+
+/** Officer roles that may view club financials (not Members). */
+export const FINANCE_VIEW_ORG_ROLES: OrgMembershipRole[] = [
+  "president",
+  "vice_president",
+  "secretary",
+];
+
+export function orgRoleCanViewFinances(orgRole: OrgMembershipRole): boolean {
+  return FINANCE_VIEW_ORG_ROLES.includes(orgRole);
+}
+
+export function orgRoleIsOfficer(orgRole: OrgMembershipRole): boolean {
+  return orgRole !== "member";
+}
 
 /** @deprecated Use GLOBAL_ROLE_PERMISSIONS — kept for backward compatibility */
 export const ROLE_PERMISSIONS = GLOBAL_ROLE_PERMISSIONS;
@@ -325,8 +370,8 @@ export function normalizeOrgRole(
     return null;
   }
 
-  const role = value.toLowerCase() as OrgMembershipRole;
-  return ORG_MEMBERSHIP_ROLES.includes(role) ? role : null;
+  const key = value.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return ORG_ROLE_ALIASES[key] ?? null;
 }
 
 export function hasPermission(
