@@ -47,3 +47,10 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# Studio Bridge agent (runs on the Studio B PC, installed separately)
+studio-bridge/node_modules
+
+# Re-included last so the trailing .env* rule above does not swallow the samples.
+!.env.example
+!studio-bridge/.env.example

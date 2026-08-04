@@ -3,36 +3,57 @@
 import { useActionState, useState, useTransition } from "react";
 import { Circle, Radio, Square } from "lucide-react";
 
+import { useStudioCommand } from "@/components/studio/use-studio-command";
 import {
-  endLiveBroadcastAction,
-  startLiveBroadcastAction,
-  type MediaActionState,
-} from "@/features/media/actions";
+  endStudioBroadcastAction,
+  startStudioBroadcastAction,
+  type StudioTransportState,
+} from "@/features/broadcast-studio/actions";
 import { cn } from "@/lib/utils";
+import type { StudioBridgeSnapshot } from "@/services/studio-bridge-service";
 
-const initialState: MediaActionState = {};
+const initialState: StudioTransportState = {};
 
 type StudioControlBarProps = {
   activeLiveId: string | null;
   programTitle: string | null;
+  bridge: StudioBridgeSnapshot;
+  onCommandSettled: () => void;
 };
 
 /**
- * Broadcast transport. GO LIVE / END BROADCAST run through the existing campus
- * live-stream actions; START RECORD is staged for the OBS bridge.
+ * Broadcast transport.
+ *
+ * GO LIVE and END BROADCAST always write the campus `CampusMediaItem` record —
+ * that is what the rest of the campus reads for "are we on air" — and
+ * additionally queue OBS start / stop when the bridge is up. The two results are
+ * reported separately, so an operator is never told OBS was touched when it was
+ * not. Recording runs entirely through the bridge and is disabled without it.
  */
 export function StudioControlBar({
   activeLiveId,
   programTitle,
+  bridge,
+  onCommandSettled,
 }: StudioControlBarProps) {
   const [startState, startAction, starting] = useActionState(
-    startLiveBroadcastAction,
+    startStudioBroadcastAction,
     initialState,
   );
-  const [endState, setEndState] = useState<MediaActionState>({});
+  const [endState, setEndState] = useState<StudioTransportState>({});
   const [ending, startEnd] = useTransition();
+  const { send, pendingKind, error: commandError } =
+    useStudioCommand(onCommandSettled);
+
   const live = Boolean(activeLiveId);
-  const message = endState.error ?? endState.success ?? startState.error;
+  const device = bridge.device;
+  const obsReady = Boolean(device?.online && device.obsConnected);
+  const recording = Boolean(device?.recording);
+  const recordPending =
+    pendingKind === "OBS_START_RECORD" || pendingKind === "OBS_STOP_RECORD";
+
+  const transport = endState.success || endState.error ? endState : startState;
+  const message = transport.error ?? transport.success ?? null;
 
   return (
     <footer className="shrink-0 border-t border-white/10 bg-[#081426] px-4 py-3">
@@ -43,6 +64,11 @@ export function StudioControlBar({
               On air ·{" "}
             </span>
             {programTitle ?? "Untitled broadcast"}
+            {device?.streaming ? (
+              <span className="ml-2 font-mono text-[0.65rem] text-[#7FE0A8]">
+                OBS streaming {device.streamTimecode ?? ""}
+              </span>
+            ) : null}
           </p>
         ) : (
           <form
@@ -77,10 +103,32 @@ export function StudioControlBar({
         <TransportButton
           type="button"
           tone="record"
-          disabled
-          title="Recording control arrives with the OBS bridge."
-          icon={<Circle className="size-4" aria-hidden="true" />}
-          label="Start record"
+          disabled={!obsReady || recordPending}
+          title={
+            obsReady
+              ? recording
+                ? "Stop the OBS recording"
+                : "Start recording in OBS"
+              : "Recording needs the studio bridge and OBS connected."
+          }
+          icon={
+            <Circle
+              className={cn("size-4", recording && "fill-current")}
+              aria-hidden="true"
+            />
+          }
+          label={
+            recordPending
+              ? "Sending…"
+              : recording
+                ? `Stop record${device?.recordTimecode ? ` ${device.recordTimecode}` : ""}`
+                : "Start record"
+          }
+          onClick={() =>
+            send({
+              kind: recording ? "OBS_STOP_RECORD" : "OBS_START_RECORD",
+            })
+          }
         />
 
         <TransportButton
@@ -94,28 +142,54 @@ export function StudioControlBar({
               return;
             }
             startEnd(async () => {
-              setEndState(await endLiveBroadcastAction(activeLiveId));
+              setEndState(await endStudioBroadcastAction(activeLiveId));
+              onCommandSettled();
             });
           }}
         />
       </div>
 
-      {message ? (
-        <p
-          className={cn(
-            "mt-2 text-[0.7rem]",
-            endState.success ? "text-emerald-400" : "text-red-400",
-          )}
-          role="status"
-        >
-          {message}
-        </p>
-      ) : (
-        <p className="mt-2 text-[0.65rem] text-slate-600">
-          Go live and end broadcast drive the campus stream record. OBS keeps
-          pushing video until you end the broadcast here.
-        </p>
-      )}
+      <div className="mt-2 space-y-1">
+        {message ? (
+          <p
+            className={cn(
+              "text-[0.7rem]",
+              transport.error ? "text-red-400" : "text-emerald-400",
+            )}
+            role="status"
+          >
+            {message}
+          </p>
+        ) : null}
+
+        {transport.obs ? (
+          <p
+            className={cn(
+              "text-[0.7rem]",
+              transport.obs.queued ? "text-emerald-400" : "text-[#E0B93B]",
+            )}
+            role="status"
+          >
+            {transport.obs.queued
+              ? transport.obs.note
+              : `OBS was not touched — ${transport.obs.note}`}
+          </p>
+        ) : null}
+
+        {commandError ? (
+          <p className="text-[0.7rem] text-red-400" role="status">
+            {commandError}
+          </p>
+        ) : null}
+
+        {message || transport.obs || commandError ? null : (
+          <p className="text-[0.65rem] text-slate-600">
+            {obsReady
+              ? "Go live writes the campus stream record and asks OBS to start streaming through the bridge."
+              : "Go live writes the campus stream record. The bridge is down, so start and stop streaming in OBS yourself."}
+          </p>
+        )}
+      </div>
     </footer>
   );
 }

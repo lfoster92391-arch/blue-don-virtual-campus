@@ -454,6 +454,7 @@ model User {
   sportsReportsReviewed      SportsGameReport[]        @relation("SportsReportReviewer")
   sportsPlayerProfiles       SportsPlayer[]            @relation("SportsPlayerUser")
   sportsStatsRecorded        SportsPlayerStat[]        @relation("SportsStatRecorder")
+  studioCommandsRequested    StudioCommand[]           @relation("StudioCommandRequester")
 
   @@index([role])
   @@index([schoolId])
@@ -1879,6 +1880,131 @@ model BroadcastJoinApplication {
   @@index([organizationId, status])
   @@index([applicantId])
   @@map("broadcast_join_applications")
+}
+
+/**
+ * Studio Bridge — the OBS control path for the Broadcast Control Studio.
+ *
+ * The campus runs on Vercel and cannot dial the Studio B PC through the school
+ * NAT, so control is inverted: the console writes a StudioCommand row, and a
+ * small agent on the OBS machine polls for it and posts telemetry back. Nothing
+ * here holds an OBS password or a stream key — those live only in the agent's
+ * local .env. See docs/STUDIO_BRIDGE_SETUP.md.
+ */
+enum StudioCommandKind {
+  SET_PROGRAM_SCENE
+  SET_PREVIEW_SCENE
+  TRIGGER_TRANSITION
+  OBS_START_STREAM
+  OBS_STOP_STREAM
+  OBS_START_RECORD
+  OBS_STOP_RECORD
+}
+
+enum StudioCommandStatus {
+  QUEUED
+  CLAIMED
+  DONE
+  FAILED
+  /** Never claimed inside its TTL — a scene taken four minutes late is worse than not taken. */
+  EXPIRED
+}
+
+/**
+ * One OBS machine paired to the campus. Holds the newest telemetry snapshot the
+ * agent posted; liveness is derived from `lastSeenAt`, never from a stored
+ * "connected" flag, so a bridge that dies mid-show reads DISCONNECTED.
+ */
+model StudioBridge {
+  id    String @id @default(cuid())
+  /** Stable device key from the agent's env, e.g. `studio-b`. */
+  key   String @unique
+  label String
+
+  /** SHA-256 of the shared bridge token this device last authenticated with. Never the token itself. */
+  tokenHash String? @map("token_hash")
+
+  lastSeenAt DateTime? @map("last_seen_at")
+  agentVersion String? @map("agent_version")
+
+  obsConnected      Boolean @default(false) @map("obs_connected")
+  obsVersion        String? @map("obs_version")
+  studioModeEnabled Boolean @default(false) @map("studio_mode_enabled")
+  programScene      String? @map("program_scene")
+  previewScene      String? @map("preview_scene")
+  /** Scene names read from OBS (string[]). Empty until the agent reports. */
+  scenes            Json    @default("[]")
+  streaming         Boolean @default(false)
+  recording         Boolean @default(false)
+  streamTimecode    String? @map("stream_timecode")
+  recordTimecode    String? @map("record_timecode")
+  /** Encoder counters straight from OBS GetStats — kbps, dropped frames, cpu. */
+  stats             Json?
+
+  lastError   String?   @map("last_error")
+  lastErrorAt DateTime? @map("last_error_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  sessions StudioSession[]
+  commands StudioCommand[]
+
+  @@map("studio_bridges")
+}
+
+/** One agent run (process lifetime), so "was the bridge up for the game?" is answerable. */
+model StudioSession {
+  id       String @id @default(cuid())
+  bridgeId String @map("bridge_id")
+  /** Run id the agent generates at startup; a new one means the agent restarted. */
+  runId    String @map("run_id")
+
+  startedAt    DateTime  @default(now()) @map("started_at")
+  lastSeenAt   DateTime  @default(now()) @map("last_seen_at")
+  endedAt      DateTime? @map("ended_at")
+  agentVersion String?   @map("agent_version")
+  obsVersion   String?   @map("obs_version")
+
+  bridge   StudioBridge    @relation(fields: [bridgeId], references: [id], onDelete: Cascade)
+  commands StudioCommand[]
+
+  @@unique([bridgeId, runId])
+  @@index([bridgeId, startedAt])
+  @@map("studio_sessions")
+}
+
+/**
+ * Queued OBS action. `kind` is an enum, so the database itself cannot hold an
+ * arbitrary OBS RPC; the agent whitelists the same set again before calling OBS.
+ */
+model StudioCommand {
+  id        String              @id @default(cuid())
+  bridgeId  String              @map("bridge_id")
+  sessionId String?             @map("session_id")
+  kind      StudioCommandKind
+  /** Narrow, kind-specific arguments — `{ sceneName }` at most. */
+  payload   Json                @default("{}")
+  status    StudioCommandStatus @default(QUEUED)
+
+  requestedById   String? @map("requested_by_id") @db.Uuid
+  requestedByName String? @map("requested_by_name")
+
+  claimedAt   DateTime? @map("claimed_at")
+  completedAt DateTime? @map("completed_at")
+  expiresAt   DateTime  @map("expires_at")
+  error       String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  bridge      StudioBridge   @relation(fields: [bridgeId], references: [id], onDelete: Cascade)
+  session     StudioSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  requestedBy User?          @relation("StudioCommandRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+
+  @@index([bridgeId, status, createdAt])
+  @@index([requestedById])
+  @@map("studio_commands")
 }
 
 enum SportSeason {

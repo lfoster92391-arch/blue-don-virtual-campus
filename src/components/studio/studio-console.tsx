@@ -58,6 +58,12 @@ export function StudioConsole({
     selectedGameId,
   );
 
+  // A queued OBS command only shows up as telemetry once the bridge has run it,
+  // so read again straight away rather than waiting out the 5 s poll.
+  const onCommandSettled = useCallback(() => {
+    void refresh();
+  }, [refresh]);
+
   // A score write and the 5 s poll race each other: show the saved score until a
   // read that started after the write lands, so a tap never appears to bounce
   // back to the old number.
@@ -85,12 +91,16 @@ export function StudioConsole({
       <main className="min-h-0 flex-1 overflow-auto p-2 lg:overflow-hidden">
         <div className="grid h-full min-h-0 grid-cols-1 gap-2 lg:grid-cols-[13rem_minmax(0,1fr)_19rem]">
           <div className="flex min-h-0 flex-col gap-2">
-            <ScenesPanel />
+            <ScenesPanel
+              bridge={snapshot.bridge}
+              onCommandSettled={onCommandSettled}
+            />
             <CrewPanel crew={snapshot.crew} />
             <SystemHealthPanel
               streamKeyHint={streamKeyHint}
               hasSharedStreamKey={hasSharedStreamKey}
               onAir={snapshot.program.state === "LIVE"}
+              bridge={snapshot.bridge}
             />
           </div>
 
@@ -134,6 +144,8 @@ export function StudioConsole({
       <StudioControlBar
         activeLiveId={snapshot.program.mediaId}
         programTitle={snapshot.program.title}
+        bridge={snapshot.bridge}
+        onCommandSettled={onCommandSettled}
       />
     </>
   );

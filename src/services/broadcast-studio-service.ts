@@ -4,7 +4,8 @@
  * One serializable payload the console renders from, so the server page and the
  * polling refresh return the exact same shape. Every field traces back to a row
  * that already exists in the campus database: CampusMediaItem, BroadcastSchedule,
- * BroadcastDailyScript / BroadcastScriptTemplate, BroadcastCrewCredit, SportsGame.
+ * BroadcastDailyScript / BroadcastScriptTemplate, BroadcastCrewCredit, SportsGame,
+ * and — since Phase 5 — StudioBridge telemetry posted by the OBS agent.
  * Nothing here fabricates telemetry — when a source is missing the field is null
  * and the UI says so. See docs/BROADCAST_STUDIO.md.
  */
@@ -35,6 +36,11 @@ import {
   listCoverableGames,
   type SportsGameView,
 } from "@/services/sports-highlights-service";
+import {
+  getStudioBridgeSnapshot,
+  isStudioBridgeConfigured,
+  type StudioBridgeSnapshot,
+} from "@/services/studio-bridge-service";
 
 /** LIVE = on-air record exists. PREVIEW = inside the pre-roll window. */
 export type StudioAirState = "LIVE" | "PREVIEW" | "OFFLINE";
@@ -136,6 +142,12 @@ export type StudioConsoleSnapshot = {
   scoreboard: StudioScoreboardState | null;
   /** Games the operator can point the console at (live first, then by kickoff). */
   gameOptions: StudioGameOption[];
+  /**
+   * OBS control path. Every field is posted telemetry from the agent on the
+   * Studio B PC — nothing here is inferred, so the console can disable the OBS
+   * controls and say DISCONNECTED the moment the agent stops reporting.
+   */
+  bridge: StudioBridgeSnapshot;
 };
 
 const CAMPUS_TEAM_LABEL = "MHS";
@@ -308,7 +320,7 @@ export async function getStudioConsoleSnapshot(options?: {
 }): Promise<StudioConsoleSnapshot> {
   const now = Date.now();
 
-  const [activeLive, schedule, crew, autoGame, coverableGames, orgId] =
+  const [activeLive, schedule, crew, autoGame, coverableGames, orgId, bridge] =
     await Promise.all([
       getActiveLiveStream().catch(() => null),
       getBroadcastSchedule().catch(() => null),
@@ -316,6 +328,10 @@ export async function getStudioConsoleSnapshot(options?: {
       getCurrentOrNextGame({ withinHours: 36 }).catch(() => null),
       listCoverableGames({ aheadHours: 36, behindHours: 6 }).catch(() => []),
       resolveBroadcastOrgId().catch(() => null),
+      getStudioBridgeSnapshot().catch(() => ({
+        configured: isStudioBridgeConfigured(),
+        device: null,
+      })),
     ]);
 
   // A pinned game usually sits in the coverable window already; read it
@@ -373,5 +389,6 @@ export async function getStudioConsoleSnapshot(options?: {
     }),
     scoreboard: buildScoreboard(game),
     gameOptions: optionRows.map(buildGameOption),
+    bridge,
   };
 }

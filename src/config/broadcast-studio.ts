@@ -12,9 +12,9 @@
 export const STUDIO_ROUTE = "/broadcast/studio";
 
 export const STUDIO_PHASE = {
-  current: 4,
-  label: "Phase 4 · Manual game control",
-  note: "Program, run of show, crew, countdown, and the score read live campus data, and the score is now writable. Scene switching, graphics, audio, and any scoreboard hardware feed arrive later.",
+  current: 5,
+  label: "Phase 5 · OBS control",
+  note: "Scene switching, recording, and stream start/stop run through the Studio Bridge on the Studio B PC. Graphics, sponsors, audio, and any scoreboard hardware feed arrive later.",
 } as const;
 
 /** How often the console re-reads on-air state from the server. */
@@ -26,6 +26,46 @@ export const STUDIO_POLL_INTERVAL_MS = 5_000;
  * without an OBS bridge — it comes from BroadcastSchedule, not from hardware.
  */
 export const STUDIO_PREVIEW_WINDOW_MINUTES = 15;
+
+/* ----------------------------------------------------------- studio bridge */
+
+/**
+ * The OBS machine the console talks to when no other device key is given. One
+ * bridge row per physical machine; Studio B is the only one today.
+ */
+export const STUDIO_BRIDGE_DEFAULT_KEY = "studio-b";
+
+/** How often the agent on the OBS machine polls for queued commands. */
+export const STUDIO_BRIDGE_POLL_INTERVAL_MS = 3_000;
+
+/**
+ * How stale `lastSeenAt` may get before the console calls the bridge
+ * DISCONNECTED. Generous next to the agent's 3 s poll so one slow request does
+ * not blink the lamp, tight enough that a dead agent is caught within a break.
+ */
+export const STUDIO_BRIDGE_ONLINE_WINDOW_MS = 20_000;
+
+/**
+ * A queued command the agent never claimed is dropped rather than run late — a
+ * scene taken a minute after the operator pressed it is worse than not taken.
+ */
+export const STUDIO_COMMAND_TTL_MS = 45_000;
+
+/** Most commands handed to one poll. Enough for a take, never a backlog flood. */
+export const STUDIO_COMMAND_BATCH_SIZE = 5;
+
+/** How many finished commands the console shows so failures are visible. */
+export const STUDIO_COMMAND_HISTORY_SIZE = 6;
+
+export const STUDIO_COMMAND_LABELS = {
+  SET_PROGRAM_SCENE: "Take scene",
+  SET_PREVIEW_SCENE: "Preview scene",
+  TRIGGER_TRANSITION: "Transition",
+  OBS_START_STREAM: "Start OBS stream",
+  OBS_STOP_STREAM: "Stop OBS stream",
+  OBS_START_RECORD: "Start recording",
+  OBS_STOP_RECORD: "Stop recording",
+} as const;
 
 /* ----------------------------------------------------------- game control */
 
@@ -72,6 +112,11 @@ export type StudioSceneDef = {
   shot: string;
 };
 
+/**
+ * Fallback scene names, shown greyed out when the bridge is offline so the
+ * panel still reads as Studio B rather than going blank. When the bridge is up
+ * the panel lists the scenes OBS actually reported and ignores this list.
+ */
 export const STUDIO_SCENES: StudioSceneDef[] = [
   { id: "open", label: "Open", shot: "Title card + music bed" },
   { id: "anchor-2shot", label: "Anchor 2-Shot", shot: "Desk cam wide" },
@@ -150,8 +195,16 @@ export type StudioHealthCheckDef = {
   /**
    * What the console can honestly report today. `NONE` means there is no data
    * source yet, so the row stays "Not linked" rather than claiming a status.
+   * The bridge bindings only ever read posted telemetry — a row goes green
+   * because the agent said so within the liveness window, never by default.
    */
-  binding: "STREAM_TARGET" | "CAMPUS_RECORD" | "NONE";
+  binding:
+    | "STREAM_TARGET"
+    | "CAMPUS_RECORD"
+    | "BRIDGE_LINK"
+    | "OBS_LINK"
+    | "OBS_ENCODER"
+    | "NONE";
 };
 
 export const STUDIO_HEALTH_CHECKS: StudioHealthCheckDef[] = [
@@ -168,16 +221,22 @@ export const STUDIO_HEALTH_CHECKS: StudioHealthCheckDef[] = [
     binding: "STREAM_TARGET",
   },
   {
+    id: "bridge",
+    label: "Studio bridge",
+    detail: "Agent on the Studio B PC",
+    binding: "BRIDGE_LINK",
+  },
+  {
     id: "obs",
-    label: "OBS bridge",
-    detail: "WebSocket link to Studio B PC",
-    binding: "NONE",
+    label: "OBS WebSocket",
+    detail: "Agent's link into OBS",
+    binding: "OBS_LINK",
   },
   {
     id: "encoder",
     label: "Encoder",
     detail: "Bitrate / dropped frames",
-    binding: "NONE",
+    binding: "OBS_ENCODER",
   },
   {
     id: "scoreboard",

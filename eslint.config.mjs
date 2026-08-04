@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Standalone Node agent for the Studio B PC — not part of the Next app.
+    "studio-bridge/**",
   ]),
 ]);
 
