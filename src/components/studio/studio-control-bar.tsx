@@ -73,6 +73,9 @@ export function StudioControlBar({
         ) : (
           <form
             action={startAction}
+            // Drop the previous END BROADCAST result, or a second show would
+            // open under the message from ending the first one.
+            onSubmit={() => setEndState({})}
             className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
           >
             <input
