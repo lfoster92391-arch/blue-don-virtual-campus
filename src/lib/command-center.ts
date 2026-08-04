@@ -24,7 +24,8 @@ export type StudentMessageKind =
   | "CRICUT_ORDER"
   | "BROADCAST_BOOKING"
   | "BROADCAST_ANNOUNCEMENT_SUBMISSION"
-  | "BROADCAST_JOIN_APPLICATION";
+  | "BROADCAST_JOIN_APPLICATION"
+  | "SPORTS_COVERAGE";
 
 export type StudentMessageView = {
   id: string;

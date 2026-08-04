@@ -40,6 +40,15 @@ import {
   JoinClubPortal,
 } from "@/components/media/broadcast-suite-panels";
 import { LiveBroadcastPanel } from "@/components/media/live-broadcast-panel";
+import {
+  SportsAudienceSections,
+  SportsDeskSections,
+} from "@/components/sports/sports-sections";
+import type {
+  SportsDeskData,
+  SportsHubData,
+  SportsPlayerStatView,
+} from "@/services/sports-highlights-service";
 import { VideoLibrary } from "@/components/media/video-library";
 import { VideoUploadForm } from "@/components/media/video-upload-form";
 import { Button } from "@/components/ui/button";
@@ -153,6 +162,11 @@ export type ClubTabPanelsProps = {
   crewCredits?: BroadcastCrewCreditView[];
   broadcastEquipment?: BroadcastEquipmentView[];
   joinApplications?: BroadcastJoinApplicationView[];
+  sportsHub?: SportsHubData | null;
+  sportsDesk?: SportsDeskData | null;
+  sportsStats?: SportsPlayerStatView[];
+  activeSportSlug?: string | null;
+  sportsStorageConfigured?: boolean;
 };
 
 function memberLabel(member: MemberPreview): string {
@@ -1235,6 +1249,51 @@ function ScriptPanel(props: ClubTabPanelsProps) {
   );
 }
 
+function SportsPanel(props: ClubTabPanelsProps) {
+  if (props.organizationSlug !== "broadcasting" || !props.sportsHub) {
+    return (
+      <DashboardCard title="Sports Highlights">
+        <p className="text-sm text-muted-foreground">
+          Sports coverage lives on the Broadcasting club page.
+        </p>
+      </DashboardCard>
+    );
+  }
+
+  return (
+    <SportsAudienceSections
+      data={props.sportsHub}
+      basePath="/organizations/broadcasting"
+      extraParams={{ tab: "sports" }}
+      storageConfigured={Boolean(props.sportsStorageConfigured)}
+      canManage={Boolean(props.canManageMedia)}
+    />
+  );
+}
+
+function SportsDeskPanel(props: ClubTabPanelsProps) {
+  if (props.organizationSlug !== "broadcasting" || !props.sportsDesk) {
+    return (
+      <DashboardCard title="Sports desk">
+        <p className="text-sm text-muted-foreground">
+          The sports desk is available to Broadcasting crew on the club page.
+        </p>
+      </DashboardCard>
+    );
+  }
+
+  return (
+    <SportsDeskSections
+      data={props.sportsDesk}
+      basePath="/organizations/broadcasting"
+      extraParams={{ tab: "sports-desk" }}
+      activeSportSlug={props.activeSportSlug ?? null}
+      storageConfigured={Boolean(props.sportsStorageConfigured)}
+      stats={props.sportsStats ?? []}
+    />
+  );
+}
+
 export function ClubTabPanels(props: ClubTabPanelsProps) {
   switch (props.activeTab) {
     case "workspace":
@@ -1379,6 +1438,10 @@ export function ClubTabPanels(props: ClubTabPanelsProps) {
           />
         </DashboardCard>
       );
+    case "sports":
+      return <SportsPanel {...props} />;
+    case "sports-desk":
+      return <SportsDeskPanel {...props} />;
     case "fundraisers":
       return <FundraisersPanel {...props} />;
     case "leadership":
@@ -1420,6 +1483,8 @@ export const CLUB_TAB_IDS = [
   "equipment",
   "join",
   "applications",
+  "sports",
+  "sports-desk",
   "fundraisers",
   "leadership",
   "members",

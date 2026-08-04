@@ -6,6 +6,7 @@ import {
   Megaphone,
   Radio,
   Sparkles,
+  Trophy,
   Upload,
   Users,
   Video,
@@ -170,6 +171,44 @@ export function MediaHubSections({
           </div>
         </DashboardCard>
       )}
+
+      <DashboardCard
+        title="Sports Highlights"
+        description="Scores, game clips, schedules, and student recaps from the sports desk."
+        icon={<Trophy className="size-5" />}
+        status={{ label: "Blue Don Sports", variant: "info" }}
+      >
+        <p className="text-sm text-muted-foreground">
+          Last night&rsquo;s result, upcoming games, and highlights — switchable
+          by sport. Students can submit recaps, previews, and clips there too.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            nativeButton={false}
+            render={
+              <Link href="/sports">
+                Open Sports
+                <ArrowRight className="size-3.5" />
+              </Link>
+            }
+          />
+          {canManageMedia ? (
+            <Button
+              size="sm"
+              variant="outline"
+              nativeButton={false}
+              render={
+                <Link
+                  href={`/organizations/${BROADCAST_ORG_SLUG}?tab=sports-desk`}
+                >
+                  Sports desk
+                </Link>
+              }
+            />
+          ) : null}
+        </div>
+      </DashboardCard>
 
       <DashboardCard
         title="Highlight Reel"

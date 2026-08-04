@@ -41,7 +41,9 @@ export type ClubTabId =
   | "credits"
   | "equipment"
   | "join"
-  | "applications";
+  | "applications"
+  | "sports"
+  | "sports-desk";
 
 function focusedTabsForSlug(
   slug: string,
@@ -72,6 +74,7 @@ function focusedTabsForSlug(
       return [
         byId.get("overview")!,
         { id: "media", label: "Watch" },
+        { id: "sports", label: "Sports" },
         { id: "book", label: "Book coverage" },
         { id: "announce", label: "Submit announcement" },
         { id: "credits", label: "Credits" },
@@ -82,6 +85,8 @@ function focusedTabsForSlug(
       byId.get("overview")!,
       { id: "script", label: "Daily Rundown" },
       { id: "media", label: "Control Room" },
+      { id: "sports", label: "Sports" },
+      { id: "sports-desk", label: "Sports desk" },
       { id: "bookings", label: "Bookings" },
       { id: "submissions", label: "Submissions" },
       { id: "equipment", label: "Equipment" },
@@ -94,7 +99,12 @@ function focusedTabsForSlug(
       byId.get("members")!,
     ];
     if (canViewFinances) {
-      tabs.splice(8, 0, byId.get("finances")!);
+      // Keep Finances directly ahead of Invoices.
+      tabs.splice(
+        tabs.findIndex((tab) => tab.id === "invoices"),
+        0,
+        byId.get("finances")!,
+      );
     }
     return tabs;
   }

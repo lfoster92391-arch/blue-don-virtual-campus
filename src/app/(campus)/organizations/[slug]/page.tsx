@@ -104,6 +104,12 @@ import {
   listPendingInvoicesForFocusClubs,
 } from "@/services/club-invoice-service";
 import { userHasActiveFocusClubMembership } from "@/services/org-membership-service";
+import {
+  getSportsDeskData,
+  getSportsHubData,
+  isSportsImageStorageConfigured,
+  listPlayerStats,
+} from "@/services/sports-highlights-service";
 
 /** Production tabs — audience may watch Overview + public suite tabs only. */
 const BROADCAST_CREW_ONLY_TABS = new Set([
@@ -122,11 +128,12 @@ const BROADCAST_CREW_ONLY_TABS = new Set([
   "submissions",
   "equipment",
   "applications",
+  "sports-desk",
 ]);
 
 type OrganizationPageProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; sport?: string }>;
 };
 
 export default async function OrganizationPage({
@@ -134,7 +141,7 @@ export default async function OrganizationPage({
   searchParams,
 }: OrganizationPageProps) {
   const { slug } = await params;
-  const { tab: tabParam } = await searchParams;
+  const { tab: tabParam, sport: sportParam } = await searchParams;
   const user = await requireCompleteProfile();
   const identity = await resolveAccessIdentity(user);
 
@@ -351,6 +358,23 @@ export default async function OrganizationPage({
     redirect("/organizations/broadcasting");
   }
 
+  const sportSlug = sportParam ?? null;
+  const sportsHub =
+    !isFallback && slug === "broadcasting" && activeTab === "sports"
+      ? await getSportsHubData(sportSlug)
+      : null;
+  const sportsDesk =
+    !isFallback && slug === "broadcasting" && activeTab === "sports-desk"
+      ? await getSportsDeskData(sportSlug)
+      : null;
+  // Stat table on the desk previews the most recent game for the chosen sport.
+  const latestSportGameId = sportsDesk?.games.find(
+    (game) => game.sportSlug === sportSlug,
+  )?.id;
+  const sportsStats = latestSportGameId
+    ? await listPlayerStats({ gameId: latestSportGameId })
+    : [];
+
   if (activeTab === "finances" && !canViewFinances) {
     redirect(`/organizations/${slug}`);
   }
@@ -470,6 +494,11 @@ export default async function OrganizationPage({
     crewCredits,
     broadcastEquipment,
     joinApplications,
+    sportsHub,
+    sportsDesk,
+    sportsStats,
+    activeSportSlug: sportSlug,
+    sportsStorageConfigured: isSportsImageStorageConfigured(),
   };
 
   return (
@@ -541,12 +570,20 @@ export default async function OrganizationPage({
           />
         ) : null}
         {FOCUSED_CLUBS_MODE && organization.slug === "broadcasting" ? (
-          <Button
-            size="sm"
-            variant="outline"
-            nativeButton={false}
-            render={<Link href="/media">Watch live &amp; archive</Link>}
-          />
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              nativeButton={false}
+              render={<Link href="/media">Watch live &amp; archive</Link>}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              nativeButton={false}
+              render={<Link href="/sports">Sports highlights</Link>}
+            />
+          </>
         ) : null}
         {FOCUSED_CLUBS_MODE &&
         organization.slug === "broadcasting" &&

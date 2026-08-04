@@ -15,6 +15,7 @@
     "db:seed": "npx tsx prisma/seed.ts",
     "db:seed:focus-clubs": "npx tsx prisma/seed-focus-clubs.ts",
     "db:seed:demo": "npx tsx prisma/seed-demo.ts",
+    "db:seed:sports": "npx tsx prisma/seed-sports.ts",
     "db:reset:clean": "prisma migrate reset --force --skip-seed && npm run db:seed",
     "postinstall": "prisma generate"
   },
