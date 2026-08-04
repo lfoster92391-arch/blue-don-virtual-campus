@@ -808,6 +808,138 @@ export async function getCurrentOrNextGame(options?: {
   return nextRow ? toGameView(nextRow as GameRow) : null;
 }
 
+/**
+ * Games a broadcast could be pointed at right now: anything LIVE, plus games
+ * with a kickoff inside the window on either side of now. Live games sort first,
+ * then by kickoff — the order an operator scans a console picker in.
+ */
+export async function listCoverableGames(options?: {
+  aheadHours?: number;
+  behindHours?: number;
+  take?: number;
+}): Promise<SportsGameView[]> {
+  if (!ready()) {
+    return [];
+  }
+
+  const now = new Date();
+  const from = new Date(now.getTime() - (options?.behindHours ?? 6) * 3_600_000);
+  const to = new Date(now.getTime() + (options?.aheadHours ?? 36) * 3_600_000);
+
+  const rows = await withDatabase((prisma) =>
+    prisma.sportsGame.findMany({
+      where: {
+        OR: [
+          { status: "LIVE" },
+          {
+            kickoffAt: { gte: from, lte: to },
+            status: { notIn: ["CANCELED"] },
+          },
+        ],
+      },
+      orderBy: { kickoffAt: "asc" },
+      take: options?.take ?? 20,
+      include: gameInclude,
+    }),
+  );
+
+  return (rows ?? [])
+    .map((row) => toGameView(row as GameRow))
+    .sort((a, b) => {
+      if (a.status !== b.status) {
+        if (a.status === "LIVE") {
+          return -1;
+        }
+        if (b.status === "LIVE") {
+          return 1;
+        }
+      }
+      return a.kickoffAt.getTime() - b.kickoffAt.getTime();
+    });
+}
+
+const MAX_GAME_SCORE = 999;
+
+function clampScore(value: number | null | undefined): number | null {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return null;
+  }
+  return Math.min(MAX_GAME_SCORE, Math.max(0, Math.trunc(value)));
+}
+
+/**
+ * Win / loss / tie only means something once a game is final with both scores
+ * in. Mirrors `upsertGame` so a score edit from either surface lands the same.
+ */
+function resolveGameResult(
+  status: GameStatusKey,
+  teamScore: number | null,
+  opponentScore: number | null,
+): GameResultKey | null {
+  if (status !== "FINAL" || teamScore === null || opponentScore === null) {
+    return null;
+  }
+  if (teamScore > opponentScore) {
+    return "WIN";
+  }
+  if (teamScore < opponentScore) {
+    return "LOSS";
+  }
+  return "TIE";
+}
+
+/**
+ * Narrow score / status write for live coverage. Touches only the score, status,
+ * and derived result columns of an existing `SportsGame`, so the Broadcast
+ * Studio and the Sports Desk stay on one row without the console needing the
+ * whole schedule form (kickoff, opponent, venue) just to save a point.
+ */
+export async function setGameScore(input: {
+  actorId: string;
+  role: CampusRole;
+  gameId: string;
+  teamScore?: number | null;
+  opponentScore?: number | null;
+  status?: GameStatusKey;
+}): Promise<ServiceResult<{ game: SportsGameView }>> {
+  if (!(await canManageSportsDesk(input.actorId, input.role))) {
+    return { error: "Only Broadcasting crew can update the score." };
+  }
+
+  const current = await getGame(input.gameId);
+  if (!current) {
+    return { error: "That game is no longer on the schedule." };
+  }
+
+  const teamScore =
+    input.teamScore === undefined
+      ? current.teamScore
+      : clampScore(input.teamScore);
+  const opponentScore =
+    input.opponentScore === undefined
+      ? current.opponentScore
+      : clampScore(input.opponentScore);
+  const status = input.status ?? current.status;
+
+  const saved = await withDatabase((prisma) =>
+    prisma.sportsGame.update({
+      where: { id: input.gameId },
+      data: {
+        teamScore,
+        opponentScore,
+        status,
+        result: resolveGameResult(status, teamScore, opponentScore),
+      },
+      include: gameInclude,
+    }),
+  );
+
+  if (!saved) {
+    return { error: "Unable to save the score." };
+  }
+  return { ok: true, game: toGameView(saved as GameRow) };
+}
+
 export async function upsertGame(input: {
   actorId: string;
   role: CampusRole;
@@ -848,14 +980,7 @@ export async function upsertGame(input: {
   const status = input.status ?? "SCHEDULED";
   const teamScore = input.teamScore ?? null;
   const opponentScore = input.opponentScore ?? null;
-  const result: GameResultKey | null =
-    status === "FINAL" && teamScore !== null && opponentScore !== null
-      ? teamScore > opponentScore
-        ? "WIN"
-        : teamScore < opponentScore
-          ? "LOSS"
-          : "TIE"
-      : null;
+  const result = resolveGameResult(status, teamScore, opponentScore);
 
   const data = {
     sportId: input.sportId,

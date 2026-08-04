@@ -12,9 +12,9 @@
 export const STUDIO_ROUTE = "/broadcast/studio";
 
 export const STUDIO_PHASE = {
-  current: 3,
-  label: "Phase 3 · Read-only console",
-  note: "Program, run of show, crew, countdown, and scoreboard read live campus data. Scene switching, graphics, audio, and scoreboard control arrive with the OBS bridge.",
+  current: 4,
+  label: "Phase 4 · Manual game control",
+  note: "Program, run of show, crew, countdown, and the score read live campus data, and the score is now writable. Scene switching, graphics, audio, and any scoreboard hardware feed arrive later.",
 } as const;
 
 /** How often the console re-reads on-air state from the server. */
@@ -26,6 +26,44 @@ export const STUDIO_POLL_INTERVAL_MS = 5_000;
  * without an OBS bridge — it comes from BroadcastSchedule, not from hardware.
  */
 export const STUDIO_PREVIEW_WINDOW_MINUTES = 15;
+
+/* ----------------------------------------------------------- game control */
+
+/**
+ * Scoring buttons per sport, so football gets a touchdown key and basketball
+ * gets a three. Keyed by `Sport.slug`; anything unlisted falls back to +1.
+ */
+export const STUDIO_SCORE_KEYS_BY_SPORT: Record<string, number[]> = {
+  football: [1, 2, 3, 6],
+  "boys-basketball": [1, 2, 3],
+  "girls-basketball": [1, 2, 3],
+  wrestling: [1, 2, 3],
+};
+
+export const STUDIO_SCORE_KEYS_DEFAULT = [1];
+
+export function studioScoreKeys(sportSlug: string | null): number[] {
+  return (
+    (sportSlug ? STUDIO_SCORE_KEYS_BY_SPORT[sportSlug] : undefined) ??
+    STUDIO_SCORE_KEYS_DEFAULT
+  );
+}
+
+/**
+ * Statuses the console can set. The Sports Desk owns the rest of
+ * `SportsGame.status` (postponed, canceled) because those are schedule
+ * decisions, not things an operator flips mid-broadcast.
+ */
+export const STUDIO_GAME_STATUSES = ["SCHEDULED", "LIVE", "FINAL"] as const;
+
+/**
+ * Period / clock is deliberately session-local: nothing in the schema stores a
+ * game clock, and inventing columns for a value only the operator sees would be
+ * worse than losing it on refresh. These are the presets the console offers.
+ */
+export const STUDIO_PERIOD_LABELS = ["1", "2", "3", "4", "OT"] as const;
+
+export const STUDIO_CLOCK_PRESET_SECONDS = [720, 600, 480, 360] as const;
 
 export type StudioSceneDef = {
   id: string;

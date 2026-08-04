@@ -11,7 +11,6 @@ import {
   StudioTile,
 } from "@/components/studio/studio-frame";
 import {
-  formatCampusTime,
   formatSinceLabel,
   useSecondTick,
 } from "@/components/studio/studio-time";
@@ -29,7 +28,6 @@ import type {
   StudioCrewMember,
   StudioProgramState,
   StudioRunOfShowState,
-  StudioScoreboardState,
 } from "@/services/broadcast-studio-service";
 
 export function ScenesPanel() {
@@ -160,83 +158,6 @@ export function AudioPanel() {
         Nominal fader positions. Live meters and mutes need the OBS bridge.
       </StudioEmptyNote>
     </StudioPanel>
-  );
-}
-
-/**
- * Display-only score from the Sports Desk (SportsGame). No entry controls and no
- * Daktronics feed — writing scores from the console is a later phase.
- */
-export function ScoreboardPanel({
-  scoreboard,
-}: {
-  scoreboard: StudioScoreboardState | null;
-}) {
-  const kickoff = formatCampusTime(scoreboard?.kickoffAt ?? null, {
-    weekday: "short",
-  });
-
-  return (
-    <StudioPanel
-      title="Scoreboard"
-      meta={scoreboard ? "Display only" : undefined}
-      badge={<PhaseBadge />}
-    >
-      <div className="rounded-sm border border-white/10 bg-black/40 p-3">
-        <div className="flex items-center justify-between gap-3 font-mono">
-          <ScoreSide
-            label={scoreboard?.awayLabel ?? "AWAY"}
-            score={scoreboard?.awayScore ?? null}
-          />
-          <span className="text-[0.6rem] tracking-[0.2em] text-slate-600 uppercase">
-            at
-          </span>
-          <ScoreSide
-            label={scoreboard?.homeLabel ?? "HOME"}
-            score={scoreboard?.homeScore ?? null}
-          />
-        </div>
-        <div className="mt-3 flex items-center justify-between gap-2 font-mono text-[0.65rem] text-slate-500">
-          <span className="truncate uppercase">
-            {scoreboard?.sportName ?? "No game"}
-          </span>
-          <span
-            className={cn(
-              "shrink-0",
-              scoreboard?.isLive ? "text-[#FF8098]" : undefined,
-            )}
-          >
-            {scoreboard?.statusLabel ?? "—"}
-          </span>
-        </div>
-      </div>
-      {scoreboard ? (
-        <StudioEmptyNote>
-          {[scoreboard.level, scoreboard.siteLabel, scoreboard.venue, kickoff]
-            .filter(Boolean)
-            .join(" · ")}
-          . Scores come from the Sports Desk — edit them there, not here.
-        </StudioEmptyNote>
-      ) : (
-        <StudioEmptyNote>
-          No game in progress or scheduled in the next 36 hours. Add one on the
-          Sports Desk and it appears here.
-        </StudioEmptyNote>
-      )}
-    </StudioPanel>
-  );
-}
-
-function ScoreSide({ label, score }: { label: string; score: number | null }) {
-  return (
-    <div className="min-w-0 text-center">
-      <p className="truncate text-[0.6rem] tracking-[0.2em] text-slate-500 uppercase">
-        {label}
-      </p>
-      <p className="text-2xl font-semibold text-slate-300 tabular-nums">
-        {score ?? "--"}
-      </p>
-    </div>
   );
 }
 

@@ -11,8 +11,11 @@ export const runtime = "nodejs";
  * operator console polls this so the on-air lamp, program feed, countdown, run
  * of show, and score follow the database without a full page reload. Crew access
  * is re-checked on every request.
+ *
+ * `?gameId=` pins the readout to the game the operator picked in Game Control
+ * instead of the automatic current/next choice.
  */
-export async function GET() {
+export async function GET(request: Request) {
   const user = await getCurrentUser();
 
   if (!user || !user.profileComplete || user.status !== "active") {
@@ -26,7 +29,9 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json(await getStudioConsoleSnapshot(), {
+  const gameId = new URL(request.url).searchParams.get("gameId");
+
+  return NextResponse.json(await getStudioConsoleSnapshot({ gameId }), {
     headers: { "Cache-Control": "no-store" },
   });
 }

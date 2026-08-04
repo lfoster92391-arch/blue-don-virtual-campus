@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { StudioControlBar } from "@/components/studio/studio-control-bar";
+import { GameControlPanel } from "@/components/studio/studio-game-control";
 import { StudioHeader } from "@/components/studio/studio-header";
 import {
   AudioPanel,
@@ -11,13 +12,16 @@ import {
   ProgramPanel,
   RunOfShowPanel,
   ScenesPanel,
-  ScoreboardPanel,
   SourcesPanel,
   SponsorsPanel,
   SystemHealthPanel,
 } from "@/components/studio/studio-panels";
 import { STUDIO_POLL_INTERVAL_MS } from "@/config/broadcast-studio";
-import type { StudioConsoleSnapshot } from "@/services/broadcast-studio-service";
+import type { StudioScoreActionState } from "@/features/broadcast-studio/actions";
+import type {
+  StudioConsoleSnapshot,
+  StudioScoreboardState,
+} from "@/services/broadcast-studio-service";
 
 const STATE_ENDPOINT = "/api/broadcast/studio/state";
 
@@ -27,6 +31,12 @@ type StudioConsoleProps = {
   operatorRole: string;
   streamKeyHint: string;
   hasSharedStreamKey: boolean;
+};
+
+/** A just-saved score, held until a poll from after the write catches up. */
+type ScoreWrite = {
+  savedAt: number;
+  scoreboard: StudioScoreboardState;
 };
 
 /**
@@ -41,7 +51,22 @@ export function StudioConsole({
   streamKeyHint,
   hasSharedStreamKey,
 }: StudioConsoleProps) {
-  const { snapshot, syncError } = useStudioSnapshot(initialSnapshot);
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [scoreWrite, setScoreWrite] = useState<ScoreWrite | null>(null);
+  const { snapshot, syncError, refresh } = useStudioSnapshot(
+    initialSnapshot,
+    selectedGameId,
+  );
+
+  // A score write and the 5 s poll race each other: show the saved score until a
+  // read that started after the write lands, so a tap never appears to bounce
+  // back to the old number.
+  const scoreboard =
+    scoreWrite &&
+    scoreWrite.scoreboard.gameId === snapshot.scoreboard?.gameId &&
+    Date.parse(snapshot.fetchedAt) < scoreWrite.savedAt
+      ? scoreWrite.scoreboard
+      : snapshot.scoreboard;
 
   return (
     <>
@@ -78,7 +103,27 @@ export function StudioConsole({
           </div>
 
           <div className="flex min-h-0 flex-col gap-2">
-            <ScoreboardPanel scoreboard={snapshot.scoreboard} />
+            <GameControlPanel
+              scoreboard={scoreboard}
+              gameOptions={snapshot.gameOptions}
+              selectedGameId={selectedGameId}
+              onSelectGame={(gameId) => {
+                setScoreWrite(null);
+                setSelectedGameId(gameId);
+                // Read straight away so the panel is not stuck on the previous
+                // game until the next poll.
+                void refresh(gameId);
+              }}
+              onSaved={(result: StudioScoreActionState) => {
+                if (result.scoreboard && result.savedAt) {
+                  setScoreWrite({
+                    savedAt: result.savedAt,
+                    scoreboard: result.scoreboard,
+                  });
+                }
+                void refresh();
+              }}
+            />
             <GraphicsPanel />
             <SponsorsPanel />
             <RunOfShowPanel runOfShow={snapshot.runOfShow} />
@@ -97,56 +142,68 @@ export function StudioConsole({
 /**
  * Polls the crew-gated console endpoint. Pauses while the tab is hidden so an
  * unattended console does not hammer the database, and refreshes immediately on
- * the way back.
+ * the way back, when the operator picks a different game, and after a write.
  */
-function useStudioSnapshot(initialSnapshot: StudioConsoleSnapshot): {
+function useStudioSnapshot(
+  initialSnapshot: StudioConsoleSnapshot,
+  selectedGameId: string | null,
+): {
   snapshot: StudioConsoleSnapshot;
   syncError: string | null;
+  /** Read now. Pass a game id to read for a pin the poller has not seen yet. */
+  refresh: (gameId?: string | null) => Promise<void>;
 } {
   const [polled, setPolled] = useState<StudioConsoleSnapshot | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const inFlight = useRef(false);
 
   // Whichever read is newer wins, so a route revalidation (Go Live, End
-  // broadcast) is not overwritten by an older polled snapshot.
+  // broadcast) is not overwritten by an older polled snapshot. Once the operator
+  // pins a game, the polled read is the only one carrying that pin, so it always
+  // wins — otherwise a revalidation would snap the console back to the
+  // automatically chosen game.
   const snapshot =
     polled &&
-    Date.parse(polled.fetchedAt) >= Date.parse(initialSnapshot.fetchedAt)
+    (selectedGameId ||
+      Date.parse(polled.fetchedAt) >= Date.parse(initialSnapshot.fetchedAt))
       ? polled
       : initialSnapshot;
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function read() {
-      if (inFlight.current || document.hidden) {
+  const read = useCallback(
+    async (options?: { force?: boolean; gameId?: string | null }) => {
+      if (inFlight.current || (document.hidden && !options?.force)) {
         return;
       }
       inFlight.current = true;
 
       try {
-        const response = await fetch(STATE_ENDPOINT, { cache: "no-store" });
+        // An explicit gameId is the game the operator just picked, which this
+        // callback has not been rebuilt for yet.
+        const pinned =
+          options?.gameId === undefined ? selectedGameId : options.gameId;
+        const url = pinned
+          ? `${STATE_ENDPOINT}?gameId=${encodeURIComponent(pinned)}`
+          : STATE_ENDPOINT;
+        const response = await fetch(url, { cache: "no-store" });
         if (!response.ok) {
           throw new Error(`Console read failed (${response.status})`);
         }
 
-        const next = (await response.json()) as StudioConsoleSnapshot;
-        if (!cancelled) {
-          setPolled(next);
-          setSyncError(null);
-        }
+        setPolled((await response.json()) as StudioConsoleSnapshot);
+        setSyncError(null);
       } catch (error) {
-        if (!cancelled) {
-          setSyncError(
-            error instanceof Error ? error.message : "Console read failed.",
-          );
-        }
+        setSyncError(
+          error instanceof Error ? error.message : "Console read failed.",
+        );
       } finally {
         inFlight.current = false;
       }
-    }
+    },
+    [selectedGameId],
+  );
 
-    const timer = window.setInterval(read, STUDIO_POLL_INTERVAL_MS);
+  useEffect(() => {
+    const timer = window.setInterval(() => void read(), STUDIO_POLL_INTERVAL_MS);
     const onVisible = () => {
       if (!document.hidden) {
         void read();
@@ -155,11 +212,15 @@ function useStudioSnapshot(initialSnapshot: StudioConsoleSnapshot): {
     document.addEventListener("visibilitychange", onVisible);
 
     return () => {
-      cancelled = true;
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [read]);
 
-  return { snapshot, syncError };
+  const refresh = useCallback(
+    (gameId?: string | null) => read({ force: true, gameId }),
+    [read],
+  );
+
+  return { snapshot, syncError, refresh };
 }

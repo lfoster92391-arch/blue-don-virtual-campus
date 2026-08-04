@@ -1,5 +1,5 @@
 /**
- * Broadcast Control Studio — read-only console snapshot (Phase 3).
+ * Broadcast Control Studio — console snapshot.
  *
  * One serializable payload the console renders from, so the server page and the
  * polling refresh return the exact same shape. Every field traces back to a row
@@ -15,7 +15,11 @@ import {
 } from "@/config/broadcast-script";
 import { BROADCAST_PRODUCTION_ROLE_LABELS } from "@/config/broadcast-production";
 import { STUDIO_PREVIEW_WINDOW_MINUTES } from "@/config/broadcast-studio";
-import { GAME_SITE_LABELS, GAME_STATUS_LABELS } from "@/config/sports-highlights";
+import {
+  GAME_SITE_LABELS,
+  GAME_STATUS_LABELS,
+  type GameStatusKey,
+} from "@/config/sports-highlights";
 import {
   getBroadcastSchedule,
   listCrewCredits,
@@ -25,7 +29,12 @@ import {
   resolveBroadcastOrgId,
 } from "@/services/broadcast-script-service";
 import { getActiveLiveStream } from "@/services/media-service";
-import { getCurrentOrNextGame } from "@/services/sports-highlights-service";
+import {
+  getCurrentOrNextGame,
+  getGame,
+  listCoverableGames,
+  type SportsGameView,
+} from "@/services/sports-highlights-service";
 
 /** LIVE = on-air record exists. PREVIEW = inside the pre-roll window. */
 export type StudioAirState = "LIVE" | "PREVIEW" | "OFFLINE";
@@ -83,15 +92,35 @@ export type StudioEventContext = {
 export type StudioScoreboardState = {
   gameId: string;
   sportName: string;
+  /** Sport slug, so the console can offer the right scoring quick keys. */
+  sportSlug: string;
+  status: GameStatusKey;
   statusLabel: string;
   isLive: boolean;
   homeLabel: string;
   awayLabel: string;
   homeScore: number | null;
   awayScore: number | null;
+  homeLogoUrl: string | null;
+  awayLogoUrl: string | null;
+  /**
+   * Which side of the readout is the campus team. `SportsGame` stores
+   * `teamScore` / `opponentScore`, so the console needs this to map a home or
+   * away score edit onto the right column.
+   */
+  campusIsHome: boolean;
   siteLabel: string;
   venue: string | null;
   level: string | null;
+  kickoffAt: string;
+};
+
+/** One choice in the console's game picker. */
+export type StudioGameOption = {
+  gameId: string;
+  label: string;
+  statusLabel: string;
+  isLive: boolean;
   kickoffAt: string;
 };
 
@@ -105,6 +134,8 @@ export type StudioConsoleSnapshot = {
   crew: StudioCrewMember[];
   event: StudioEventContext;
   scoreboard: StudioScoreboardState | null;
+  /** Games the operator can point the console at (live first, then by kickoff). */
+  gameOptions: StudioGameOption[];
 };
 
 const CAMPUS_TEAM_LABEL = "MHS";
@@ -149,8 +180,13 @@ function buildRunOfShow(
   };
 }
 
-function buildScoreboard(
-  game: Awaited<ReturnType<typeof getCurrentOrNextGame>>,
+/**
+ * Map a `SportsGame` onto the two-sided readout an operator reads. The row
+ * stores campus-relative scores (`teamScore` / `opponentScore`); the console
+ * shows home and away, so the mapping is recorded in `campusIsHome`.
+ */
+export function buildScoreboard(
+  game: SportsGameView | null,
 ): StudioScoreboardState | null {
   if (!game) {
     return null;
@@ -161,15 +197,32 @@ function buildScoreboard(
   return {
     gameId: game.id,
     sportName: game.sportName,
+    sportSlug: game.sportSlug,
+    status: game.status,
     statusLabel: GAME_STATUS_LABELS[game.status] ?? game.status,
     isLive: game.status === "LIVE",
     homeLabel: campusIsHome ? CAMPUS_TEAM_LABEL : game.opponentName,
     awayLabel: campusIsHome ? game.opponentName : CAMPUS_TEAM_LABEL,
     homeScore: campusIsHome ? game.teamScore : game.opponentScore,
     awayScore: campusIsHome ? game.opponentScore : game.teamScore,
+    homeLogoUrl: campusIsHome ? null : game.opponentLogoUrl,
+    awayLogoUrl: campusIsHome ? game.opponentLogoUrl : null,
+    campusIsHome,
     siteLabel: GAME_SITE_LABELS[game.site] ?? game.site,
     venue: game.venue,
     level: game.level,
+    kickoffAt: game.kickoffAt.toISOString(),
+  };
+}
+
+function buildGameOption(game: SportsGameView): StudioGameOption {
+  const separator = game.site === "AWAY" ? "at" : "vs";
+
+  return {
+    gameId: game.id,
+    label: `${game.sportName} ${separator} ${game.opponentName}`,
+    statusLabel: GAME_STATUS_LABELS[game.status] ?? game.status,
+    isLive: game.status === "LIVE",
     kickoffAt: game.kickoffAt.toISOString(),
   };
 }
@@ -180,7 +233,7 @@ function buildScoreboard(
  */
 function buildEventContext(input: {
   liveTitle: string | null;
-  game: Awaited<ReturnType<typeof getCurrentOrNextGame>>;
+  game: SportsGameView | null;
   scheduleTitle: string | null;
   scheduleAt: Date | null;
 }): StudioEventContext {
@@ -245,17 +298,39 @@ function resolveAirState(input: {
 /**
  * Everything the console reads in one pass. Each query soft-fails to null/empty
  * on its own so a missing table never blanks the whole console.
+ *
+ * `gameId` is the game the operator picked for the console. When it is absent
+ * (or the row has since gone) the console falls back to the automatic choice:
+ * an in-progress game, else the next one inside the horizon.
  */
-export async function getStudioConsoleSnapshot(): Promise<StudioConsoleSnapshot> {
+export async function getStudioConsoleSnapshot(options?: {
+  gameId?: string | null;
+}): Promise<StudioConsoleSnapshot> {
   const now = Date.now();
 
-  const [activeLive, schedule, crew, game, orgId] = await Promise.all([
-    getActiveLiveStream().catch(() => null),
-    getBroadcastSchedule().catch(() => null),
-    listCrewCredits({ visibleOnly: true }).catch(() => []),
-    getCurrentOrNextGame({ withinHours: 36 }).catch(() => null),
-    resolveBroadcastOrgId().catch(() => null),
-  ]);
+  const [activeLive, schedule, crew, autoGame, coverableGames, orgId] =
+    await Promise.all([
+      getActiveLiveStream().catch(() => null),
+      getBroadcastSchedule().catch(() => null),
+      listCrewCredits({ visibleOnly: true }).catch(() => []),
+      getCurrentOrNextGame({ withinHours: 36 }).catch(() => null),
+      listCoverableGames({ aheadHours: 36, behindHours: 6 }).catch(() => []),
+      resolveBroadcastOrgId().catch(() => null),
+    ]);
+
+  // A pinned game usually sits in the coverable window already; read it
+  // directly when the operator is parked on an older or later game.
+  const pinnedGame = options?.gameId
+    ? ((coverableGames.find((row) => row.id === options.gameId) ??
+        (await getGame(options.gameId).catch(() => null))) ??
+      null)
+    : null;
+
+  const game = pinnedGame ?? autoGame;
+  const optionRows = [...coverableGames];
+  if (game && !optionRows.some((row) => row.id === game.id)) {
+    optionRows.unshift(game);
+  }
 
   const script = orgId
     ? await getTodaysBroadcastScript(orgId).catch(() => null)
@@ -297,5 +372,6 @@ export async function getStudioConsoleSnapshot(): Promise<StudioConsoleSnapshot>
       scheduleAt: nextAirAt,
     }),
     scoreboard: buildScoreboard(game),
+    gameOptions: optionRows.map(buildGameOption),
   };
 }

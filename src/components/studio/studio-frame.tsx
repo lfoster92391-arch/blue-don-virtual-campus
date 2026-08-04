@@ -47,7 +47,7 @@ export function StudioPanel({
   );
 }
 
-export function PhaseBadge({ phase = 4 }: { phase?: number }) {
+export function PhaseBadge({ phase = 5 }: { phase?: number }) {
   return (
     <span className="rounded-sm border border-[#C9A227]/40 bg-[#C9A227]/10 px-1.5 py-0.5 font-mono text-[0.6rem] tracking-wider text-[#E0B93B] uppercase">
       Phase {phase}
