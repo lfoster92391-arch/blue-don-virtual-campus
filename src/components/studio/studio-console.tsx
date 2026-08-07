@@ -10,11 +10,12 @@ import {
   AudioPanel,
   CrewPanel,
   ProgramPanel,
-  RunOfShowPanel,
   ScenesPanel,
   SourcesPanel,
   SystemHealthPanel,
 } from "@/components/studio/studio-panels";
+import { RunOfShowPanel } from "@/components/studio/studio-run-of-show";
+import { SponsorPanel } from "@/components/studio/studio-sponsor-panel";
 import { STUDIO_POLL_INTERVAL_MS } from "@/config/broadcast-studio";
 import type { StudioScoreActionState } from "@/features/broadcast-studio/actions";
 import type {
@@ -111,16 +112,23 @@ export function StudioConsole({
 
           <div className="flex min-h-0 flex-col gap-2">
             <ProgramPanel program={snapshot.program} />
-            <div className="grid min-h-0 flex-1 gap-2 xl:grid-cols-[minmax(0,1fr)_13rem]">
+            <div className="grid min-h-0 flex-1 gap-2 xl:grid-cols-[minmax(0,1fr)_15rem]">
               <GraphicsPanel
                 graphics={snapshot.graphics}
                 fetchedAt={snapshot.fetchedAt}
                 scoreboard={scoreboard}
                 roster={snapshot.roster}
+                sponsors={snapshot.sponsors}
                 overlayPath={overlayPath}
                 onChanged={onCommandSettled}
               />
               <div className="flex min-h-0 flex-col gap-2">
+                <SponsorPanel
+                  sponsors={snapshot.sponsors}
+                  graphics={snapshot.graphics}
+                  fetchedAt={snapshot.fetchedAt}
+                  onChanged={onCommandSettled}
+                />
                 <SourcesPanel />
                 <AudioPanel />
               </div>
@@ -149,7 +157,11 @@ export function StudioConsole({
                 void refresh();
               }}
             />
-            <RunOfShowPanel runOfShow={snapshot.runOfShow} />
+            <RunOfShowPanel
+              runOfShow={snapshot.runOfShow}
+              fetchedAt={snapshot.fetchedAt}
+              onChanged={onCommandSettled}
+            />
           </div>
         </div>
       </main>

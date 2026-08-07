@@ -15,9 +15,9 @@ import type { StudioGraphicKind } from "@/generated/prisma/client";
 export const STUDIO_ROUTE = "/broadcast/studio";
 
 export const STUDIO_PHASE = {
-  current: 6,
-  label: "Phase 6 · Graphics",
-  note: "Scene switching and transport run through the Studio Bridge; graphics are taken to an OBS Browser Source overlay. Audio, sources, and any scoreboard hardware feed arrive later.",
+  current: 7,
+  label: "Phase 7 · Run of show + sponsors",
+  note: "Scene switching and transport run through the Studio Bridge; graphics, the rundown, and the sponsor book are operated from the console and taken to an OBS Browser Source overlay. Audio, sources, and any scoreboard hardware feed arrive later.",
 } as const;
 
 /** How often the console re-reads on-air state from the server. */
@@ -107,6 +107,80 @@ export const STUDIO_GAME_STATUSES = ["SCHEDULED", "LIVE", "FINAL"] as const;
 export const STUDIO_PERIOD_LABELS = ["1", "2", "3", "4", "OT"] as const;
 
 export const STUDIO_CLOCK_PRESET_SECONDS = [720, 600, 480, 360] as const;
+
+/* -------------------------------------------------------- run of show */
+
+/** Studio surface the rundown progress belongs to. One control room today. */
+export const STUDIO_RUN_OF_SHOW_DEFAULT_KEY = "studio-b";
+
+/**
+ * Where an item sits in tonight's read. `CURRENT` is derived from the one slot
+ * key the row marks as on the air, never stored per item, so two items can
+ * never both claim to be up.
+ */
+export type StudioRunItemState =
+  | "PENDING"
+  | "READY"
+  | "CURRENT"
+  | "COMPLETED"
+  | "SKIPPED";
+
+/** The states an item can actually be saved in — see above for `CURRENT`. */
+export type StudioRunStoredState = Extract<
+  StudioRunItemState,
+  "READY" | "COMPLETED" | "SKIPPED"
+>;
+
+export const STUDIO_RUN_STORED_STATES: StudioRunStoredState[] = [
+  "READY",
+  "COMPLETED",
+  "SKIPPED",
+];
+
+export const STUDIO_RUN_STATE_LABELS: Record<StudioRunItemState, string> = {
+  PENDING: "Pending",
+  READY: "Ready",
+  CURRENT: "On air",
+  COMPLETED: "Done",
+  SKIPPED: "Skipped",
+};
+
+/**
+ * A segment running longer than this is almost certainly an item nobody
+ * advanced past, so the timer says so rather than counting into the hours.
+ */
+export const STUDIO_SEGMENT_LONG_SECONDS = 15 * 60;
+
+/* ----------------------------------------------------------- sponsors */
+
+/** Caps on sponsor copy, enforced server-side. The overlay is public. */
+export const STUDIO_SPONSOR_NAME_MAX = 80;
+export const STUDIO_SPONSOR_TAGLINE_MAX = 120;
+export const STUDIO_SPONSOR_LOGO_URL_MAX = 500;
+
+/** A season's sponsor book, not an ad server. */
+export const STUDIO_SPONSOR_MAX = 40;
+
+/** How long one billboard sits before the next, in seconds. */
+export const STUDIO_SPONSOR_DURATION_DEFAULT = 15;
+export const STUDIO_SPONSOR_DURATION_MIN = 5;
+export const STUDIO_SPONSOR_DURATION_MAX = 120;
+
+export function clampSponsorDuration(seconds: number): number {
+  if (!Number.isFinite(seconds)) {
+    return STUDIO_SPONSOR_DURATION_DEFAULT;
+  }
+  return Math.min(
+    Math.max(Math.round(seconds), STUDIO_SPONSOR_DURATION_MIN),
+    STUDIO_SPONSOR_DURATION_MAX,
+  );
+}
+
+/** The two places a sponsor can land — a strap under the show, or a break card. */
+export const STUDIO_SPONSOR_KINDS: StudioGraphicKind[] = [
+  "SPONSOR",
+  "SPONSOR_FULL",
+];
 
 export type StudioSceneDef = {
   id: string;
@@ -233,7 +307,7 @@ export type StudioGraphicDef = {
    * read the campus row live, so the panel can say where the numbers come from
    * instead of implying someone typed them.
    */
-  source: "MANUAL" | "GAME" | "PLAYER" | "ROSTER";
+  source: "MANUAL" | "GAME" | "PLAYER" | "ROSTER" | "SPONSOR";
 };
 
 /**
@@ -331,10 +405,22 @@ export const STUDIO_GRAPHIC_DEFS: Record<StudioGraphicKind, StudioGraphicDef> = 
   },
   SPONSOR: {
     kind: "SPONSOR",
-    label: "Sponsor",
-    detail: "Single billboard — no rotation yet",
+    label: "Sponsor strap",
+    detail: "Sponsor from the book, along the bottom",
     region: "LOWER",
-    source: "MANUAL",
+    source: "SPONSOR",
+    fields: [
+      { key: "title", label: "Sponsor", placeholder: "Hometown Hardware" },
+      { key: "subtitle", label: "Line", placeholder: "Proud to back the Dons" },
+      { key: "note", label: "Tag", placeholder: "Tonight's sponsor" },
+    ],
+  },
+  SPONSOR_FULL: {
+    kind: "SPONSOR_FULL",
+    label: "Sponsor billboard",
+    detail: "Full-frame card with the logo, for breaks",
+    region: "FULL",
+    source: "SPONSOR",
     fields: [
       { key: "title", label: "Sponsor", placeholder: "Hometown Hardware" },
       { key: "subtitle", label: "Line", placeholder: "Proud to back the Dons" },
@@ -353,6 +439,7 @@ export const STUDIO_GRAPHIC_ORDER: StudioGraphicKind[] = [
   "FINAL_SCORE",
   "ANNOUNCEMENT",
   "SPONSOR",
+  "SPONSOR_FULL",
 ];
 
 export function studioGraphicDef(kind: StudioGraphicKind): StudioGraphicDef {

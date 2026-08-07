@@ -36,6 +36,10 @@ import type {
 } from "@/generated/prisma/client";
 import { withDatabase } from "@/lib/prisma";
 import { canManageCampusMedia } from "@/services/media-service";
+import {
+  markSponsorTaken,
+  type StudioSponsorBillboard,
+} from "@/services/studio-sponsors-service";
 
 /* --------------------------------------------------------------- shapes */
 
@@ -75,6 +79,12 @@ export type StudioGraphicView = {
   fields: StudioGraphicFields;
   gameId: string | null;
   playerId: string | null;
+  sponsorId: string | null;
+  /**
+   * Resolved on every read rather than copied into `fields`, so correcting a
+   * sponsor's name or logo in the book corrects the card on air.
+   */
+  sponsor: StudioSponsorBillboard | null;
   takenAt: string | null;
   updatedAt: string;
   updatedByName: string | null;
@@ -278,6 +288,8 @@ type GraphicRow = {
   fields: unknown;
   gameId: string | null;
   playerId: string | null;
+  sponsorId: string | null;
+  sponsor: StudioSponsorBillboard | null;
   takenAt: Date | null;
   updatedAt: Date;
   updatedByName: string | null;
@@ -290,6 +302,8 @@ function toGraphicView(row: GraphicRow): StudioGraphicView {
     fields: parseGraphicFields(row.fields),
     gameId: row.gameId,
     playerId: row.playerId,
+    sponsorId: row.sponsorId,
+    sponsor: row.sponsor,
     takenAt: row.takenAt ? row.takenAt.toISOString() : null,
     updatedAt: row.updatedAt.toISOString(),
     updatedByName: row.updatedByName,
@@ -302,6 +316,8 @@ const GRAPHIC_SELECT = {
   fields: true,
   gameId: true,
   playerId: true,
+  sponsorId: true,
+  sponsor: { select: { id: true, name: true, tagline: true, logoUrl: true } },
   takenAt: true,
   updatedAt: true,
   updatedByName: true,
@@ -434,6 +450,8 @@ export async function saveStudioGraphic(input: {
   fields: unknown;
   gameId?: string | null;
   playerId?: string | null;
+  /** Sponsor cards point at the book instead of copying a name and a logo. */
+  sponsorId?: string | null;
   overlayKey?: string;
 }): Promise<StudioGraphicResult> {
   if (!(await canManageCampusMedia(input.actorId, input.role))) {
@@ -468,6 +486,7 @@ export async function saveStudioGraphic(input: {
       fields: fields as unknown as object,
       gameId: input.gameId ?? null,
       playerId: input.playerId ?? null,
+      sponsorId: input.sponsorId ?? null,
       takenAt: goingLive ? (existing?.takenAt ?? now) : null,
       clearedAt: null,
       updatedById: input.actorId,
@@ -503,9 +522,17 @@ export async function saveStudioGraphic(input: {
     return graphic;
   });
 
-  return saved
-    ? { graphic: toGraphicView(saved) }
-    : { error: "Unable to save the graphic. Check database connectivity." };
+  if (!saved) {
+    return { error: "Unable to save the graphic. Check database connectivity." };
+  }
+
+  // Rotation reads this to know which sponsor has waited longest. It is a
+  // last-taken stamp, not an impression count.
+  if (saved.state === "LIVE" && saved.sponsorId) {
+    await markSponsorTaken(saved.sponsorId);
+  }
+
+  return { graphic: toGraphicView(saved) };
 }
 
 /** Takes one graphic off air. The copy stays, so it can be re-taken as is. */

@@ -163,6 +163,8 @@ function GraphicBody({ graphic }: { graphic: StudioOverlayGraphic }) {
       return <AnnouncementStrap graphic={graphic} />;
     case "SPONSOR":
       return <SponsorStrap graphic={graphic} />;
+    case "SPONSOR_FULL":
+      return <SponsorBillboard graphic={graphic} />;
     default:
       return <LowerThird graphic={graphic} />;
   }
@@ -294,27 +296,86 @@ function AnnouncementStrap({ graphic }: { graphic: StudioOverlayGraphic }) {
   );
 }
 
-function SponsorStrap({ graphic }: { graphic: StudioOverlayGraphic }) {
+/**
+ * Sponsor copy for a card: the book's row when one is attached, and whatever
+ * the operator typed in the Graphics panel otherwise. The book wins, so
+ * correcting a name there corrects every card that points at it.
+ */
+function sponsorCopy(graphic: StudioOverlayGraphic) {
   const { title, subtitle, note } = graphic.fields;
 
+  return {
+    name: graphic.sponsor?.name ?? title ?? "",
+    line: graphic.sponsor?.tagline ?? subtitle,
+    tag: note ?? "Tonight's sponsor",
+    logoUrl: graphic.sponsor?.logoUrl ?? null,
+  };
+}
+
+function SponsorLogo({ url, height }: { url: string; height: string }) {
   return (
-    <Panel className="rounded-[0.4cqw]">
+    // Sponsor logos are arbitrary remote URLs; next/image would need every
+    // business host allowlisted in next.config.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt=""
+      className="shrink-0 rounded-[0.3cqw] bg-white object-contain"
+      style={{ height, maxWidth: "22cqw", padding: "0.4cqw" }}
+    />
+  );
+}
+
+function SponsorStrap({ graphic }: { graphic: StudioOverlayGraphic }) {
+  const { name, line, tag, logoUrl } = sponsorCopy(graphic);
+
+  return (
+    <Panel className="items-center rounded-[0.4cqw]">
       <AccentBar />
-      <div className="py-[1.2cqw] pr-[2.6cqw] pl-[1.2cqw]">
-        <Eyebrow>{note ?? "Tonight's sponsor"}</Eyebrow>
-        <p
-          className="font-semibold text-white"
-          style={{ fontSize: "2.2cqw", lineHeight: 1.1 }}
-        >
-          {title ?? ""}
-        </p>
-        {subtitle ? (
-          <p className="text-white/80" style={{ fontSize: "1.3cqw" }}>
-            {subtitle}
+      <div className="flex items-center gap-[1.4cqw] py-[1.2cqw] pr-[2.6cqw] pl-[1.2cqw]">
+        {logoUrl ? <SponsorLogo url={logoUrl} height="4.4cqw" /> : null}
+        <div>
+          <Eyebrow>{tag}</Eyebrow>
+          <p
+            className="font-semibold text-white"
+            style={{ fontSize: "2.2cqw", lineHeight: 1.1 }}
+          >
+            {name}
           </p>
-        ) : null}
+          {line ? (
+            <p className="text-white/80" style={{ fontSize: "1.3cqw" }}>
+              {line}
+            </p>
+          ) : null}
+        </div>
       </div>
     </Panel>
+  );
+}
+
+/** The break card: one sponsor, full frame, logo first. */
+function SponsorBillboard({ graphic }: { graphic: StudioOverlayGraphic }) {
+  const { name, line, tag, logoUrl } = sponsorCopy(graphic);
+
+  return (
+    <div
+      className="flex w-[52cqw] flex-col items-center gap-[1.4cqw] rounded-[0.6cqw] px-[4cqw] py-[3cqw] text-center shadow-2xl"
+      style={{ backgroundColor: `${NAVY}F5` }}
+    >
+      <Eyebrow>{tag}</Eyebrow>
+      {logoUrl ? <SponsorLogo url={logoUrl} height="12cqw" /> : null}
+      <p
+        className="font-semibold text-white"
+        style={{ fontSize: "3.4cqw", lineHeight: 1.1 }}
+      >
+        {name}
+      </p>
+      {line ? (
+        <p className="text-white/85" style={{ fontSize: "1.6cqw" }}>
+          {line}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

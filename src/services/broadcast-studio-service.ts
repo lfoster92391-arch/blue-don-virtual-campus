@@ -19,6 +19,7 @@ import {
   STUDIO_PREVIEW_WINDOW_MINUTES,
   studioGraphicRegion,
   type StudioGraphicRegion,
+  type StudioRunItemState,
 } from "@/config/broadcast-studio";
 import {
   GAME_SITE_LABELS,
@@ -53,6 +54,16 @@ import {
   type StudioGraphicFields,
   type StudioGraphicsState,
 } from "@/services/studio-graphics-service";
+import {
+  EMPTY_RUN_PROGRESS,
+  getStudioRunProgress,
+  type StudioRunProgress,
+} from "@/services/studio-run-of-show-service";
+import {
+  listStudioSponsors,
+  type StudioSponsorBillboard,
+  type StudioSponsorView,
+} from "@/services/studio-sponsors-service";
 
 /** LIVE = on-air record exists. PREVIEW = inside the pre-roll window. */
 export type StudioAirState = "LIVE" | "PREVIEW" | "OFFLINE";
@@ -82,6 +93,27 @@ export type StudioRunOfShowItem = {
   line: string;
   filled: boolean;
   required: boolean;
+  /** Where the item sits in tonight's read. `CURRENT` is the one on the air. */
+  state: StudioRunItemState;
+};
+
+/**
+ * How far through the rundown the crew is. Separate from the script's own
+ * `updatedAt` / `updatedByName` above, which say who last wrote the words —
+ * these say who last drove them.
+ */
+export type StudioRunOfShowProgressState = {
+  currentKey: string | null;
+  /** Position of the current item, for the `3 / 9` readout. */
+  currentIndex: number | null;
+  startedAt: string | null;
+  /** When the current item was taken — the segment timer counts from here. */
+  itemStartedAt: string | null;
+  endedAt: string | null;
+  completedCount: number;
+  skippedCount: number;
+  updatedAt: string | null;
+  updatedByName: string | null;
 };
 
 export type StudioRunOfShowState = {
@@ -92,6 +124,7 @@ export type StudioRunOfShowState = {
   filledCount: number;
   fillableCount: number;
   items: StudioRunOfShowItem[];
+  progress: StudioRunOfShowProgressState;
 };
 
 export type StudioCrewMember = {
@@ -181,6 +214,12 @@ export type StudioConsoleSnapshot = {
    * instead of riding along in a payload the console re-reads every 5 s.
    */
   graphics: StudioGraphicsState;
+  /**
+   * The sponsor book. Names, logos, and rotation order only — the same
+   * marketing copy the overlay puts on screen, so there is nothing here a
+   * student operator should not see.
+   */
+  sponsors: StudioSponsorView[];
 };
 
 const CAMPUS_TEAM_LABEL = "MHS";
@@ -189,8 +228,15 @@ function toIso(value: Date | null | undefined): string | null {
   return value ? value.toISOString() : null;
 }
 
+/**
+ * The rundown as the console reads it: the script's filled lines (Phase 3)
+ * with the crew's progress laid over them (Phase 7). The two come from
+ * different rows on purpose — the words are the Daily Rundown's, the position
+ * in them is the studio's.
+ */
 function buildRunOfShow(
   script: Awaited<ReturnType<typeof getTodaysBroadcastScript>>,
+  progress: StudioRunProgress,
 ): StudioRunOfShowState | null {
   if (!script) {
     return null;
@@ -199,6 +245,11 @@ function buildRunOfShow(
   const items: StudioRunOfShowItem[] = script.slots.map((slot) => {
     const filled =
       slot.slotType === "FIXED" ? true : slot.value.trim().length > 0;
+
+    const state: StudioRunItemState =
+      progress.currentKey === slot.key
+        ? "CURRENT"
+        : (progress.states[slot.key] ?? "PENDING");
 
     return {
       key: slot.key,
@@ -209,10 +260,14 @@ function buildRunOfShow(
         : slot.template,
       filled,
       required: slot.required,
+      state,
     };
   });
 
   const fillable = items.filter((item) => item.slotType !== "FIXED");
+  const currentIndex = progress.currentKey
+    ? items.findIndex((item) => item.key === progress.currentKey)
+    : -1;
 
   return {
     scriptDate: toIso(script.scriptDate),
@@ -222,6 +277,17 @@ function buildRunOfShow(
     filledCount: fillable.filter((item) => item.filled).length,
     fillableCount: fillable.length,
     items,
+    progress: {
+      currentKey: currentIndex >= 0 ? progress.currentKey : null,
+      currentIndex: currentIndex >= 0 ? currentIndex : null,
+      startedAt: progress.startedAt,
+      itemStartedAt: currentIndex >= 0 ? progress.itemStartedAt : null,
+      endedAt: progress.endedAt,
+      completedCount: items.filter((item) => item.state === "COMPLETED").length,
+      skippedCount: items.filter((item) => item.state === "SKIPPED").length,
+      updatedAt: progress.updatedAt,
+      updatedByName: progress.updatedByName,
+    },
   };
 }
 
@@ -362,6 +428,7 @@ export async function getStudioConsoleSnapshot(options?: {
     orgId,
     bridge,
     graphics,
+    sponsors,
   ] = await Promise.all([
     getActiveLiveStream().catch(() => null),
     getBroadcastSchedule().catch(() => null),
@@ -379,6 +446,7 @@ export async function getStudioConsoleSnapshot(options?: {
       overlayLastSeenAt: null,
       items: [],
     })),
+    listStudioSponsors().catch(() => []),
   ]);
 
   // A pinned game usually sits in the coverable window already; read it
@@ -402,6 +470,14 @@ export async function getStudioConsoleSnapshot(options?: {
       : Promise.resolve([]),
   ]);
 
+  // Progress is filtered against the slots today's script actually has, so a
+  // template edit cannot leave the console pointing at an item nobody can see.
+  const runProgress = script
+    ? await getStudioRunProgress({
+        itemKeys: script.slots.map((slot) => slot.key),
+      }).catch(() => EMPTY_RUN_PROGRESS)
+    : EMPTY_RUN_PROGRESS;
+
   const nextAirAt = schedule?.nextAirAt ?? null;
 
   return {
@@ -423,7 +499,7 @@ export async function getStudioConsoleSnapshot(options?: {
       notes: schedule?.notes ?? null,
       setByName: schedule?.updatedByName ?? null,
     },
-    runOfShow: buildRunOfShow(script),
+    runOfShow: buildRunOfShow(script, runProgress),
     crew: crew.map((credit) => ({
       id: credit.id,
       displayName: credit.displayName,
@@ -448,6 +524,7 @@ export async function getStudioConsoleSnapshot(options?: {
     })),
     bridge,
     graphics,
+    sponsors,
   };
 }
 
@@ -469,6 +546,11 @@ export type StudioOverlayGraphic = {
    * on screen and the score on `/sports` are the same number by construction.
    */
   scoreboard: StudioScoreboardState | null;
+  /**
+   * Same rule for sponsors: the card holds the sponsor's id, and the name and
+   * logo are read from the book on every poll.
+   */
+  sponsor: StudioSponsorBillboard | null;
 };
 
 export type StudioOverlayPayload = {
@@ -521,6 +603,7 @@ export async function getStudioOverlayPayload(
       scoreboard: graphic.gameId
         ? buildScoreboard(games.get(graphic.gameId) ?? null)
         : null,
+      sponsor: graphic.sponsor,
     })),
   };
 }

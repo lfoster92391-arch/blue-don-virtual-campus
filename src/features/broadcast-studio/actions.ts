@@ -18,6 +18,7 @@ import {
   buildScoreboard,
   type StudioScoreboardState,
 } from "@/services/broadcast-studio-service";
+import { canManageCampusMedia } from "@/services/media-service";
 import { setGameScore } from "@/services/sports-highlights-service";
 import {
   queueStudioCommand,
@@ -32,6 +33,20 @@ import {
   type StudioGraphicIntent,
   type StudioGraphicView,
 } from "@/services/studio-graphics-service";
+import {
+  applyStudioRunCommand,
+  type StudioRunCommand,
+  type StudioRunProgress,
+} from "@/services/studio-run-of-show-service";
+import {
+  deleteStudioSponsor,
+  listSponsorPartnerOptions,
+  listStudioSponsors,
+  saveStudioSponsor,
+  type StudioSponsorInput,
+  type StudioSponsorPartnerOption,
+  type StudioSponsorView,
+} from "@/services/studio-sponsors-service";
 
 export type StudioScoreActionState = {
   error?: string;
@@ -226,6 +241,7 @@ export async function saveStudioGraphicAction(input: {
   fields: Partial<StudioGraphicFields>;
   gameId?: string | null;
   playerId?: string | null;
+  sponsorId?: string | null;
 }): Promise<StudioGraphicActionState> {
   try {
     const user = await requireCompleteProfile();
@@ -239,6 +255,7 @@ export async function saveStudioGraphicAction(input: {
       fields: input.fields,
       gameId: input.gameId,
       playerId: input.playerId,
+      sponsorId: input.sponsorId,
     });
 
     return "error" in result ? { error: result.error } : { graphic: result.graphic };
@@ -323,6 +340,182 @@ export async function rotateStudioOverlayKeyAction(): Promise<{
         error instanceof Error
           ? error.message
           : "Unable to rotate the overlay URL.",
+    };
+  }
+}
+
+/* ------------------------------------------------------------ run of show */
+
+export type StudioRunActionState = {
+  error?: string;
+  /** The saved progress, so the rundown moves before the next poll lands. */
+  progress?: StudioRunProgress;
+  savedAt?: number;
+};
+
+/**
+ * One press on the run of show — advance, back, jump, ready, skip, or reset.
+ *
+ * The rundown's words stay in `BroadcastDailyScript`; only the crew's position
+ * in them is written here. The ordering is resolved server-side from today's
+ * script, so a console left open across a template edit cannot advance into a
+ * slot that no longer exists. Crew permission is re-checked in the service.
+ */
+export async function runStudioShowAction(
+  command: StudioRunCommand,
+): Promise<StudioRunActionState> {
+  try {
+    const user = await requireCompleteProfile();
+
+    const result = await applyStudioRunCommand({
+      actorId: user.id,
+      actorName: user.displayName || user.email,
+      role: user.role,
+      command,
+    });
+
+    return "error" in result
+      ? { error: result.error }
+      : { progress: result.progress, savedAt: Date.now() };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to update the run of show.",
+    };
+  }
+}
+
+/* --------------------------------------------------------------- sponsors */
+
+export type StudioSponsorActionState = {
+  error?: string;
+  sponsor?: StudioSponsorView;
+  /** The whole book after the write, so the panel and rotation stay in order. */
+  sponsors?: StudioSponsorView[];
+};
+
+/** Adds or edits one sponsor in the book. Crew-gated inside the service. */
+export async function saveStudioSponsorAction(
+  sponsor: StudioSponsorInput,
+): Promise<StudioSponsorActionState> {
+  try {
+    const user = await requireCompleteProfile();
+
+    const result = await saveStudioSponsor({
+      actorId: user.id,
+      actorName: user.displayName || user.email,
+      role: user.role,
+      sponsor,
+    });
+
+    if ("error" in result) {
+      return { error: result.error };
+    }
+
+    revalidatePath(STUDIO_ROUTE);
+    return { sponsor: result.sponsor, sponsors: await listStudioSponsors() };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Unable to save the sponsor.",
+    };
+  }
+}
+
+/** Removes a sponsor from the book. Refused while that sponsor is on air. */
+export async function deleteStudioSponsorAction(input: {
+  sponsorId: string;
+}): Promise<StudioSponsorActionState> {
+  try {
+    const user = await requireCompleteProfile();
+
+    const result = await deleteStudioSponsor({
+      actorId: user.id,
+      role: user.role,
+      sponsorId: input.sponsorId,
+    });
+
+    if ("error" in result) {
+      return { error: result.error };
+    }
+
+    revalidatePath(STUDIO_ROUTE);
+    return { sponsors: await listStudioSponsors() };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to remove the sponsor.",
+    };
+  }
+}
+
+/**
+ * Cues or takes one sponsor to the overlay.
+ *
+ * The graphic stores the sponsor's id, never a copy of its name or logo, so
+ * the card on air and the book are the same row — the same rule score cards
+ * follow with `SportsGame`.
+ */
+export async function takeStudioSponsorAction(input: {
+  sponsorId: string;
+  kind: Extract<StudioGraphicKind, "SPONSOR" | "SPONSOR_FULL">;
+  intent: StudioGraphicIntent;
+}): Promise<StudioGraphicActionState> {
+  try {
+    const user = await requireCompleteProfile();
+
+    const result = await saveStudioGraphic({
+      actorId: user.id,
+      actorName: user.displayName || user.email,
+      role: user.role,
+      kind: input.kind,
+      intent: input.intent,
+      // Copy is deliberately empty: the renderer reads the resolved sponsor,
+      // and an operator who wants one-off wording uses the Graphics panel.
+      fields: {},
+      sponsorId: input.sponsorId,
+    });
+
+    return "error" in result
+      ? { error: result.error }
+      : { graphic: result.graphic };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to put the sponsor on air.",
+    };
+  }
+}
+
+/**
+ * Approved campus partners, for adopting one into the book instead of
+ * retyping a name and a logo. Loaded on demand — it is a directory, not
+ * something the console needs on every poll.
+ */
+export async function loadSponsorPartnerOptionsAction(): Promise<{
+  error?: string;
+  partners?: StudioSponsorPartnerOption[];
+}> {
+  try {
+    const user = await requireCompleteProfile();
+
+    if (!(await canManageCampusMedia(user.id, user.role))) {
+      return { error: "Only Broadcasting crew can manage sponsors." };
+    }
+
+    return { partners: await listSponsorPartnerOptions() };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to read the partner directory.",
     };
   }
 }

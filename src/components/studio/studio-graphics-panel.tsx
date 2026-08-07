@@ -32,6 +32,7 @@ import type {
   StudioGraphicsState,
   StudioGraphicView,
 } from "@/services/studio-graphics-service";
+import type { StudioSponsorView } from "@/services/studio-sponsors-service";
 
 /**
  * Graphics control.
@@ -53,6 +54,8 @@ type Draft = {
   note: string;
   entries: StudioGraphicEntry[];
   playerId: string | null;
+  /** Set when the card is bound to the sponsor book rather than typed copy. */
+  sponsorId: string | null;
 };
 
 type LocalWrite = {
@@ -68,6 +71,8 @@ type GraphicsPanelProps = {
   fetchedAt: string;
   scoreboard: StudioScoreboardState | null;
   roster: StudioRosterPlayer[];
+  /** The sponsor book, for the cards that read a sponsor rather than copy one. */
+  sponsors: StudioSponsorView[];
   /** Browser Source URL path, handed over once with the crew-gated page. */
   overlayPath: string | null;
   onChanged: () => void;
@@ -81,6 +86,7 @@ function emptyDraft(): Draft {
     note: "",
     entries: [],
     playerId: null,
+    sponsorId: null,
   };
 }
 
@@ -96,6 +102,7 @@ function draftFrom(view: StudioGraphicView | undefined): Draft {
     note: view.fields.note ?? "",
     entries: view.fields.entries,
     playerId: view.playerId,
+    sponsorId: view.sponsorId,
   };
 }
 
@@ -104,6 +111,7 @@ export function GraphicsPanel({
   fetchedAt,
   scoreboard,
   roster,
+  sponsors,
   overlayPath,
   onChanged,
 }: GraphicsPanelProps) {
@@ -166,6 +174,7 @@ export function GraphicsPanel({
         fields: fieldsFor(kind, source),
         gameId: needsGame(kind) ? (scoreboard?.gameId ?? null) : null,
         playerId: kind === "PLAYER_ID" ? source.playerId : null,
+        sponsorId: needsSponsor(kind) ? source.sponsorId : null,
       });
       setBusyKind(null);
       setError(result.error ?? null);
@@ -235,6 +244,9 @@ export function GraphicsPanel({
     [items, scoreboard],
   );
 
+  const draftSponsor =
+    sponsors.find((sponsor) => sponsor.id === draft.sponsorId) ?? null;
+
   const previewGraphic = useMemo(
     () =>
       toOverlayGraphic(
@@ -245,13 +257,15 @@ export function GraphicsPanel({
           fields: fieldsFor(selectedKind, draft),
           gameId: needsGame(selectedKind) ? (scoreboard?.gameId ?? null) : null,
           playerId: draft.playerId,
+          sponsorId: needsSponsor(selectedKind) ? draft.sponsorId : null,
+          sponsor: needsSponsor(selectedKind) ? draftSponsor : null,
           takenAt: null,
           updatedAt: new Date(0).toISOString(),
           updatedByName: null,
         },
         scoreboard,
       ),
-    [draft, fieldsFor, scoreboard, selectedKind],
+    [draft, draftSponsor, fieldsFor, scoreboard, selectedKind],
   );
 
   const liveCount = liveGraphics.length;
@@ -364,6 +378,14 @@ export function GraphicsPanel({
             />
           ) : null}
 
+          {def.source === "SPONSOR" ? (
+            <SponsorPicker
+              sponsors={sponsors}
+              value={draft.sponsorId}
+              onPick={(sponsor) => patchDraft({ sponsorId: sponsor?.id ?? null })}
+            />
+          ) : null}
+
           {def.fields.map((field) => (
             <label key={field.key} className="block">
               <span className="mb-0.5 block font-mono text-[0.55rem] tracking-[0.15em] text-slate-500 uppercase">
@@ -393,6 +415,14 @@ export function GraphicsPanel({
               {scoreboard
                 ? `Reads ${scoreboard.awayLabel} at ${scoreboard.homeLabel} live from the game record — the score on air is the score on /sports.`
                 : "Pick a game in Game control first. This card reads the score from the game record rather than copying it."}
+            </p>
+          ) : null}
+
+          {needsSponsor(selectedKind) ? (
+            <p className="rounded-sm border border-white/10 bg-white/[0.02] px-2 py-1.5 text-[0.65rem] leading-snug text-slate-400">
+              {draftSponsor
+                ? `Reads ${draftSponsor.name} from the sponsor book — fixing the name or logo there fixes this card on air.`
+                : "No sponsor attached, so this card uses the copy typed above. Attach one from the book to get the logo and keep it correctable."}
             </p>
           ) : null}
 
@@ -460,8 +490,9 @@ export function GraphicsPanel({
       <StudioEmptyNote>
         Graphics render in the OBS Browser Source, not in OBS itself — the
         overlay pulls this state about once a second. One graphic per region, so
-        a take replaces whatever shared that part of the frame. Sponsor is a
-        single billboard; rotation and impression counts are not built.
+        a take replaces whatever shared that part of the frame. Sponsor cards
+        are faster to run from the Sponsors panel; this is where one-off
+        wording lives.
       </StudioEmptyNote>
     </StudioPanel>
   );
@@ -473,6 +504,10 @@ function needsGame(kind: StudioGraphicKind): boolean {
   return STUDIO_GRAPHIC_DEFS[kind].source === "GAME";
 }
 
+function needsSponsor(kind: StudioGraphicKind): boolean {
+  return STUDIO_GRAPHIC_DEFS[kind].source === "SPONSOR";
+}
+
 function sourceLabel(source: string): string {
   switch (source) {
     case "GAME":
@@ -481,6 +516,8 @@ function sourceLabel(source: string): string {
       return "Reads the roster";
     case "ROSTER":
       return "Reads the roster";
+    case "SPONSOR":
+      return "Reads the sponsor book";
     default:
       return "Typed here";
   }
@@ -583,6 +620,7 @@ function toOverlayGraphic(
     // different game previews without a score rather than with the wrong one.
     scoreboard:
       view.gameId && scoreboard?.gameId === view.gameId ? scoreboard : null,
+    sponsor: view.sponsor,
   };
 }
 
@@ -692,6 +730,58 @@ function PlayerPicker({
             {player.jerseyNumber ? `#${player.jerseyNumber} ` : ""}
             {player.fullName}
             {player.position ? ` · ${player.position}` : ""}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/**
+ * Attaches a card to the sponsor book. Leaving it unattached is a real choice
+ * — a one-off thank-you does not belong in the season's book — so the empty
+ * option stays available rather than being a placeholder.
+ */
+function SponsorPicker({
+  sponsors,
+  value,
+  onPick,
+}: {
+  sponsors: StudioSponsorView[];
+  value: string | null;
+  onPick: (sponsor: StudioSponsorView | null) => void;
+}) {
+  if (sponsors.length === 0) {
+    return (
+      <p className="rounded-sm border border-white/10 bg-white/[0.02] px-2 py-1.5 text-[0.65rem] text-slate-400">
+        The sponsor book is empty. Add sponsors in the Sponsors panel, or type
+        the copy below for a one-off.
+      </p>
+    );
+  }
+
+  return (
+    <label className="block">
+      <span className="mb-0.5 block font-mono text-[0.55rem] tracking-[0.15em] text-slate-500 uppercase">
+        Sponsor book
+      </span>
+      <select
+        value={value ?? ""}
+        onChange={(event) =>
+          onPick(
+            sponsors.find((sponsor) => sponsor.id === event.target.value) ??
+              null,
+          )
+        }
+        className="h-8 w-full rounded-sm border border-white/15 bg-white/5 px-2 text-[0.7rem] text-slate-200 focus:border-[#2F80ED] focus:outline-none"
+      >
+        <option value="" className="bg-[#0C1A2E]">
+          Type the copy instead
+        </option>
+        {sponsors.map((sponsor) => (
+          <option key={sponsor.id} value={sponsor.id} className="bg-[#0C1A2E]">
+            {sponsor.name}
+            {sponsor.isActive ? "" : " · off the book"}
           </option>
         ))}
       </select>

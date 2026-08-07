@@ -69,6 +69,26 @@ export function formatElapsed(now: number | null, since: string | null): string 
   return hms(Math.floor((now - startedAt) / 1000));
 }
 
+/**
+ * Segment timer for the run of show — `m:ss`, counting up from when the item
+ * was taken. Minutes rather than hours, because a rundown item that has been
+ * up for an hour is a forgotten advance, not a long segment.
+ */
+export function formatSegmentTimer(
+  now: number | null,
+  since: string | null,
+): string | null {
+  if (!since) {
+    return null;
+  }
+  if (!now) {
+    return "0:00";
+  }
+
+  const seconds = Math.max(0, Math.floor((now - new Date(since).getTime()) / 1000));
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
 /** Countdown to the next air time. Past times read as an open air window. */
 export function formatCountdown(
   now: number | null,

@@ -456,6 +456,8 @@ model User {
   sportsStatsRecorded        SportsPlayerStat[]        @relation("SportsStatRecorder")
   studioCommandsRequested    StudioCommand[]           @relation("StudioCommandRequester")
   studioGraphicsOperated     StudioGraphic[]           @relation("StudioGraphicOperator")
+  studioRundownsOperated     StudioRunOfShow[]         @relation("StudioRunOfShowOperator")
+  studioSponsorsMaintained   StudioSponsor[]           @relation("StudioSponsorOperator")
 
   @@index([role])
   @@index([schoolId])
@@ -1346,6 +1348,7 @@ model Partner {
   createdAt           DateTime           @default(now()) @map("created_at")
   updatedAt           DateTime           @updatedAt @map("updated_at")
   opportunities       PartnerOpportunity[]
+  studioSponsors      StudioSponsor[]
 
   @@index([partnerType])
   @@index([communityCategory])
@@ -2024,6 +2027,8 @@ enum StudioGraphicKind {
   FINAL_SCORE
   ANNOUNCEMENT
   SPONSOR
+  /** Full-frame sponsor billboard, for breaks rather than under a talking head. */
+  SPONSOR_FULL
 }
 
 enum StudioGraphicState {
@@ -2073,6 +2078,8 @@ model StudioGraphic {
 
   gameId   String? @map("game_id")
   playerId String? @map("player_id")
+  /** Sponsor cards keep the row, not a copy of its name and logo. */
+  sponsorId String? @map("sponsor_id")
 
   takenAt   DateTime? @map("taken_at")
   clearedAt DateTime? @map("cleared_at")
@@ -2083,15 +2090,97 @@ model StudioGraphic {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  overlay   StudioOverlay @relation(fields: [overlayId], references: [id], onDelete: Cascade)
-  game      SportsGame?   @relation("StudioGraphicGame", fields: [gameId], references: [id], onDelete: SetNull)
-  player    SportsPlayer? @relation("StudioGraphicPlayer", fields: [playerId], references: [id], onDelete: SetNull)
-  updatedBy User?         @relation("StudioGraphicOperator", fields: [updatedById], references: [id], onDelete: SetNull)
+  overlay   StudioOverlay  @relation(fields: [overlayId], references: [id], onDelete: Cascade)
+  game      SportsGame?    @relation("StudioGraphicGame", fields: [gameId], references: [id], onDelete: SetNull)
+  player    SportsPlayer?  @relation("StudioGraphicPlayer", fields: [playerId], references: [id], onDelete: SetNull)
+  sponsor   StudioSponsor? @relation("StudioGraphicSponsor", fields: [sponsorId], references: [id], onDelete: SetNull)
+  updatedBy User?          @relation("StudioGraphicOperator", fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@unique([overlayId, kind])
   @@index([overlayId, state])
   @@index([gameId])
+  @@index([sponsorId])
   @@map("studio_graphics")
+}
+
+/**
+ * A sponsor the broadcast can put on air (Phase 7).
+ *
+ * The campus `Partner` directory stays the record of who the school works
+ * with; `partnerId` adopts one of those rows so a name and logo are entered
+ * once. What lives here is only what a broadcast needs and a directory does
+ * not have: rotation order, how long a billboard sits, and whether the sponsor
+ * is in tonight's book. Read by the public overlay, so nothing but public
+ * marketing copy may ever land in these columns.
+ */
+model StudioSponsor {
+  id      String  @id @default(cuid())
+  name    String
+  tagline String?
+  /** Absolute http(s) URL. Validated on write; rendered on the public overlay. */
+  logoUrl String? @map("logo_url")
+
+  partnerId String? @map("partner_id")
+
+  /** Seconds a billboard is meant to sit before the next sponsor. */
+  durationSeconds Int     @default(15) @map("duration_seconds")
+  /** Rotation order — lower goes first, then name. */
+  priority        Int     @default(0)
+  isActive        Boolean @default(true) @map("is_active")
+
+  /** Last time this sponsor was taken to air. Ordering aid, not an impression count. */
+  lastLiveAt DateTime? @map("last_live_at")
+
+  updatedById   String? @map("updated_by_id") @db.Uuid
+  updatedByName String? @map("updated_by_name")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  partner   Partner?        @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  updatedBy User?           @relation("StudioSponsorOperator", fields: [updatedById], references: [id], onDelete: SetNull)
+  graphics  StudioGraphic[] @relation("StudioGraphicSponsor")
+
+  @@index([isActive, priority])
+  @@index([partnerId])
+  @@map("studio_sponsors")
+}
+
+/**
+ * Where the operator is in today's rundown (Phase 7).
+ *
+ * Progress only — never the script. Items are referenced by the slot keys in
+ * `BroadcastScriptTemplate` / `BroadcastDailyScript`, so the words an operator
+ * reads keep exactly one home and this row cannot drift from them. A slot that
+ * disappears from the template simply stops being referenced.
+ */
+model StudioRunOfShow {
+  id  String @id @default(cuid())
+  /** Studio surface the progress belongs to, e.g. `studio-b`. */
+  key String
+  /** UTC day, matching `BroadcastDailyScript.scriptDate`. */
+  showDate DateTime @map("show_date") @db.Date
+
+  /** Slot key that is on the air, or null before the show starts. */
+  currentKey String? @map("current_key")
+  /** Slot key → `READY` / `COMPLETED` / `SKIPPED`. Absent means pending. */
+  itemStates Json    @default("{}") @map("item_states")
+
+  startedAt DateTime? @map("started_at")
+  /** When the current item was taken — what the segment timer counts from. */
+  itemStartedAt DateTime? @map("item_started_at")
+  endedAt       DateTime? @map("ended_at")
+
+  updatedById   String? @map("updated_by_id") @db.Uuid
+  updatedByName String? @map("updated_by_name")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  updatedBy User? @relation("StudioRunOfShowOperator", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([key, showDate])
+  @@map("studio_run_of_show")
 }
 
 enum SportSeason {

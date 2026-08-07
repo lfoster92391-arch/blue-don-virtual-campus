@@ -26,7 +26,6 @@ import { cn } from "@/lib/utils";
 import type {
   StudioCrewMember,
   StudioProgramState,
-  StudioRunOfShowState,
 } from "@/services/broadcast-studio-service";
 import type { StudioBridgeSnapshot } from "@/services/studio-bridge-service";
 
@@ -382,120 +381,6 @@ export function AudioPanel() {
         Real meters and mutes are not wired.
       </StudioEmptyNote>
     </StudioPanel>
-  );
-}
-
-/** Today's Daily Rundown (BroadcastDailyScript + org script template). */
-export function RunOfShowPanel({
-  runOfShow,
-}: {
-  runOfShow: StudioRunOfShowState | null;
-}) {
-  const tick = useSecondTick();
-
-  if (!runOfShow) {
-    return (
-      <StudioPanel title="Run of show" className="lg:flex-1">
-        <StudioEmptyNote>
-          Today&apos;s rundown could not be read. Open the{" "}
-          <Link
-            href="/organizations/broadcasting?tab=script"
-            className="text-slate-300 underline"
-          >
-            Daily Rundown
-          </Link>{" "}
-          to check it.
-        </StudioEmptyNote>
-      </StudioPanel>
-    );
-  }
-
-  const updated = formatSinceLabel(tick, runOfShow.updatedAt);
-
-  return (
-    <StudioPanel
-      title="Run of show"
-      meta={`${runOfShow.filledCount}/${runOfShow.fillableCount} filled`}
-      className="lg:flex-1"
-    >
-      <ol className="space-y-1">
-        {runOfShow.items.map((item, index) => (
-          <li
-            key={item.key}
-            className="rounded-sm border border-white/5 bg-white/[0.02] px-2 py-1.5"
-          >
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-[0.6rem] text-slate-600 tabular-nums">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <span className="min-w-0 flex-1 truncate text-[0.7rem] text-slate-300">
-                {item.label}
-              </span>
-              <SlotChip item={item} />
-            </div>
-            <p
-              className={cn(
-                "mt-0.5 pl-6 text-[0.65rem] leading-snug",
-                item.filled ? "text-slate-400" : "text-slate-600 italic",
-              )}
-            >
-              {item.line.length > 140
-                ? `${item.line.slice(0, 140)}…`
-                : item.line}
-            </p>
-          </li>
-        ))}
-      </ol>
-      <StudioEmptyNote>
-        {runOfShow.isPersisted
-          ? `Today's rundown${runOfShow.updatedByName ? ` · ${runOfShow.updatedByName}` : ""}${updated ? ` · saved ${updated}` : ""}.`
-          : "No one has saved today's rundown yet — this is the template."}{" "}
-        <Link
-          href="/organizations/broadcasting?tab=script"
-          className="text-slate-300 underline"
-        >
-          Edit in Daily Rundown
-        </Link>
-        . Segment timing and automatic item advance are not built.
-      </StudioEmptyNote>
-    </StudioPanel>
-  );
-}
-
-function SlotChip({
-  item,
-}: {
-  item: StudioRunOfShowState["items"][number];
-}) {
-  const chrome =
-    item.slotType === "FIXED"
-      ? { label: "Fixed", tone: "border-white/10 bg-white/5 text-slate-500" }
-      : item.slotType === "LOCKED_DAILY"
-        ? {
-            label: "Prayer",
-            tone: "border-[#2F80ED]/40 bg-[#2F80ED]/10 text-[#8FBEFF]",
-          }
-        : item.filled
-          ? {
-              label: "Filled",
-              tone: "border-[#2E8B57]/40 bg-[#2E8B57]/10 text-[#7FE0A8]",
-            }
-          : {
-              label: item.required ? "Needed" : "Open",
-              tone: item.required
-                ? "border-[#E11D48]/40 bg-[#E11D48]/10 text-[#FF8098]"
-                : "border-white/10 bg-white/5 text-slate-500",
-            };
-
-  return (
-    <span
-      className={cn(
-        "shrink-0 rounded-sm border px-1.5 py-0.5 font-mono text-[0.55rem] tracking-wider uppercase",
-        chrome.tone,
-      )}
-    >
-      {chrome.label}
-    </span>
   );
 }
 

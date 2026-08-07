@@ -5,11 +5,11 @@ operator surface that eventually drives OBS, graphics, audio, and the
 scoreboard. It lives outside the campus shell so it reads as broadcast
 hardware, not a SaaS dashboard.
 
-**Status: Phase 6 shipped — the console reads campus data, writes the game
-score, drives OBS through the Studio Bridge, and takes graphics to an OBS
-Browser Source overlay.** Sponsor rotation, the Daktronics feed, real audio
-metering, and source tally are **not approved**. Do not build them without
-sign-off.
+**Status: Phase 7 shipped — the console reads campus data, writes the game
+score, drives OBS through the Studio Bridge, takes graphics to an OBS Browser
+Source overlay, drives today's rundown, and runs a sponsor book.** The
+Daktronics feed, real audio metering, source tally, and broadcaster role UIs
+are **not approved**. Do not build them without sign-off.
 
 ## Route
 
@@ -56,10 +56,11 @@ badge, so an operator never has to guess which readouts are real.
 | Left | System health | env + `CampusMediaItem` + `StudioBridge` | **Campus stream record** (On air / Idle), **RTMP ingest** (Key set / No key), **Studio bridge** (Connected / Disconnected / Never paired / Not set up), **OBS WebSocket** (Connected / No OBS), **Encoder** (measured kbps + dropped frames while streaming). Scoreboard and disk stay "Not linked" |
 | Left | OBS stream target | `revealStreamCredentialsAction` | Crew-gated reveal, unchanged from Phase 2 |
 | Center | PROGRAM | `CampusMediaItem.embedUrl` | Real viewer embed when the on-air row has one, black slate otherwise; footer credits the operator who started the stream |
-| Center | Graphics | `StudioGraphic` + `SportsGame` + `SportsPlayer` | **Read and write.** Eight graphic kinds with editable copy, Preview / Take live / Remove, PVW and PGM monitors rendering the real overlay components, the Browser Source URL, and an overlay-attached lamp |
+| Center | Graphics | `StudioGraphic` + `SportsGame` + `SportsPlayer` + `StudioSponsor` | **Read and write.** Nine graphic kinds with editable copy, Preview / Take live / Remove, PVW and PGM monitors rendering the real overlay components, the Browser Source URL, and an overlay-attached lamp |
+| Center | Sponsors | `StudioSponsor` (+ `Partner`) | **Read and write.** The sponsor book with Preview / Take live / Remove per row against the strap or the full billboard, a Next key, console-side auto-advance, and add / edit / remove including adopting a campus partner |
 | Center | Sources / Audio | static config | Tile and fader labels only |
 | Right | Game control | `SportsGame` | **Read and write.** Game picker, away/home labels with opponent logos, scores with per-sport quick keys, and `SCHEDULED / LIVE / FINAL` status. Clock and period are console-only. Reads MANUAL MODE — no Daktronics |
-| Right | Run of show | `BroadcastDailyScript` + `BroadcastScriptTemplate` | Today's rundown with the **filled values** rendered per slot, a `Filled / Needed / Open / Prayer / Fixed` chip per item, a `4/7 filled` count, and who saved it when. Links to the Daily Rundown to edit |
+| Right | Run of show | `BroadcastDailyScript` + `BroadcastScriptTemplate` + `StudioRunOfShow` | **Read and write.** Today's rundown with the **filled values** rendered per slot, driven with Back / Advance / jump, a per-item `Pending / Ready / On air / Done / Skipped` state, and a segment timer |
 | Footer | GO LIVE / START RECORD / END BROADCAST | `startStudioBroadcastAction` / `endStudioBroadcastAction` / command queue | GO LIVE and END BROADCAST write the campus record **and** queue OBS start / stop when the bridge is up. START RECORD toggles the OBS recording and is disabled without the bridge |
 
 GO LIVE and END BROADCAST write the same `CampusMediaItem` record the Control
@@ -113,8 +114,8 @@ no Prisma columns.**
 The console never claims a status it cannot measure. There is no fake telemetry:
 health rows without a data source read "Not linked", game control reads `--` for
 a score nobody has entered, and the run of show says "no one has saved today's
-rundown yet" instead of showing invented timings. Segment times are deliberately
-absent because no schema stores them.
+rundown yet" instead of showing invented timings. Planned segment durations are
+deliberately absent because no schema stores them.
 
 Game control reads **MANUAL MODE**, never "scoreboard connected". Nothing is
 linked to the Daktronics board — a person is typing the score — and the System
@@ -126,8 +127,14 @@ DISCONNECTED and drags the OBS and encoder rows down with it. The audio faders
 are still config, not measurement, and the panel now says so.
 
 Phase 6 extends it again to the overlay: "attached" means a Browser Source
-actually asked for the state inside the last 25 seconds, and the graphics panel
-says a sponsor is one billboard rather than implying a rotation exists.
+actually asked for the state inside the last 25 seconds.
+
+Phase 7 keeps it in two more places. The run of show reports where the crew
+actually is — an item is "on air" because somebody pressed it, and the segment
+timer counts from that press, turning amber past 15 minutes rather than
+implying a long segment was intended. And sponsor auto-advance is labelled as
+running **from this console tab**, because nothing on the campus schedules a
+rotation; close the tab and it stops, which the panel says out loud.
 
 ## Studio Bridge (Phase 5)
 
@@ -285,7 +292,8 @@ clears the outgoing sibling and writes the new graphic in a single transaction.
 | Lower third | Lower | Typed: name, title / role, secondary line |
 | Player ID | Lower | `SportsPlayer` picker for the selected game, then editable |
 | Announcement | Lower | Typed: headline, second line, tag |
-| Sponsor | Lower | Typed. One billboard — **no rotation, no impression counts** |
+| Sponsor strap | Lower | `StudioSponsor` picked from the book, or typed for a one-off |
+| Sponsor billboard | Full | Same, full frame with the logo — the break card |
 | Score bug | Bug | `SportsGame` + the console clock / period |
 | Starting lineup | Full | `SportsPlayer` roster, hand-picked into up to 12 rows |
 | Game announcement | Full | `SportsGame` matchup, site, kickoff |
@@ -332,13 +340,120 @@ says so within half a minute. It is derived from a real request, never from a
 stored flag — so an operator can tell "nothing is cued" apart from "OBS is not
 looking at us."
 
+## Run of show (Phase 7)
+
+The rundown was readable in Phase 3. Phase 7 makes it operable without moving
+where the words live: the script is still the Daily Rundown's
+`BroadcastDailyScript`, and the console stores **only the crew's position in
+it**. Items are referenced by slot key, so there is no second copy of the show
+to fall out of sync, and a slot deleted from the template simply stops being
+referenced.
+
+### The five states
+
+| State | Means | Set by |
+| --- | --- | --- |
+| **Pending** | Nobody has touched it. Still shows the Phase 3 `Filled / Needed / Open / Prayer / Fixed` chip | default |
+| **Ready** | Prepped ahead of air | the row's check key |
+| **On air** | The item being read right now. Exactly one, ever — it is the row's `currentKey`, not a per-item flag | Advance, Start, or tapping the item |
+| **Done** | Advanced past | Advance |
+| **Skipped** | Not being read tonight. Advance walks over it | the row's skip key |
+
+### The keys
+
+| Key | Does |
+| --- | --- |
+| **Start show** | Puts the first non-skipped item up and stamps the show start |
+| **Advance** | Marks the current item **Done** and moves to the next non-skipped one. Advancing off the end ends the show |
+| **Back** | Returns to the previous item and **un-completes** it; the item being left drops back to pending, because nothing after that point has happened yet |
+| **Tap an item** | Jumps straight to it without disturbing anything else — and un-skips it, since picking it is saying it is being read |
+| **Check** | Toggles Ready |
+| **Skip** | Toggles Skipped. Skipping what is on air advances |
+| **Reset** | Clears today's progress. **The script is untouched** |
+
+The filled script line stays visible under every item whatever its state, and
+the item on air shows its line in full rather than truncated — the panel is
+what the operator is reading from, so hiding the words to save space would
+defeat it.
+
+### The segment timer
+
+`itemStartedAt` is stamped whenever the current item changes, and the panel
+counts up from it in `m:ss`. Past `STUDIO_SEGMENT_LONG_SECONDS` (15 minutes)
+the chip turns amber, because a rundown item up for a quarter of an hour is a
+forgotten advance rather than a long segment. Nothing writes per second: the
+timestamp is one column and the browser does the counting.
+
+### Shared, soft-failing, crew-gated
+
+Progress is one row per studio per day, so a second console sees the same
+position within a poll (~5 s) — this is shared state, not a per-browser view,
+which is the point when the producer and the director are on different
+machines. It is still last-write-wins; real multi-operator sync is Phase 8+.
+Ordering is resolved **server-side** from today's script on every press, so a
+console left open across a template edit cannot advance into a slot that no
+longer exists. Permission is `canManageCampusMedia`, re-checked inside the
+service. If the write fails the console says so and the script is unaffected.
+
+## Sponsors (Phase 7)
+
+Phase 6 had one hand-typed sponsor strap. Phase 7 gives the club a **book**: a
+list of sponsors with logos, rotation order, and a billboard duration, and two
+places to put one on air.
+
+### The card is never a copy
+
+A sponsor graphic stores a `sponsorId`, exactly as a score bug stores a
+`gameId`. `StudioSponsor` is resolved on every overlay poll, so fixing a
+misspelled sponsor name or swapping a logo in the book fixes what is on air
+within a second, and there is no second list of businesses to disagree with.
+
+### Adapter, not a second directory
+
+The campus already keeps `Partner` — approved local businesses with names and
+logos. A sponsor can **adopt** one (`StudioSponsor.partnerId`), which fills the
+name and logo from that row instead of retyping them. What `StudioSponsor` adds
+is the part a directory has no business holding: rotation order, how long a
+billboard sits, and whether the sponsor is in tonight's book. A sponsor with no
+partner is fine — not every advertiser is in the directory.
+
+### Controls
+
+| Key | Does |
+| --- | --- |
+| **Strap / Billboard** | Which region the keys act on: the lower strap during the show, or the full-frame break card |
+| **Preview** | Cues that sponsor into the chosen region. Nothing changes on air |
+| **Take live** | Puts it on the overlay within ~1 s and stamps `lastLiveAt` |
+| **Remove** | Pulls that region |
+| **Next sponsor** | Takes the next **active** sponsor in book order, wrapping at the end |
+| **Auto** | Advances on the current sponsor's duration — **from this console tab only** (see the honesty rule) |
+| **Add / edit / remove** | Maintains the book. Removing a sponsor that is on air is refused; take it off first |
+
+Region rules are Phase 6's, unchanged: the strap shares the lower third with
+lower thirds and player IDs, and the billboard shares the full frame with
+lineups and final scores, so a take replaces rather than stacks.
+
+### What is deliberately absent
+
+No impression counts, no per-spot reporting, no scheduling by daypart.
+`lastLiveAt` exists so an operator can see which sponsor has waited longest;
+it is a timestamp, not analytics. The sponsor book is capped at
+`STUDIO_SPONSOR_MAX` (40) — a season's sponsors, not an ad server.
+
+Logo URLs are stored only if they parse as absolute `http(s)` URLs, because an
+unauthenticated page renders them. They are `<img>` rather than `next/image`,
+the same call the opponent logos make: allowlisting every local business's host
+in `next.config` is not workable.
+
 ## Data flow and refresh
 
 - `getStudioConsoleSnapshot()` (`src/services/broadcast-studio-service.ts`)
-  builds one serializable `StudioConsoleSnapshot` from seven reads in parallel:
+  builds one serializable `StudioConsoleSnapshot` from eight reads in parallel:
   `getActiveLiveStream()`, `getBroadcastSchedule()`, `listCrewCredits()`,
   `getCurrentOrNextGame()`, `listCoverableGames()`,
-  `getStudioBridgeSnapshot()`, and `getTodaysBroadcastScript()`.
+  `getStudioBridgeSnapshot()`, `getStudioGraphicsState()`, and
+  `listStudioSponsors()` — then `getTodaysBroadcastScript()` and, once its slot
+  keys are known, `getStudioRunProgress()`.
 - `getStudioConsoleSnapshot({ gameId })` pins the readout to the game the
   operator picked; without it the console falls back to the automatic choice (an
   in-progress game, else the next one inside 36 hours). While a game is pinned
@@ -424,8 +539,31 @@ Phase 6 adds two more, in `prisma/migrations/20260805120000_studio_graphics`:
 | `StudioOverlay` | `studio_overlays` | One row per Browser Source surface, keyed `studio-b`. The session key and `lastSeenAt`. Rotating the URL is an update to this row |
 | `StudioGraphic` | `studio_graphics` | One row per overlay **per kind** — `@@unique([overlayId, kind])`. State, the typed copy as JSON, optional `gameId` / `playerId`, and who last touched it |
 
-Enums: `StudioGraphicKind` (the eight kinds) and `StudioGraphicState`
+Enums: `StudioGraphicKind` (the graphic kinds) and `StudioGraphicState`
 (`PREVIEW / LIVE / CLEARED`).
+
+Phase 7 adds two more, in
+`prisma/migrations/20260805190000_studio_run_of_show_and_sponsors`:
+
+| Model | Table | Holds |
+| --- | --- | --- |
+| `StudioSponsor` | `studio_sponsors` | The sponsor book: name, tagline, logo URL, optional `partnerId`, billboard duration, rotation priority, active flag, and `lastLiveAt` |
+| `StudioRunOfShow` | `studio_run_of_show` | One row per studio per day (`@@unique([key, showDate])`). The slot key on air, a `slotKey → READY / COMPLETED / SKIPPED` map, and the show / item timestamps |
+
+The same migration adds `SPONSOR_FULL` to `StudioGraphicKind` and
+`StudioGraphic.sponsor_id`.
+
+`itemStates` is JSON rather than a table of rows because it is a handful of
+keys keyed to a script that already exists — a `studio_run_of_show_items` table
+would be one row per slot per day for a value that is only ever read as a whole
+map. It is filtered on read against today's slot keys and sanitized to the
+three stored states on write, the same discipline `fields` gets on
+`StudioGraphic`. `CURRENT` is deliberately **not** one of them: it is the
+`currentKey` column, so two items cannot both claim to be on air.
+
+Still no schema for segment *durations* — the run of show stores when an item
+was taken, not how long it was supposed to run. Planned timings are a rundown
+feature, and no one has asked for them.
 
 One row per kind, upserted, rather than an append-only take log: an operator
 retypes and re-takes the same lower third all night, and a log would grow by the
@@ -456,13 +594,17 @@ src/app/api/studio/bridge/state/route.ts          agent: post telemetry + comman
 src/services/broadcast-studio-service.ts          the StudioConsoleSnapshot + the overlay payload
 src/services/studio-bridge-service.ts             token auth, queue, telemetry, transport gate
 src/services/studio-graphics-service.ts           cue / take / clear, session key, overlay heartbeat
-src/features/broadcast-studio/actions.ts          score write, command queue, graphics, go live / end
+src/services/studio-run-of-show-service.ts        rundown progress: advance / back / jump / ready / skip
+src/services/studio-sponsors-service.ts           the sponsor book, partner adapter, rotation order
+src/features/broadcast-studio/actions.ts          score, commands, graphics, run of show, sponsors, go live / end
 src/components/studio/studio-console.tsx          client shell + polling + grid
 src/components/studio/studio-frame.tsx            panel / tile / air-lamp primitives
 src/components/studio/studio-header.tsx           air state, clocks, event, sync lamp
 src/components/studio/studio-panels.tsx           the console panels (scenes, health, …)
 src/components/studio/studio-game-control.tsx     game picker, score keys, status
 src/components/studio/studio-graphics-panel.tsx   kind picker, copy fields, PVW/PGM, overlay URL
+src/components/studio/studio-run-of-show.tsx      the driven rundown: transport, item states, segment timer
+src/components/studio/studio-sponsor-panel.tsx    the sponsor book, take keys, rotation, add / edit
 src/components/broadcast-overlay/overlay-client.tsx         1 s poll loop for the Browser Source
 src/components/broadcast-overlay/overlay-stage.tsx          the graphics themselves (shared with PVW/PGM)
 src/components/studio/use-studio-command.ts       queues one OBS command, tracks in-flight
@@ -579,7 +721,7 @@ You can do the whole check in a browser tab on the overlay URL if OBS is not to
 hand; the URL is a normal web page, just a transparent one.
 
 1. Open `/broadcast/studio` as Broadcasting crew. The **Graphics** panel lists
-   the eight kinds and shows the overlay URL with **Copy overlay URL**. With no
+   the graphic kinds and shows the overlay URL with **Copy overlay URL**. With no
    Browser Source open it reads that nothing is attached.
 2. Open the overlay URL in a second tab. Within ~25 s the panel says the overlay
    is attached.
@@ -604,15 +746,70 @@ hand; the URL is a normal web page, just a transparent one.
     tab carries no stream key, bridge token, or session cookie. Press **Rotate**
     and reload the old URL — it is now a `404`, and OBS needs the new one.
 
-## Not in Phase 6 (awaiting approval)
+## How to verify Phase 7
 
-- Sponsor rotation, scheduling, or impression counts (one billboard exists)
-- Interactive run of show — the rundown is still read-only in the console
+Run `npx prisma migrate deploy` first — Phase 7 is the first studio phase since
+Phase 6 to add tables.
+
+### Run of show
+
+1. Fill a couple of slots in `/organizations/broadcasting?tab=script` and save,
+   then open `/broadcast/studio` as Broadcasting crew. **Run of show** lists
+   today's items with their filled lines, all **Pending**.
+2. Press **Start show**. Item 1 goes **On air**, the header shows `1/9`, and a
+   segment timer starts counting in `m:ss`.
+3. Press **Advance**. Item 1 reads **Done**, item 2 goes on air, and the timer
+   restarts. The line for the item on air is shown in full, not truncated.
+4. Press **Back**. Item 1 is on air again and is **no longer Done**; item 2 is
+   back to pending — going back means that part of the show has not happened.
+5. Tap item 6 directly. It goes on air with nothing else disturbed, which is
+   the out-of-order case (a guest arrives late) working as intended.
+6. Press **Skip** on item 7, then **Advance** from item 6: the rundown walks
+   over 7 to 8. Tap item 7 anyway — picking it un-skips it.
+7. Open the console in a second browser. Within ~5 s it shows the same
+   position, because progress is one shared row, not per-browser state.
+8. Leave an item up for 15 minutes: the segment chip turns amber.
+9. Press **Reset**, confirm, and check
+   `/organizations/broadcasting?tab=script` — the script is exactly as it was.
+   Only the progress cleared.
+
+### Sponsors
+
+10. In **Sponsors**, press **Add sponsor**, type a name and a logo URL, and add
+    it to the book. Then press **Adopt a campus partner** on a second one: the
+    name and logo fill from an approved `Partner` row, and a partner already in
+    the book is greyed out in the picker.
+11. With **Strap** selected, press **Preview** on a sponsor — it appears in the
+    Graphics PVW monitor and nothing changes on the overlay. Press **Take
+    live**: the strap appears on the overlay in about a second, with the logo.
+12. Switch to **Billboard** and take a different sponsor. The full-frame card
+    appears; the strap is untouched, because they are different regions. Take a
+    **Lineup**: it replaces the billboard (same region) and leaves the strap.
+13. Edit the live sponsor's name and save. The card on air changes within a
+    second — it holds the row, not a copy.
+14. Press **Next sponsor**. The next active sponsor in book order takes the
+    region, wrapping at the end. Tick **Auto** and watch it advance on the
+    sponsor's own duration; close the tab and confirm the rotation stops, which
+    is what the panel says it will do.
+15. Set a sponsor to **not** in tonight's rotation. Next and Auto skip it, and
+    it can still be taken by hand.
+16. Try removing a sponsor that is on air: it is refused with a reason. Remove
+    it from the overlay first, then the delete goes through.
+17. Confirm the guards: a non-crew account still cannot reach
+    `/broadcast/studio`, and the overlay's network tab carries sponsor names,
+    taglines, and logo URLs only — the same marketing copy on screen.
+
+## Not in Phase 7 (awaiting approval)
+
+- Full RBAC broadcaster role UIs (Phase 8)
+- Realtime multi-operator sync — progress is shared but last-write-wins, and
+  the console still polls every 5 s
+- Sponsor impression counts, per-spot reporting, or daypart scheduling
+- Server-side sponsor rotation (auto-advance runs in the console tab)
+- Planned segment durations or an over/under against a target time
 - Source tally, per-source visibility toggles, real audio meters and mixing
 - Daktronics scoreboard feed (the console is manual entry only)
 - Durable clock / period, or any scoreboard schema of its own
-- Graphic themes, per-club skins, or an image / logo uploader for graphics
+- Graphic themes, per-club skins, or an image uploader (sponsor logos are URLs)
 - Recording disk space telemetry
-- Full RBAC operator role UIs
-- Realtime multi-operator sync (the console polls every 5 s, the overlay 1 s)
 - Any simulated or fake video backend
