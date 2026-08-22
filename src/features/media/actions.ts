@@ -62,6 +62,10 @@ function revalidateMediaPaths() {
   revalidatePath("/organizations/broadcasting");
   revalidatePath("/broadcast/studio");
   revalidatePath("/home");
+  revalidatePath("/madonna");
+  revalidatePath("/madonna/announcements");
+  revalidatePath("/madonna/sports-recap");
+  revalidatePath("/madonna/highlight-reel");
 }
 
 async function requireMediaProducer() {

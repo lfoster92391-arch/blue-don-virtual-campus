@@ -523,3 +523,259 @@ export async function resolveBroadcastOrganizationId(): Promise<string | null> {
 export function isCampusMediaStorageConfigured(): boolean {
   return isSupabaseAdminConfigured();
 }
+
+/* ------------------------------------------------- Madonna hub video feeds */
+
+/**
+ * Flattened card used by the Madonna hub grids. Sports recap merges two
+ * sources (campus media uploads and sports-desk highlights), so the pages
+ * render this instead of {@link CampusMediaItemView}.
+ */
+export type CampusVideoCard = {
+  id: string;
+  /** Where the row came from, so the UI can label sports-desk submissions. */
+  source: "media" | "highlight";
+  title: string;
+  description: string | null;
+  /** Direct file URL or embeddable page URL. Null means nothing to play yet. */
+  url: string | null;
+  thumbnailUrl: string | null;
+  /** Short badge text — category, sport, or clip kind. */
+  kicker: string;
+  credit: string;
+  /** Raw category for crew curation controls. Null for sports-desk rows. */
+  category: CampusMediaCategory | null;
+  isHighlightReel: boolean;
+  /** True for ended live streams replayed from the archive. */
+  isReplay: boolean;
+  publishedAt: Date | null;
+  /** Normalized timestamp the grids sort on (newest first). */
+  sortAt: Date;
+};
+
+/** Categories that always belong in Madonna Sports Recap. */
+const SPORTS_RECAP_CATEGORIES = ["SPORTS_HIGHLIGHTS", "HIGHLIGHT_REEL"] as const;
+
+/**
+ * True when a stream is tagged as sports coverage, so Sports Recap can play it
+ * inline instead of pointing at the announcements surface.
+ */
+export function isSportsTaggedMedia(item: CampusMediaItemView | null): boolean {
+  if (!item) {
+    return false;
+  }
+  return (
+    item.isHighlightReel ||
+    item.category === "SPORTS_HIGHLIGHTS" ||
+    item.category === "HIGHLIGHT_REEL"
+  );
+}
+
+/** Published uploads plus ended live streams — the "watchable archive" filter. */
+const WATCHABLE_ARCHIVE = [
+  { type: "VIDEO_UPLOAD" as const, status: "PUBLISHED" as const },
+  { type: "LIVE_STREAM" as const, status: "ENDED" as const },
+];
+
+function mediaViewToCard(item: CampusMediaItemView, kicker: string): CampusVideoCard {
+  const sortAt = item.publishedAt ?? item.endedAt ?? item.createdAt;
+
+  return {
+    id: item.id,
+    source: "media",
+    title: item.title,
+    description: item.description,
+    url: item.publicUrl ?? item.embedUrl,
+    thumbnailUrl: item.thumbnailUrl,
+    kicker,
+    credit: item.uploaderName,
+    category: item.category,
+    isHighlightReel: item.isHighlightReel || item.category === "HIGHLIGHT_REEL",
+    isReplay: item.type === "LIVE_STREAM",
+    publishedAt: item.publishedAt ?? item.endedAt,
+    sortAt,
+  };
+}
+
+function categoryKicker(category: CampusMediaCategory | null): string {
+  switch (category) {
+    case "MORNING_ANNOUNCEMENTS":
+      return "Morning Announcements";
+    case "SPORTS_HIGHLIGHTS":
+      return "Sports Highlights";
+    case "STUDENT_SPOTLIGHT":
+      return "Student Spotlight";
+    case "SPECIAL_EVENTS":
+      return "Special Events";
+    case "HIGHLIGHT_REEL":
+      return "Highlight Reel";
+    default:
+      return "Broadcasting";
+  }
+}
+
+function sortCardsNewestFirst(cards: CampusVideoCard[]): CampusVideoCard[] {
+  return cards.sort((a, b) => b.sortAt.getTime() - a.sortAt.getTime());
+}
+
+/**
+ * Every sports / recap video the crew has published, newest first.
+ *
+ * Category tagging is still partial, so three signals are unioned:
+ * `SPORTS_HIGHLIGHTS` / `HIGHLIGHT_REEL` categories, the `isHighlightReel`
+ * flag, and any media item linked from a {@link SportsHighlight}. Published
+ * sports-desk highlights that carry their own video URL (no linked upload)
+ * are merged in as well so nothing the crew posts goes missing.
+ */
+export async function listSportsRecapVideos(options?: {
+  take?: number;
+}): Promise<CampusVideoCard[]> {
+  const take = options?.take ?? 120;
+
+  if (!isDatabaseConfigured() || !isPrismaReady()) {
+    return sortCardsNewestFirst(
+      demoBroadcastViews()
+        .filter(
+          (item) =>
+            item.status !== "LIVE" &&
+            (item.isHighlightReel ||
+              item.category === "SPORTS_HIGHLIGHTS" ||
+              item.category === "HIGHLIGHT_REEL"),
+        )
+        .map((item) => mediaViewToCard(item, categoryKicker(item.category))),
+    );
+  }
+
+  const [mediaRows, highlightRows] = await Promise.all([
+    withDatabase((prisma) =>
+      prisma.campusMediaItem.findMany({
+        where: {
+          OR: WATCHABLE_ARCHIVE,
+          AND: [
+            {
+              OR: [
+                { category: { in: [...SPORTS_RECAP_CATEGORIES] } },
+                { isHighlightReel: true },
+                { sportsHighlights: { some: {} } },
+              ],
+            },
+          ],
+        },
+        orderBy: [
+          { publishedAt: "desc" },
+          { endedAt: "desc" },
+          { createdAt: "desc" },
+        ],
+        take,
+        select: {
+          ...mediaSelect,
+          sportsHighlights: {
+            take: 1,
+            select: { sport: { select: { name: true } } },
+          },
+        },
+      }),
+    ),
+    withDatabase((prisma) =>
+      prisma.sportsHighlight.findMany({
+        where: {
+          status: "PUBLISHED",
+          mediaItemId: null,
+          videoUrl: { not: null },
+        },
+        orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+        take,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          videoUrl: true,
+          imageUrl: true,
+          credit: true,
+          submittedByName: true,
+          publishedAt: true,
+          createdAt: true,
+          sport: { select: { name: true } },
+        },
+      }),
+    ),
+  ]);
+
+  const cards: CampusVideoCard[] = [];
+
+  for (const row of mediaRows ?? []) {
+    const view = mapMediaRow(row);
+    const sportName = row.sportsHighlights[0]?.sport?.name ?? null;
+    cards.push(mediaViewToCard(view, sportName ?? categoryKicker(view.category)));
+  }
+
+  for (const row of highlightRows ?? []) {
+    cards.push({
+      id: `highlight-${row.id}`,
+      source: "highlight",
+      title: row.title,
+      description: row.description,
+      url: row.videoUrl,
+      thumbnailUrl: row.imageUrl,
+      kicker: row.sport?.name ?? "Sports desk",
+      credit: row.credit?.trim() || row.submittedByName?.trim() || "Sports desk",
+      category: null,
+      isHighlightReel: false,
+      isReplay: false,
+      publishedAt: row.publishedAt,
+      sortAt: row.publishedAt ?? row.createdAt,
+    });
+  }
+
+  return sortCardsNewestFirst(cards).slice(0, take);
+}
+
+/**
+ * Announcement videos for the Madonna Announcements page — anything tagged
+ * `MORNING_ANNOUNCEMENTS` plus media attached to a Daily Announcement.
+ */
+export async function listAnnouncementVideos(options?: {
+  take?: number;
+}): Promise<CampusVideoCard[]> {
+  const take = options?.take ?? 60;
+
+  if (!isDatabaseConfigured() || !isPrismaReady()) {
+    return sortCardsNewestFirst(
+      demoBroadcastViews()
+        .filter(
+          (item) =>
+            item.status !== "LIVE" && item.category === "MORNING_ANNOUNCEMENTS",
+        )
+        .map((item) => mediaViewToCard(item, categoryKicker(item.category))),
+    );
+  }
+
+  const rows = await withDatabase((prisma) =>
+    prisma.campusMediaItem.findMany({
+      where: {
+        OR: WATCHABLE_ARCHIVE,
+        AND: [
+          {
+            OR: [
+              { category: "MORNING_ANNOUNCEMENTS" },
+              { announcements: { some: {} } },
+            ],
+          },
+        ],
+      },
+      orderBy: [
+        { publishedAt: "desc" },
+        { endedAt: "desc" },
+        { createdAt: "desc" },
+      ],
+      take,
+      select: mediaSelect,
+    }),
+  );
+
+  return sortCardsNewestFirst(
+    (rows ?? [])
+      .map(mapMediaRow)
+      .map((view) => mediaViewToCard(view, categoryKicker(view.category))),
+  );
+}

@@ -201,6 +201,28 @@ export function MediaHubSections({
             size="sm"
             nativeButton={false}
             render={
+              <Link href="/madonna/sports-recap">
+                Madonna Sports Recap
+                <ArrowRight className="size-3.5" />
+              </Link>
+            }
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={
+              <Link href="/madonna/highlight-reel">
+                <Sparkles className="size-3.5" />
+                Highlight Reel
+              </Link>
+            }
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={
               <Link href="/sports">
                 Open Sports
                 <ArrowRight className="size-3.5" />

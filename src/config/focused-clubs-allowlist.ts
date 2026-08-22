@@ -7,6 +7,7 @@
 /** Exact path prefixes that remain reachable in focused mode. */
 export const FOCUSED_MODE_ALLOWED_PREFIXES = [
   "/home",
+  "/madonna",
   "/organizations/it-club",
   "/organizations/broadcasting",
   "/organizations/cricut-club",

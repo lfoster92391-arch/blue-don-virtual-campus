@@ -34,6 +34,10 @@ function revalidateBroadcastPaths() {
   revalidatePath("/media");
   revalidatePath("/organizations/broadcasting");
   revalidatePath("/home");
+  revalidatePath("/madonna");
+  revalidatePath("/madonna/announcements");
+  revalidatePath("/madonna/sports-recap");
+  revalidatePath("/madonna/highlight-reel");
 }
 
 const bookingServices = z.enum([

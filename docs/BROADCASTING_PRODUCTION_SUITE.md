@@ -7,6 +7,7 @@ Lisa — full Studio B production tools on top of Watch Broadcasting, Daily Rund
 | Surface | Route |
 |---------|--------|
 | Audience watch hub | `/media` |
+| Madonna hub (2-button entry) | `/madonna` — see `docs/MADONNA_HUB.md` |
 | Broadcasting club | `/organizations/broadcasting` |
 
 ### Audience tabs (`/organizations/broadcasting`)
@@ -37,7 +38,7 @@ Lisa — full Studio B production tools on top of Watch Broadcasting, Daily Rund
 
 1. **Countdown** — Crew sets next air time on Overview / Control Room / `/media`. Audience sees the live timer.
 2. **On-demand categories** — Morning Announcements, Sports Highlights, Student Spotlight, Special Events (+ Highlight Reel). Set on upload or from the library categorize control.
-3. **Highlight Reel** — Mark uploads as highlight reel; dedicated section on `/media` and Control Room.
+3. **Highlight Reel** — Mark uploads as highlight reel; dedicated section on `/media` and Control Room, and a playlist-style reel at `/madonna/highlight-reel`. Crew curate it by ticking the box at upload or pressing **Add to reel** in Sports Recap — clips are never auto-detected from game film.
 4. **Event booking** — Submits → Command Center message (`BROADCAST_BOOKING`) to Broadcasting crew → status pending / accepted / declined / completed.
 5. **Announcement submissions** — Faculty/students submit → crew review → approve can publish today’s Daily Announcement; Command Center notify (`BROADCAST_ANNOUNCEMENT_SUBMISSION`).
 6. **Credit roll** — Gallery by production role; officers add from club roster.
