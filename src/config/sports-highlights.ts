@@ -8,6 +8,21 @@
 
 export const SPORTS_STORAGE_PREFIX = "sports-schools";
 
+/**
+ * Madonna's own athletics identity, in one place.
+ *
+ * Opponent marks come from the Opponent directory (`OpponentSchool.logoUrl` /
+ * `OpponentSportTeam.logoUrl`, uploaded to Supabase). Our side has no such row,
+ * so the mark ships as a static public asset and every scoreboard, score bug,
+ * and matchup card reads it from here rather than hardcoding the path.
+ */
+export const CAMPUS_TEAM_NAME = "Blue Dons";
+
+/** Short form for the two-line score bug and console readouts. */
+export const CAMPUS_TEAM_LABEL = "MHS";
+
+export const CAMPUS_TEAM_LOGO_URL = "/images/sports/madonna-dons-logo.png";
+
 export const SPORTS_LOGO_MAX_BYTES = 4 * 1024 * 1024;
 
 export const SPORTS_LOGO_TYPES = [

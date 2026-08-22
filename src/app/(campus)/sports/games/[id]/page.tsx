@@ -15,6 +15,8 @@ import {
 } from "@/components/sports/sports-student-forms";
 import { Button } from "@/components/ui/button";
 import {
+  CAMPUS_TEAM_LOGO_URL,
+  CAMPUS_TEAM_NAME,
   GAME_RESULT_LABELS,
   GAME_SITE_LABELS,
   GAME_STATUS_LABELS,
@@ -65,7 +67,7 @@ export default async function GameDetailPage({ params }: GamePageProps) {
 
   return (
     <ShellPage
-      title={`Blue Dons ${game.site === "HOME" ? "vs" : "at"} ${game.opponentName}`}
+      title={`${CAMPUS_TEAM_NAME} ${game.site === "HOME" ? "vs" : "at"} ${game.opponentName}`}
       description={`${game.sportName} · ${formatGameDateTime(game.kickoffAt)}${
         game.venue ? ` · ${game.venue}` : ""
       }`}
@@ -97,6 +99,13 @@ export default async function GameDetailPage({ params }: GamePageProps) {
     >
       <section className="rounded-xl border border-[#0A2342]/15 bg-gradient-to-br from-[#0A2342] to-[#123a63] p-6 text-white">
         <div className="flex flex-wrap items-center gap-4">
+          {/* Our mark is a static public asset; the opponent's is an upload. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={CAMPUS_TEAM_LOGO_URL}
+            alt={`Madonna ${CAMPUS_TEAM_NAME} logo`}
+            className="size-14 rounded-lg bg-white object-contain p-1"
+          />
           {game.opponentLogoUrl ? (
             // Uploaded by Broadcasting crew or pasted from the school's site.
             // eslint-disable-next-line @next/next/no-img-element
@@ -112,7 +121,8 @@ export default async function GameDetailPage({ params }: GamePageProps) {
               {game.level ? ` · ${game.level}` : ""}
             </p>
             <p className="mt-1 text-2xl font-semibold">
-              Blue Dons {game.site === "HOME" ? "vs" : "at"} {game.opponentName}
+              {CAMPUS_TEAM_NAME} {game.site === "HOME" ? "vs" : "at"}{" "}
+              {game.opponentName}
             </p>
             <p className="text-sm text-white/75">
               {formatGameDateTime(game.kickoffAt)}

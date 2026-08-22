@@ -399,8 +399,16 @@ function ScoreBug({ graphic }: { graphic: StudioOverlayGraphic }) {
     >
       <div className="flex items-stretch">
         <div className="flex flex-col justify-center gap-[0.35cqw] py-[0.9cqw] pr-[1.2cqw] pl-[1.2cqw]">
-          <ScoreLine label={board.awayLabel} score={board.awayScore} />
-          <ScoreLine label={board.homeLabel} score={board.homeScore} />
+          <ScoreLine
+            label={board.awayLabel}
+            logoUrl={board.awayLogoUrl}
+            score={board.awayScore}
+          />
+          <ScoreLine
+            label={board.homeLabel}
+            logoUrl={board.homeLogoUrl}
+            score={board.homeScore}
+          />
         </div>
         {clock || graphic.fields.clock?.period ? (
           <div
@@ -449,13 +457,16 @@ function ScoreBug({ graphic }: { graphic: StudioOverlayGraphic }) {
 
 function ScoreLine({
   label,
+  logoUrl,
   score,
 }: {
   label: string;
+  logoUrl: string | null;
   score: number | null;
 }) {
   return (
-    <div className="flex items-center gap-[1.6cqw]">
+    <div className="flex items-center gap-[0.9cqw]">
+      <TeamMark logoUrl={logoUrl} size="2.2cqw" />
       <span
         className="font-semibold text-white uppercase"
         style={{ fontSize: "1.4cqw", letterSpacing: "0.08em" }}
@@ -463,12 +474,43 @@ function ScoreLine({
         {label}
       </span>
       <span
-        className="ml-auto font-semibold text-white tabular-nums"
+        className="ml-auto pl-[1.6cqw] font-semibold text-white tabular-nums"
         style={{ fontSize: "1.8cqw" }}
       >
         {score ?? 0}
       </span>
     </div>
+  );
+}
+
+/**
+ * A team's mark on a card: the Dons logo on our side, the Sports Desk's upload
+ * on the opponent's. The slot keeps its width when a side has no logo, so an
+ * opponent the desk has not uploaded yet cannot knock the rows out of line.
+ */
+function TeamMark({
+  logoUrl,
+  size,
+}: {
+  logoUrl: string | null;
+  size: string;
+}) {
+  if (!logoUrl) {
+    return (
+      <span aria-hidden="true" className="shrink-0" style={{ width: size }} />
+    );
+  }
+
+  return (
+    // Opponent logos are arbitrary remote URLs; next/image would need every
+    // school host allowlisted in next.config.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={logoUrl}
+      alt=""
+      className="shrink-0 rounded-[0.2cqw] bg-white object-contain"
+      style={{ width: size, height: size, padding: "0.15cqw" }}
+    />
   );
 }
 
@@ -535,12 +577,20 @@ function GameAnnouncementCard({ graphic }: { graphic: StudioOverlayGraphic }) {
       style={{ backgroundColor: `${NAVY}F5` }}
     >
       <Eyebrow>{title ?? "Tonight on MHS Broadcasting"}</Eyebrow>
-      <p
-        className="mt-[0.8cqw] font-semibold text-white"
+      <div
+        className="mt-[0.8cqw] flex items-center justify-center gap-[1.6cqw] font-semibold text-white"
         style={{ fontSize: "3.2cqw", lineHeight: 1.1 }}
       >
-        {board ? `${board.awayLabel} at ${board.homeLabel}` : (note ?? "")}
-      </p>
+        {board ? (
+          <>
+            <TeamMark logoUrl={board.awayLogoUrl} size="4.4cqw" />
+            <span>{`${board.awayLabel} at ${board.homeLabel}`}</span>
+            <TeamMark logoUrl={board.homeLogoUrl} size="4.4cqw" />
+          </>
+        ) : (
+          <span>{note ?? ""}</span>
+        )}
+      </div>
       {board ? (
         <p
           className="mt-[0.6cqw] text-white/80"
@@ -578,8 +628,16 @@ function FinalScoreCard({ graphic }: { graphic: StudioOverlayGraphic }) {
     >
       <Eyebrow>{title ?? board.statusLabel}</Eyebrow>
       <div className="mt-[1.2cqw] space-y-[0.8cqw]">
-        <FinalLine label={board.awayLabel} score={board.awayScore} />
-        <FinalLine label={board.homeLabel} score={board.homeScore} />
+        <FinalLine
+          label={board.awayLabel}
+          logoUrl={board.awayLogoUrl}
+          score={board.awayScore}
+        />
+        <FinalLine
+          label={board.homeLabel}
+          logoUrl={board.homeLogoUrl}
+          score={board.homeScore}
+        />
       </div>
       <p
         className="mt-[1.4cqw] text-white/75"
@@ -591,9 +649,18 @@ function FinalScoreCard({ graphic }: { graphic: StudioOverlayGraphic }) {
   );
 }
 
-function FinalLine({ label, score }: { label: string; score: number | null }) {
+function FinalLine({
+  label,
+  logoUrl,
+  score,
+}: {
+  label: string;
+  logoUrl: string | null;
+  score: number | null;
+}) {
   return (
-    <div className="flex items-baseline gap-[2cqw]">
+    <div className="flex items-center gap-[1.4cqw]">
+      <TeamMark logoUrl={logoUrl} size="3.4cqw" />
       <span
         className="flex-1 font-semibold text-white uppercase"
         style={{ fontSize: "2.4cqw", letterSpacing: "0.06em" }}

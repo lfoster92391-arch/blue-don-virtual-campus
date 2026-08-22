@@ -2,12 +2,31 @@ import Link from "next/link";
 import { CalendarDays, Radio, Trophy } from "lucide-react";
 
 import {
+  CAMPUS_TEAM_LOGO_URL,
+  CAMPUS_TEAM_NAME,
   formatGameDateTime,
   GAME_RESULT_LABELS,
   GAME_SITE_LABELS,
   GAME_STATUS_LABELS,
 } from "@/config/sports-highlights";
 import type { SportsGameView } from "@/services/sports-highlights-service";
+
+/**
+ * Our own mark. It is a static public asset, not an upload, so unlike the
+ * opponent's it is always there and never needs a monogram fallback.
+ */
+function CampusMark({ size = "md" }: { size?: "sm" | "md" }) {
+  const dimension = size === "sm" ? "size-8" : "size-12";
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={CAMPUS_TEAM_LOGO_URL}
+      alt={`Madonna ${CAMPUS_TEAM_NAME} logo`}
+      className={`${dimension} shrink-0 rounded-lg bg-white object-contain p-0.5 ring-1 ring-white/30`}
+    />
+  );
+}
 
 function OpponentMark({
   game,
@@ -37,6 +56,19 @@ function OpponentMark({
       aria-hidden="true"
     >
       {game.opponentName.slice(0, 2)}
+    </span>
+  );
+}
+
+/** Both marks for a matchup, read the way the game is billed: Dons first. */
+function MatchupMarks({ game }: { game: SportsGameView }) {
+  return (
+    <span className="flex shrink-0 items-center gap-2">
+      <CampusMark />
+      <span className="text-xs font-semibold uppercase text-white/60">
+        {game.site === "HOME" ? "vs" : "at"}
+      </span>
+      <OpponentMark game={game} />
     </span>
   );
 }
@@ -91,10 +123,17 @@ export function SportsBanner({
   if (!lastGame && upcoming.length === 0) {
     return (
       <section className="rounded-xl border border-[#0A2342]/15 bg-gradient-to-br from-[#0A2342] to-[#123a63] p-6 text-white">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#C9A227]">
-          Madonna Blue Dons · {sportLabel}
-        </p>
-        <h2 className="mt-2 text-2xl font-semibold">No games on the board yet</h2>
+        <div className="flex items-center gap-3">
+          <CampusMark />
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#C9A227]">
+              Madonna {CAMPUS_TEAM_NAME} · {sportLabel}
+            </p>
+            <h2 className="mt-1 text-2xl font-semibold">
+              No games on the board yet
+            </h2>
+          </div>
+        </div>
         <p className="mt-2 max-w-2xl text-sm text-white/80">
           {canManage
             ? "Add opponent schools to the directory, then post a game so the scoreboard and student write-up forms light up."
@@ -120,10 +159,10 @@ export function SportsBanner({
               className="mt-4 block rounded-lg transition-colors hover:bg-white/5"
             >
               <div className="flex flex-wrap items-center gap-4">
-                <OpponentMark game={lastGame} />
+                <MatchupMarks game={lastGame} />
                 <div className="min-w-0 flex-1">
                   <p className="text-lg font-semibold">
-                    Blue Dons {lastGame.site === "HOME" ? "vs" : "at"}{" "}
+                    {CAMPUS_TEAM_NAME} {lastGame.site === "HOME" ? "vs" : "at"}{" "}
                     {lastGame.opponentName}
                   </p>
                   <p className="text-sm text-white/70">

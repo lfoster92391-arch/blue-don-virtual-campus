@@ -313,7 +313,10 @@ function ScoreRow({
   );
 }
 
-/** Opponent school logo when the Sports Desk has one; monogram otherwise. */
+/**
+ * The Dons mark on our side, the opponent's on theirs when the Sports Desk has
+ * uploaded one, and a monogram otherwise.
+ */
 function TeamMark({
   label,
   logoUrl,

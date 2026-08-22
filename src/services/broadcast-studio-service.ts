@@ -22,6 +22,8 @@ import {
   type StudioRunItemState,
 } from "@/config/broadcast-studio";
 import {
+  CAMPUS_TEAM_LABEL,
+  CAMPUS_TEAM_LOGO_URL,
   GAME_SITE_LABELS,
   GAME_STATUS_LABELS,
   type GameStatusKey,
@@ -152,6 +154,10 @@ export type StudioScoreboardState = {
   awayLabel: string;
   homeScore: number | null;
   awayScore: number | null;
+  /**
+   * Campus side carries the Dons mark from config; the other side carries
+   * whatever the Sports Desk uploaded for the opponent, which may be nothing.
+   */
   homeLogoUrl: string | null;
   awayLogoUrl: string | null;
   /**
@@ -221,8 +227,6 @@ export type StudioConsoleSnapshot = {
    */
   sponsors: StudioSponsorView[];
 };
-
-const CAMPUS_TEAM_LABEL = "MHS";
 
 function toIso(value: Date | null | undefined): string | null {
   return value ? value.toISOString() : null;
@@ -316,8 +320,8 @@ export function buildScoreboard(
     awayLabel: campusIsHome ? game.opponentName : CAMPUS_TEAM_LABEL,
     homeScore: campusIsHome ? game.teamScore : game.opponentScore,
     awayScore: campusIsHome ? game.opponentScore : game.teamScore,
-    homeLogoUrl: campusIsHome ? null : game.opponentLogoUrl,
-    awayLogoUrl: campusIsHome ? game.opponentLogoUrl : null,
+    homeLogoUrl: campusIsHome ? CAMPUS_TEAM_LOGO_URL : game.opponentLogoUrl,
+    awayLogoUrl: campusIsHome ? game.opponentLogoUrl : CAMPUS_TEAM_LOGO_URL,
     campusIsHome,
     siteLabel: GAME_SITE_LABELS[game.site] ?? game.site,
     venue: game.venue,
