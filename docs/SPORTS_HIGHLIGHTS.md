@@ -30,6 +30,33 @@ configured the form falls back to pasting an image URL.
 
 Students never upload or hunt for opponent logos.
 
+#### Bulk import
+
+The 2026 opponent set was loaded from a ZIP of logo art rather than added one at
+a time. Two scripts handle it, and both are safe to re-run:
+
+| Step | Command | What it does |
+|------|---------|--------------|
+| Prepare art | `npm run sports:opponent-logos -- <source-dir>` | Reads the raw slide exports, crops the school-name caption off the bottom, squares each mark, and writes `public/images/sports/opponents/<slug>.png` |
+| Import | `npm run sports:import-opponents` | Uploads those marks to `campus-media/sports-schools/schools/import/` and upserts `OpponentSchool` + `OpponentSportTeam` |
+
+School identity, short names, and mascots live in
+`scripts/opponent-schools-data.ts` — edit that file to fix a name or add a
+school, then re-run the import.
+
+The import never clobbers Lisa's own edits: an existing logo, mascot, or note is
+left alone, and matching is by `slug`, so a second run creates nothing new. Pass
+`--force` to deliberately re-point logos and metadata back to the manifest, or
+`--dry-run` to preview.
+
+Every imported school is linked to football, volleyball, boys/girls basketball,
+baseball, and softball, because the source art carried no sport information and
+a missing link blocks scheduling. Remove any team that doesn't apply with the
+**×** on its chip.
+
+The import also creates the public `campus-media` bucket if the Supabase project
+doesn't have one yet — without it every upload fails with "Bucket not found".
+
 ### 2. Give each school a team name per sport
 
 **Sports desk → Opponent directory → Link a school to a sport.**
