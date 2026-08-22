@@ -8,13 +8,14 @@ export const BROADCAST_ACADEMY_SLUG = "broadcast";
 export const CAMPUS_MEDIA_BUCKET =
   process.env.SUPABASE_CAMPUS_MEDIA_BUCKET?.trim() || "campus-media";
 
-export const CAMPUS_MEDIA_MAX_BYTES = 100 * 1024 * 1024;
-
-export const CAMPUS_MEDIA_VIDEO_TYPES = [
-  "video/mp4",
-  "video/webm",
-  "video/quicktime",
-] as const;
+export {
+  CAMPUS_MEDIA_MAX_BYTES,
+  CAMPUS_MEDIA_MAX_LABEL,
+  CAMPUS_MEDIA_VIDEO_ACCEPT,
+  CAMPUS_MEDIA_VIDEO_TYPES,
+  resolveCampusVideoContentType,
+  type CampusMediaVideoType,
+} from "./campus-video";
 
 const OBS_CHECKLIST = [
   "Open OBS → Settings → Stream",

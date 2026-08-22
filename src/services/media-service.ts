@@ -5,9 +5,11 @@ import {
   BROADCAST_ORG_SLUG,
   CAMPUS_MEDIA_BUCKET,
   CAMPUS_MEDIA_MAX_BYTES,
+  CAMPUS_MEDIA_MAX_LABEL,
   CAMPUS_MEDIA_VIDEO_TYPES,
   DEMO_SCHOOL_BROADCASTS,
   getBlueDonLiveStreamSecrets,
+  resolveCampusVideoContentType,
 } from "@/config/broadcast-media";
 import { isDatabaseConfigured, isSupabaseAdminConfigured } from "@/config/env";
 import type { CampusRole } from "@/config/roles";
@@ -369,6 +371,183 @@ export async function getStudioStreamCredentials(): Promise<StudioStreamCredenti
   };
 }
 
+type AdminClient = NonNullable<ReturnType<typeof createAdminClient>>;
+
+/**
+ * A fresh Supabase project has no buckets, and every upload then fails with an
+ * opaque "Bucket not found". Create `campus-media` on first use rather than
+ * relying on someone having run a setup script.
+ *
+ * Cached per server instance: the happy path is a single `getBucket` on the
+ * first upload after a cold start, and nothing afterwards.
+ */
+let bucketReady: Promise<void> | null = null;
+
+export async function ensureCampusMediaBucket(admin: AdminClient): Promise<void> {
+  if (!bucketReady) {
+    bucketReady = (async () => {
+      const { data } = await admin.storage.getBucket(CAMPUS_MEDIA_BUCKET);
+      if (data) {
+        return;
+      }
+
+      const { error } = await admin.storage.createBucket(CAMPUS_MEDIA_BUCKET, {
+        public: true,
+        fileSizeLimit: CAMPUS_MEDIA_MAX_BYTES,
+      });
+
+      // A parallel request may have won the race; that is a success for us.
+      if (error && !/already exists/i.test(error.message)) {
+        throw new Error(
+          `Campus media storage is unavailable (${error.message}). Ask an admin to create the ${CAMPUS_MEDIA_BUCKET} bucket.`,
+        );
+      }
+    })().catch((error) => {
+      bucketReady = null;
+      throw error;
+    });
+  }
+
+  return bucketReady;
+}
+
+function buildVideoStoragePath(userId: string, fileName: string): string {
+  return `videos/${userId}/${Date.now()}-${sanitizeFilename(fileName)}`;
+}
+
+/** Shared file validation for both the direct-upload and server-relay paths. */
+function assertUploadableVideo(input: {
+  name: string;
+  size: number;
+  type?: string | null;
+}): (typeof CAMPUS_MEDIA_VIDEO_TYPES)[number] {
+  if (input.size <= 0) {
+    throw new Error("That file is empty. Pick the video again and retry.");
+  }
+
+  if (input.size > CAMPUS_MEDIA_MAX_BYTES) {
+    throw new Error(
+      `Video must be ${CAMPUS_MEDIA_MAX_LABEL} or smaller. Trim the clip, export at 1080p, or paste a hosted video URL instead.`,
+    );
+  }
+
+  const contentType = resolveCampusVideoContentType(input.name, input.type);
+  if (!contentType) {
+    throw new Error(
+      "Upload an MP4, WebM, or MOV video file. (Convert .avi, .mkv, or .wmv to MP4 first.)",
+    );
+  }
+
+  return contentType;
+}
+
+export type CampusVideoUploadTicket = {
+  /** Pre-authorized one-shot PUT target — the file never passes through our server. */
+  signedUrl: string;
+  storagePath: string;
+  contentType: string;
+  maxBytes: number;
+};
+
+/**
+ * Issues a signed Supabase upload URL so the browser can send the video
+ * straight to storage.
+ *
+ * Video cannot be relayed through a Server Action in production: Next.js caps
+ * action bodies at 1 MB by default and Vercel rejects any function request body
+ * over 4.5 MB at the infrastructure level, which no config can raise. Every
+ * real clip exceeds both.
+ *
+ * Callers must authorize with {@link canManageCampusMedia} first.
+ */
+export async function createCampusVideoUploadTicket(
+  input: { name: string; size: number; type?: string | null },
+  userId: string,
+): Promise<CampusVideoUploadTicket | null> {
+  if (!isSupabaseAdminConfigured()) {
+    return null;
+  }
+
+  const contentType = assertUploadableVideo(input);
+
+  const admin = createAdminClient();
+  if (!admin) {
+    return null;
+  }
+
+  await ensureCampusMediaBucket(admin);
+
+  const storagePath = buildVideoStoragePath(userId, input.name);
+  const { data, error } = await admin.storage
+    .from(CAMPUS_MEDIA_BUCKET)
+    .createSignedUploadUrl(storagePath);
+
+  if (error || !data) {
+    console.error("[media] Signed upload URL failed:", error?.message);
+    throw new Error(
+      `Campus storage did not hand out an upload slot (${error?.message ?? "unknown error"}).`,
+    );
+  }
+
+  return {
+    signedUrl: data.signedUrl,
+    storagePath,
+    contentType,
+    maxBytes: CAMPUS_MEDIA_MAX_BYTES,
+  };
+}
+
+/**
+ * Confirms a browser-uploaded object really landed, and resolves its public URL
+ * server-side. The client only ever hands back a storage path — never a URL —
+ * so a tampered form cannot point a media item at arbitrary content.
+ */
+export async function resolveUploadedCampusVideo(
+  storagePath: string,
+  userId: string,
+): Promise<{ storagePath: string; publicUrl: string } | null> {
+  const expectedPrefix = `videos/${userId}/`;
+  if (!storagePath.startsWith(expectedPrefix) || storagePath.includes("..")) {
+    throw new Error("That upload does not belong to your account. Try again.");
+  }
+
+  const admin = createAdminClient();
+  if (!admin) {
+    return null;
+  }
+
+  const separator = storagePath.lastIndexOf("/");
+  const directory = storagePath.slice(0, separator);
+  const fileName = storagePath.slice(separator + 1);
+
+  const { data, error } = await admin.storage
+    .from(CAMPUS_MEDIA_BUCKET)
+    .list(directory, { search: fileName, limit: 1 });
+
+  if (error) {
+    console.error("[media] Upload verification failed:", error.message);
+    throw new Error("Could not confirm the uploaded video in campus storage.");
+  }
+
+  const object = data?.find((entry) => entry.name === fileName);
+  if (!object) {
+    throw new Error(
+      "The video did not finish uploading. Check your connection and try again.",
+    );
+  }
+
+  const { data: published } = admin.storage
+    .from(CAMPUS_MEDIA_BUCKET)
+    .getPublicUrl(storagePath);
+
+  return { storagePath, publicUrl: published.publicUrl };
+}
+
+/**
+ * Server-relayed upload. Only reachable for small files (the Server Action body
+ * cap applies) — the browser uses {@link createCampusVideoUploadTicket} instead.
+ * Kept so the form still works with JavaScript disabled.
+ */
 export async function uploadCampusVideoFile(
   file: File,
   userId: string,
@@ -377,34 +556,30 @@ export async function uploadCampusVideoFile(
     return null;
   }
 
-  if (file.size > CAMPUS_MEDIA_MAX_BYTES) {
-    throw new Error("Video must be 100 MB or smaller.");
-  }
-
-  if (
-    !CAMPUS_MEDIA_VIDEO_TYPES.includes(
-      file.type as (typeof CAMPUS_MEDIA_VIDEO_TYPES)[number],
-    )
-  ) {
-    throw new Error("Upload MP4, WebM, or MOV video files.");
-  }
+  const contentType = assertUploadableVideo({
+    name: file.name,
+    size: file.size,
+    type: file.type,
+  });
 
   const admin = createAdminClient();
   if (!admin) {
     return null;
   }
 
-  const storagePath = `videos/${userId}/${Date.now()}-${sanitizeFilename(file.name)}`;
+  await ensureCampusMediaBucket(admin);
+
+  const storagePath = buildVideoStoragePath(userId, file.name);
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const { error } = await admin.storage.from(CAMPUS_MEDIA_BUCKET).upload(storagePath, buffer, {
-    contentType: file.type,
+    contentType,
     upsert: false,
   });
 
   if (error) {
     console.error("[media] Storage upload failed:", error.message);
-    throw new Error("Unable to upload video to campus storage.");
+    throw new Error(`Unable to upload video to campus storage (${error.message}).`);
   }
 
   const { data } = admin.storage.from(CAMPUS_MEDIA_BUCKET).getPublicUrl(storagePath);

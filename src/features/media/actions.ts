@@ -8,11 +8,14 @@ import { upsertTodaysBroadcastAnnouncement } from "@/services/broadcast-announce
 import {
   canManageCampusMedia,
   createCampusVideoUpload,
+  createCampusVideoUploadTicket,
   endCampusLiveStream,
   getStudioStreamCredentials,
   resolveBroadcastOrganizationId,
+  resolveUploadedCampusVideo,
   startCampusLiveStream,
   uploadCampusVideoFile,
+  type CampusVideoUploadTicket,
   type StudioStreamCredentials,
 } from "@/services/media-service";
 
@@ -25,6 +28,11 @@ export type MediaActionState = {
 export type StreamCredentialsState = {
   error?: string;
   credentials?: StudioStreamCredentials;
+};
+
+export type VideoUploadTicketState = {
+  error?: string;
+  ticket?: CampusVideoUploadTicket;
 };
 
 const uploadSchema = z.object({
@@ -81,6 +89,37 @@ async function requireMediaProducer() {
   return user;
 }
 
+/**
+ * Step 1 of a video upload: authorize the producer and hand back a signed
+ * Supabase URL the browser PUTs the file to directly. The bytes never touch
+ * this server, which is what keeps 50 MB clips under Vercel's 4.5 MB request
+ * body ceiling.
+ */
+export async function createVideoUploadTicketAction(input: {
+  name: string;
+  size: number;
+  type?: string | null;
+}): Promise<VideoUploadTicketState> {
+  try {
+    const user = await requireMediaProducer();
+    const ticket = await createCampusVideoUploadTicket(input, user.id);
+
+    if (!ticket) {
+      return {
+        error:
+          "Campus video storage is not configured. Paste a YouTube or hosted video URL instead.",
+      };
+    }
+
+    return { ticket };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Unable to start the upload.",
+    };
+  }
+}
+
 export async function uploadCampusVideoAction(
   _prev: MediaActionState,
   formData: FormData,
@@ -104,10 +143,23 @@ export async function uploadCampusVideoAction(
     }
 
     const file = formData.get("videoFile");
+    const uploadedPath = String(formData.get("storagePath") ?? "").trim();
     let publicUrl = parsed.data.videoUrl || undefined;
     let storagePath: string | undefined;
 
-    if (file instanceof File && file.size > 0) {
+    // Step 2 of the direct upload: the browser already pushed the file to
+    // storage and hands back only the path, which we re-verify and resolve.
+    if (uploadedPath) {
+      const resolved = await resolveUploadedCampusVideo(uploadedPath, user.id);
+      if (!resolved) {
+        return {
+          error:
+            "Campus video storage is not configured. Paste a YouTube or hosted video URL instead.",
+        };
+      }
+      publicUrl = resolved.publicUrl;
+      storagePath = resolved.storagePath;
+    } else if (file instanceof File && file.size > 0) {
       const uploaded = await uploadCampusVideoFile(file, user.id);
       if (!uploaded) {
         if (!publicUrl) {

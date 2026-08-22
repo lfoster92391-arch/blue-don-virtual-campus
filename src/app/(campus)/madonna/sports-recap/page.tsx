@@ -121,7 +121,7 @@ export default async function MadonnaSportsRecapPage() {
           />
           <p className="mt-3 text-xs text-muted-foreground">
             Tick <strong className="text-foreground">Feature in Highlight Reel</strong>{" "}
-            to also drop it into the reel. Files up to 100 MB upload directly;
+            to also drop it into the reel. Files up to 50 MB upload directly;
             longer game film is easier as an unlisted YouTube link pasted into
             the URL field.
           </p>

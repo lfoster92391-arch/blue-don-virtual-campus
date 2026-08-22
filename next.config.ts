@@ -25,6 +25,16 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  experimental: {
+    serverActions: {
+      // Default is 1 MB, which silently breaks every image upload form (club
+      // logos, storefront photos, invoice scans). 4 MB is the practical
+      // ceiling: Vercel rejects any function request body over 4.5 MB at the
+      // infrastructure level. Video is deliberately not sent through an action
+      // at all — it goes straight to Supabase Storage from the browser.
+      bodySizeLimit: "4mb",
+    },
+  },
   async redirects() {
     return [
       { source: "/dashboard", destination: "/home", permanent: false },

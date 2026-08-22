@@ -48,6 +48,10 @@ NEXT_PUBLIC_PARTNER_SITE_URL
 ASSETPILOT_SITE_URL
 ```
 
+All seven must be present on **Production** (and Preview, if admin flows are exercised there). Environment changes only take effect after a redeploy — `vercel redeploy <production-url>` rebuilds the same commit with the current env.
+
+**`SUPABASE_SERVICE_ROLE_KEY`** (required, server-only) — gates every admin account operation via `isSupabaseAdminConfigured()` in `src/config/env.ts`. If it is missing from the deployed environment, creating a student login at `/admin/students` fails with *"Account creation is unavailable. Add SUPABASE_SERVICE_ROLE_KEY to the server environment."* and `/admin/users` password resets are disabled. Store it as a **Sensitive** variable; never expose it to the client bundle.
+
 **`NEXT_PUBLIC_PARTNER_SITE_URL`** (recommended) — enables "Back to Asset Pilot EDU" in footer and profile menu, and allows iframe embedding from the partner origin. Example: `https://www.assetpilotedu.com`.
 
 **`ASSETPILOT_SITE_URL`** (optional server fallback) — used when `NEXT_PUBLIC_PARTNER_SITE_URL` is not set. Prefer setting the public var for client-side links.

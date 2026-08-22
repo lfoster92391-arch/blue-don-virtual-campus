@@ -70,7 +70,7 @@ advisors/admins) can upload.
 
 1. Go to `/madonna/sports-recap` → **Upload sports highlight**. Category is
    pre-set to Sports Highlights.
-2. Choose an MP4/WebM/MOV up to 100 MB, **or** paste a hosted URL (unlisted
+2. Choose an MP4/WebM/MOV up to 50 MB, **or** paste a hosted URL (unlisted
    YouTube is easiest for full game film).
 3. Tick **Feature in Highlight Reel** to also put it in the reel.
 4. **Publish to Sports Recap.** Uploads are created with `status = PUBLISHED`,
@@ -79,6 +79,37 @@ advisors/admins) can upload.
 Equivalent paths: `/media` → Upload Video, Control Room
 (`/organizations/broadcasting?tab=media`), and the sports desk
 (`?tab=sports-desk`) for clips attached to a game.
+
+### How the file actually gets there
+
+Video **never passes through our server**, and this is not an optimization —
+it is the only way the feature can work in production:
+
+| Layer | Limit |
+|-------|-------|
+| Next.js Server Action body | 1 MB by default; raised to 4 MB in `next.config.ts` for the image forms |
+| Vercel function request body | 4.5 MB, enforced by the platform, not configurable |
+| Supabase project file size | 50 MB on the current plan — the real ceiling |
+
+So the browser does a three-step dance:
+
+1. `createVideoUploadTicketAction` authorizes the producer, validates
+   name/size/type, makes sure the `campus-media` bucket exists, and returns a
+   **signed Supabase upload URL**.
+2. The form `PUT`s the file straight to Supabase over XHR, with a progress bar.
+3. `uploadCampusVideoAction` receives only the storage **path**, re-verifies
+   that the object exists under `videos/<that user's id>/`, and resolves the
+   public URL server-side. A tampered form cannot point a media item at
+   somebody else's object.
+
+Raising the 50 MB cap means raising it in Supabase (project storage settings)
+**and** in `CAMPUS_MEDIA_MAX_BYTES` (`src/config/campus-video.ts`); the bucket
+limit cannot exceed the project limit, and bumping only the constant just moves
+the failure to the upload itself.
+
+MIME types from file pickers are unreliable — an iPhone `.MOV` can arrive with
+no type at all — so `resolveCampusVideoContentType` falls back to the file
+extension before rejecting anything.
 
 ## Highlight reel
 
