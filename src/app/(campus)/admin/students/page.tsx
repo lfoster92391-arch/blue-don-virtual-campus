@@ -16,7 +16,10 @@ import { Button } from "@/components/ui/button";
 import { FOCUS_CLUBS } from "@/config/focused-clubs";
 import { isSupabaseAdminConfigured } from "@/config/env";
 import { canManageUsers, canViewLeadershipAnalytics } from "@/config/roles";
-import { startClubPreviewAction } from "@/features/admin/preview-actions";
+import {
+  startClubPreviewAction,
+  startParentPreviewAction,
+} from "@/features/admin/preview-actions";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { isPrismaReady, withDatabase } from "@/lib/prisma";
 import { FOCUS_CLUB_SLUGS } from "@/config/focused-clubs";
@@ -136,6 +139,27 @@ export default async function AdminStudentsPage() {
             </form>
           ))}
         </div>
+      </section>
+
+      <section className="mt-8 space-y-3 rounded-xl border border-border bg-card p-5">
+        <div className="flex items-center gap-2">
+          <Eye className="size-5 text-muted-foreground" />
+          <h2 className="text-lg font-semibold text-[#0A2342] dark:text-white">
+            Preview the parent view
+          </h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Open the Parent Portal and the cafeteria lunch board as a family sees
+          them, without linking a student to your account. A sample student
+          stands in for a real child, and lunch orders and dietary forms are
+          disabled so nothing reaches the kitchen or the office queue.
+        </p>
+        <form action={startParentPreviewAction}>
+          <Button type="submit" size="sm" variant="outline">
+            <Eye className="size-4" />
+            Preview as parent
+          </Button>
+        </form>
       </section>
 
       <section className="mt-8 space-y-3">

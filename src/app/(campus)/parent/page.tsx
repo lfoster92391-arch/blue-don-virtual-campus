@@ -15,7 +15,14 @@ import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
 import { FACTS_SYNC_FIELDS, FACTS_SYNC_SUMMARY } from "@/config/facts-sync";
 import { getCurrentSchoolYear } from "@/config/school-year";
+import {
+  PARENT_PREVIEW_RELATIONSHIP,
+  PARENT_PREVIEW_STUDENT_EMAIL,
+  PARENT_PREVIEW_STUDENT_ID,
+  PARENT_PREVIEW_STUDENT_NAME,
+} from "@/config/parent-preview";
 import { FORM_TYPE_LABELS } from "@/lib/forms/constants";
+import { isParentPreviewActive } from "@/lib/auth/preview";
 import { requireCampusAccess } from "@/lib/auth/session";
 import { getParentFormSummary } from "@/services/form-service";
 import {
@@ -23,22 +30,40 @@ import {
   getAgreementStatusesForUser,
   listChildClubRequests,
 } from "@/services/digital-forms-service";
-import { listLinkedStudents, userCanAccessParentPortal } from "@/services/parent-student-service";
+import {
+  listLinkedStudents,
+  userCanAccessParentPortal,
+  type LinkedStudent,
+} from "@/services/parent-student-service";
+
+const PREVIEW_STUDENT: LinkedStudent = {
+  id: PARENT_PREVIEW_STUDENT_ID,
+  displayName: PARENT_PREVIEW_STUDENT_NAME,
+  email: PARENT_PREVIEW_STUDENT_EMAIL,
+  relationship: PARENT_PREVIEW_RELATIONSHIP,
+};
 
 export default async function ParentPortalPage() {
   const user = await requireCampusAccess();
+  const previewing = await isParentPreviewActive(user);
 
-  if (!(await userCanAccessParentPortal(user.id, user.role))) {
+  if (!previewing && !(await userCanAccessParentPortal(user.id, user.role))) {
     redirect("/dashboard");
   }
 
-  const [summary, linkedStudents, agreementStatuses, childClubRequests] =
+  // While previewing, agreements are read against the parent role so the admin
+  // sees the family agreement list rather than their own staff one.
+  const agreementUser = previewing ? { ...user, role: "parent" as const } : user;
+
+  const [summary, realLinkedStudents, agreementStatuses, childClubRequests] =
     await Promise.all([
       getParentFormSummary(user.id),
-      listLinkedStudents(user.id),
-      getAgreementStatusesForUser(user),
-      listChildClubRequests(user.id),
+      previewing ? Promise.resolve([]) : listLinkedStudents(user.id),
+      getAgreementStatusesForUser(agreementUser),
+      previewing ? Promise.resolve([]) : listChildClubRequests(user.id),
     ]);
+
+  const linkedStudents = previewing ? [PREVIEW_STUDENT] : realLinkedStudents;
 
   const schoolYear = getCurrentSchoolYear();
   const outstandingAgreements = agreementStatuses.filter(
@@ -49,7 +74,11 @@ export default async function ParentPortalPage() {
   return (
     <ShellPage
       title="Parent Portal"
-      description="Review agreement status and view your linked student's campus activity."
+      description={
+        previewing
+          ? "Preview of the family view, built against a sample student. Nothing here saves."
+          : "Review agreement status and view your linked student's campus activity."
+      }
       actions={
         <>
           <Button
@@ -66,6 +95,20 @@ export default async function ParentPortalPage() {
         </>
       }
     >
+      {previewing ? (
+        <div className="rounded-xl border border-[#D4A017]/40 bg-[#D4A017]/10 p-4">
+          <p className="text-sm font-semibold text-foreground">
+            Preview mode — no student is linked to your account
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {PARENT_PREVIEW_STUDENT_NAME} stands in for a real child so the whole
+            parent portal and lunch board are visible. Lunch orders and dietary
+            forms are disabled while previewing, and the kitchen never sees this
+            sample student. Exit from the yellow banner at the top.
+          </p>
+        </div>
+      ) : null}
+
       <DashboardCard
         title="Cafeteria lunch"
         description="Choose hot lunch, the vegetarian option, or a packed lunch for each school day."

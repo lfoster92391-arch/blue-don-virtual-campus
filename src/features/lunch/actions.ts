@@ -10,6 +10,7 @@ import {
   isLunchDateOpen,
   isLunchServiceDay,
 } from "@/config/lunch";
+import { isParentPreviewStudentId } from "@/config/parent-preview";
 import { requireCampusAccess } from "@/lib/auth/session";
 import { isParentLinkedToStudent } from "@/services/parent-student-service";
 import { placeLunchOrder } from "@/services/lunch-service";
@@ -48,6 +49,14 @@ export async function placeLunchOrderAction(input: {
   }
 
   const { dinerId, dateKey, choice, note } = parsed.data;
+
+  // The preview board never calls this, but an admin previewing the parent view
+  // must not be able to write against the synthetic child by any other route.
+  if (isParentPreviewStudentId(dinerId)) {
+    return {
+      error: "Preview only — lunch orders for the sample student are not saved.",
+    };
+  }
 
   const isSelf = dinerId === user.id;
   if (isSelf) {

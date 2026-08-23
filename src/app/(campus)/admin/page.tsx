@@ -81,7 +81,7 @@ export default async function AdminPage() {
             {
               title: "Students",
               description:
-                "Create students, assign clubs and roles, preview their view",
+                "Create students, assign clubs and roles, preview the student or parent view",
               href: "/admin/students",
               icon: Users,
               count: null,
@@ -177,7 +177,7 @@ export default async function AdminPage() {
           {
             title: "Students control center",
             description:
-              "Create students, assign clubs/roles, preview their view, reset passwords",
+              "Create students, assign clubs/roles, preview the student or parent view, reset passwords",
             href: "/admin/students",
             icon: Users,
             count: null,

@@ -10,6 +10,7 @@ import { canManageUsers } from "@/config/roles";
 import {
   PREVIEW_AS_COOKIE,
   PREVIEW_CLUB_COOKIE,
+  PREVIEW_PARENT_COOKIE,
 } from "@/lib/auth/preview";
 import {
   previewCookieDeleteOptions,
@@ -50,9 +51,28 @@ export async function startStudentPreviewAction(
   const jar = await cookies();
   jar.set(PREVIEW_AS_COOKIE, target.id, previewCookieOptions());
   jar.delete(previewCookieDeleteOptions(PREVIEW_CLUB_COOKIE));
+  jar.delete(previewCookieDeleteOptions(PREVIEW_PARENT_COOKIE));
 
   const slugs = await listActiveFocusClubSlugsForUser(target.id);
   redirect(firstFocusClubHref(slugs) ?? "/home");
+}
+
+/**
+ * Preview the parent experience without a linked student. The portal and lunch
+ * board render against a synthetic child and refuse every write, so an admin can
+ * check what families see without creating orders or dietary forms.
+ */
+export async function startParentPreviewAction(): Promise<void> {
+  const admin = await requireCompleteProfile();
+  if (!canManageUsers(admin.role)) {
+    redirect("/admin");
+  }
+
+  const jar = await cookies();
+  jar.set(PREVIEW_PARENT_COOKIE, "1", previewCookieOptions());
+  jar.delete(previewCookieDeleteOptions(PREVIEW_AS_COOKIE));
+  jar.delete(previewCookieDeleteOptions(PREVIEW_CLUB_COOKIE));
+  redirect("/parent");
 }
 
 export async function startClubPreviewAction(
@@ -78,6 +98,7 @@ export async function startClubPreviewAction(
   const jar = await cookies();
   jar.set(PREVIEW_CLUB_COOKIE, club.slug, previewCookieOptions());
   jar.delete(previewCookieDeleteOptions(PREVIEW_AS_COOKIE));
+  jar.delete(previewCookieDeleteOptions(PREVIEW_PARENT_COOKIE));
   redirect(club.href);
 }
 
@@ -90,5 +111,6 @@ export async function exitPreviewAction(): Promise<void> {
   const jar = await cookies();
   jar.delete(previewCookieDeleteOptions(PREVIEW_AS_COOKIE));
   jar.delete(previewCookieDeleteOptions(PREVIEW_CLUB_COOKIE));
+  jar.delete(previewCookieDeleteOptions(PREVIEW_PARENT_COOKIE));
   redirect("/admin/students");
 }

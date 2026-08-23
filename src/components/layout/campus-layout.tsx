@@ -27,6 +27,8 @@ export function CampusLayout({
     active: boolean;
     studentName?: string | null;
     clubSlug?: FocusClubSlug | null;
+    /** Previewing the parent experience against a synthetic child. */
+    parent?: boolean;
   };
 }) {
   const effectiveRole = navRole ?? user.role;
@@ -51,6 +53,7 @@ export function CampusLayout({
           <PreviewBanner
             studentName={preview.studentName}
             clubSlug={preview.clubSlug}
+            parent={preview.parent}
           />
         ) : null}
         <Header user={user} />

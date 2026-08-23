@@ -41,8 +41,13 @@ function DinerHeading({ diner }: { diner: LunchDiner }) {
   return (
     <div className="space-y-2">
       <div className="space-y-0.5">
-        <p className="font-semibold text-[#0A2342] dark:text-white">
+        <p className="flex flex-wrap items-center gap-2 font-semibold text-[#0A2342] dark:text-white">
           {diner.kind === "self" ? "Your lunch" : diner.displayName}
+          {diner.isPreview ? (
+            <span className="rounded-full bg-[#D4A017]/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-[#8a6a0a]">
+              Preview
+            </span>
+          ) : null}
         </p>
         <p className="text-xs text-muted-foreground">
           {diner.kind === "self"
@@ -66,6 +71,13 @@ export function LunchOrderBoard({ board }: LunchOrderBoardProps) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [savedKey, setSavedKey] = useState<string | null>(null);
+  /**
+   * Preview choices live only in this component. `useOptimistic` rolls back once
+   * its transition settles, and in preview there is no action to settle against.
+   */
+  const [previewChoices, setPreviewChoices] = useState<
+    Record<string, LunchChoice>
+  >({});
 
   const [optimistic, applyOptimistic] = useOptimistic(
     board.orders,
@@ -89,6 +101,11 @@ export function LunchOrderBoard({ board }: LunchOrderBoardProps) {
     const key = lunchOrderKey(diner.id, day.dateKey);
     setError(null);
     setSavedKey(null);
+
+    if (board.previewOnly) {
+      setPreviewChoices((current) => ({ ...current, [key]: choice }));
+      return;
+    }
 
     startTransition(async () => {
       applyOptimistic({ key, choice });
@@ -136,6 +153,14 @@ export function LunchOrderBoard({ board }: LunchOrderBoardProps) {
         </p>
       ) : null}
 
+      {board.previewOnly ? (
+        <p className="rounded-lg border border-[#D4A017]/40 bg-[#D4A017]/10 px-3 py-2 text-sm text-foreground">
+          <span className="font-semibold">Preview only.</span> Tap around to see
+          how families order. Nothing is saved, and the kitchen counts do not
+          change.
+        </p>
+      ) : null}
+
       {board.diners.map((diner) => {
         const avoidsEntree = avoidsHotEntree(diner.dietary?.restrictions ?? []);
 
@@ -153,6 +178,9 @@ export function LunchOrderBoard({ board }: LunchOrderBoardProps) {
               const key = lunchOrderKey(diner.id, day.dateKey);
               const order = optimistic[key];
               const existing = board.orders[key];
+              const chosen = board.previewOnly
+                ? (previewChoices[key] ?? null)
+                : (order?.choice ?? null);
 
               return (
                 <li key={day.dateKey} className="px-4 py-3">
@@ -170,6 +198,12 @@ export function LunchOrderBoard({ board }: LunchOrderBoardProps) {
                         <Lock className="size-3" aria-hidden="true" />
                         Ordering closed
                       </span>
+                    ) : board.previewOnly ? (
+                      chosen ? (
+                        <span className="text-xs font-medium text-[#8a6a0a]">
+                          Not saved — preview
+                        </span>
+                      ) : null
                     ) : savedKey === key ? (
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-[#2E8B57]">
                         <Check className="size-3" aria-hidden="true" />
@@ -195,7 +229,7 @@ export function LunchOrderBoard({ board }: LunchOrderBoardProps) {
                   >
                     {LUNCH_CHOICES.map((choice) => {
                       const meta = LUNCH_CHOICE_META[choice];
-                      const selected = order?.choice === choice;
+                      const selected = chosen === choice;
                       const detail = menuLineFor(day, choice);
                       const conflicts = choice === "HOT" && avoidsEntree;
 
@@ -233,7 +267,7 @@ export function LunchOrderBoard({ board }: LunchOrderBoardProps) {
                     })}
                   </div>
 
-                  {avoidsEntree && order?.choice === "HOT" ? (
+                  {avoidsEntree && chosen === "HOT" ? (
                     <p className="mt-1.5 inline-flex items-center gap-1 text-xs text-[#C0392B]">
                       <AlertTriangle className="size-3" aria-hidden="true" />
                       Heads up — this student&apos;s dietary record suggests the

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChefHat, Salad, UtensilsCrossed } from "lucide-react";
+import { ChefHat, Eye, Salad, UtensilsCrossed } from "lucide-react";
 
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import {
@@ -13,10 +13,13 @@ import { LUNCH_ORDER_CUTOFF_HOUR } from "@/config/lunch";
 import {
   canManageDietary,
   canManageLunch,
+  canManageUsers,
   canOrderLunch,
   canSubmitDietaryForm,
 } from "@/config/roles";
+import { startParentPreviewAction } from "@/features/admin/preview-actions";
 import { formatMinutes } from "@/config/school-hub";
+import { isParentPreviewActive } from "@/lib/auth/preview";
 import { requireCampusAccess } from "@/lib/auth/session";
 import { listDietaryRequests } from "@/services/dietary-service";
 import { getLunchBoard, getLunchKitchenCounts } from "@/services/lunch-service";
@@ -29,17 +32,23 @@ export const metadata = {
 
 export default async function LunchPage() {
   const user = await requireCampusAccess();
+  const previewing = await isParentPreviewActive(user);
 
-  const canOrder = canOrderLunch(user.role);
-  const canManage = canManageLunch(user.role);
-  const canReviewDietary = canManageDietary(user.role);
+  // Previewing shows the family board, so the staff-only sections stand down —
+  // an admin checking the parent view should see what a parent sees.
+  const canOrder = previewing || canOrderLunch(user.role);
+  const canManage = !previewing && canManageLunch(user.role);
+  const canReviewDietary = !previewing && canManageDietary(user.role);
 
   const [board, kitchenCounts] = await Promise.all([
-    getLunchBoard({
-      id: user.id,
-      displayName: user.displayName,
-      role: user.role,
-    }),
+    getLunchBoard(
+      {
+        id: user.id,
+        displayName: user.displayName,
+        role: user.role,
+      },
+      { parentPreview: previewing },
+    ),
     canManage ? getLunchKitchenCounts() : Promise.resolve([]),
   ]);
 
@@ -49,14 +58,15 @@ export default async function LunchPage() {
   // tray, so the form only covers linked students on this board.
   const studentDiners = board.diners.filter((diner) => diner.kind === "student");
   const showDietaryForm =
-    canSubmitDietaryForm(user.role) && studentDiners.length > 0;
+    (previewing || canSubmitDietaryForm(user.role)) && studentDiners.length > 0;
 
-  const pendingDietary = showDietaryForm
-    ? await listDietaryRequests({
-        status: "PENDING",
-        studentIds: studentDiners.map((diner) => diner.id),
-      })
-    : [];
+  const pendingDietary =
+    showDietaryForm && !previewing
+      ? await listDietaryRequests({
+          status: "PENDING",
+          studentIds: studentDiners.map((diner) => diner.id),
+        })
+      : [];
 
   const dietaryStudents: DietaryFormStudent[] = studentDiners.map((diner) => ({
     id: diner.id,
@@ -67,6 +77,7 @@ export default async function LunchPage() {
     hasPendingRequest: pendingDietary.some(
       (request) => request.studentId === diner.id,
     ),
+    isPreview: diner.isPreview,
   }));
 
   return (
@@ -172,6 +183,21 @@ export default async function LunchPage() {
               No lunch orders recorded for the days ahead yet.
             </p>
           )}
+        </DashboardCard>
+      ) : null}
+
+      {!previewing && canManageUsers(user.role) ? (
+        <DashboardCard
+          title="Check the family view"
+          description="Open the parent portal and this board the way a parent sees them, using a sample student. Nothing you tap while previewing is saved."
+          icon={<Eye className="size-5" />}
+        >
+          <form action={startParentPreviewAction}>
+            <Button type="submit" size="sm" variant="outline">
+              <Eye className="size-4" />
+              Preview as parent
+            </Button>
+          </form>
         </DashboardCard>
       ) : null}
 

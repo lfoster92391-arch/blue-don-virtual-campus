@@ -14,6 +14,8 @@ import { getUserById } from "@/services/user-service";
 export const PREVIEW_AS_COOKIE = "bd_preview_as";
 /** HttpOnly cookie — preview nav scoped to one focus club (no student account). */
 export const PREVIEW_CLUB_COOKIE = "bd_preview_club";
+/** HttpOnly cookie — preview the parent experience (no linked student needed). */
+export const PREVIEW_PARENT_COOKIE = "bd_preview_parent";
 
 export type AccessIdentity = {
   actor: CampusUser;
@@ -26,8 +28,33 @@ export type AccessIdentity = {
   isPreviewing: boolean;
   previewTarget: CampusUser | null;
   previewClubSlug: FocusClubSlug | null;
+  /**
+   * Previewing the parent experience against a synthetic child rather than a
+   * real account. Surfaces the parent portal and the family lunch board to an
+   * admin who has no `ParentStudentLink`, and forces every write off.
+   */
+  isParentPreview: boolean;
   previewLabel: string | null;
 };
+
+/**
+ * Whether this admin is previewing the parent experience. Cheaper than
+ * `resolveAccessIdentity` for pages that only need the parent branch, and it
+ * mirrors the same precedence: previewing a real student wins.
+ */
+export async function isParentPreviewActive(
+  actor: CampusUser,
+): Promise<boolean> {
+  if (!canManageUsers(actor.role)) {
+    return false;
+  }
+
+  const jar = await cookies();
+  if (jar.get(PREVIEW_AS_COOKIE)?.value?.trim()) {
+    return false;
+  }
+  return jar.get(PREVIEW_PARENT_COOKIE)?.value === "1";
+}
 
 /**
  * Resolve nav/soft-block identity for the signed-in user, including optional
@@ -44,6 +71,7 @@ export async function resolveAccessIdentity(
     isPreviewing: false,
     previewTarget: null,
     previewClubSlug: null,
+    isParentPreview: false,
     previewLabel: null,
   };
 
@@ -64,11 +92,26 @@ export async function resolveAccessIdentity(
         isPreviewing: true,
         previewTarget: target,
         previewClubSlug: null,
+        isParentPreview: false,
         previewLabel: target.displayName,
       };
     }
     // Stale / inactive preview cookie — clear so UI does not look "broken".
     jar.delete(previewCookieDeleteOptions(PREVIEW_AS_COOKIE));
+  }
+
+  if (jar.get(PREVIEW_PARENT_COOKIE)?.value === "1") {
+    return {
+      actor,
+      membershipUserId: actor.id,
+      navRole: "parent",
+      forcedMembershipSlugs: null,
+      isPreviewing: true,
+      previewTarget: null,
+      previewClubSlug: null,
+      isParentPreview: true,
+      previewLabel: null,
+    };
   }
 
   const clubSlug = jar.get(PREVIEW_CLUB_COOKIE)?.value?.trim();
@@ -81,6 +124,7 @@ export async function resolveAccessIdentity(
       isPreviewing: true,
       previewTarget: null,
       previewClubSlug: clubSlug,
+      isParentPreview: false,
       previewLabel: null,
     };
   }

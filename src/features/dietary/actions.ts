@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { canManageDietary, canSubmitDietaryForm } from "@/config/roles";
 import { DIETARY_NOTES_MAX_LENGTH } from "@/config/dietary";
+import { isParentPreviewStudentId } from "@/config/parent-preview";
 import { requireCampusAccess } from "@/lib/auth/session";
 import { isParentLinkedToStudent } from "@/services/parent-student-service";
 import {
@@ -62,6 +63,15 @@ export async function submitDietaryRequestAction(input: {
   }
 
   const { studentId, allergens, restrictions, notes } = parsed.data;
+
+  // Office roles skip the link check below, so the preview child has to be
+  // rejected here or an admin previewing the parent view could file a form
+  // against a student that does not exist.
+  if (isParentPreviewStudentId(studentId)) {
+    return {
+      error: "Preview only — dietary forms for the sample student are not saved.",
+    };
+  }
 
   // Office roles cover any student; everyone else must be linked to them.
   if (

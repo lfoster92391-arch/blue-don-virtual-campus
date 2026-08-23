@@ -19,6 +19,8 @@ export type DietaryFormStudent = {
   restrictions: string[];
   notes: string | null;
   hasPendingRequest: boolean;
+  /** Synthetic stand-in from an admin parent preview — submitting is a no-op. */
+  isPreview?: boolean;
 };
 
 type DietaryRequestFormProps = {
@@ -100,6 +102,13 @@ export function DietaryRequestForm({ students }: DietaryRequestFormProps) {
     setMessage(null);
     setError(null);
 
+    if (student.isPreview) {
+      setMessage(
+        "Preview only — this form was not submitted and the office queue is untouched.",
+      );
+      return;
+    }
+
     startTransition(async () => {
       const result = await submitDietaryRequestAction({
         studentId: student.id,
@@ -163,6 +172,13 @@ export function DietaryRequestForm({ students }: DietaryRequestFormProps) {
             ))}
           </select>
         </div>
+      ) : null}
+
+      {student?.isPreview ? (
+        <p className="rounded-lg border border-[#D4A017]/40 bg-[#D4A017]/10 px-3 py-2 text-sm text-foreground">
+          <span className="font-semibold">Preview only.</span> This is the form
+          families fill in. Submitting it here saves nothing.
+        </p>
       ) : null}
 
       {student?.hasPendingRequest ? (
@@ -241,7 +257,11 @@ export function DietaryRequestForm({ students }: DietaryRequestFormProps) {
 
       <div className="flex flex-wrap items-center gap-3">
         <Button disabled={pending} onClick={handleSubmit}>
-          {pending ? "Submitting…" : "Submit dietary form"}
+          {pending
+            ? "Submitting…"
+            : student?.isPreview
+              ? "Submit dietary form (preview)"
+              : "Submit dietary form"}
         </Button>
         <p className="text-xs text-muted-foreground">
           The office reviews and accepts the form before it reaches the

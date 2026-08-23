@@ -24,6 +24,12 @@ import {
   type LunchChoice,
 } from "@/config/lunch";
 import { getLunchForWeekday, type LunchMenu } from "@/config/school-hub";
+import {
+  PARENT_PREVIEW_DIETARY,
+  PARENT_PREVIEW_RELATIONSHIP,
+  PARENT_PREVIEW_STUDENT_ID,
+  PARENT_PREVIEW_STUDENT_NAME,
+} from "@/config/parent-preview";
 import { canOrderLunch, ordersLunchForSelf, type CampusRole } from "@/config/roles";
 import { listLinkedStudents } from "@/services/parent-student-service";
 import { getDietaryProfiles, type DietaryProfile } from "@/services/dietary-service";
@@ -40,6 +46,8 @@ export type LunchDiner = {
    * choices so whoever orders sees the allergy before picking the entree.
    */
   dietary: DietaryProfile | null;
+  /** Synthetic stand-in shown while an admin previews the parent view. */
+  isPreview?: boolean;
 };
 
 export type LunchDay = {
@@ -71,6 +79,12 @@ export type LunchBoard = {
   /** Keyed `${dinerId}:${dateKey}`. */
   orders: Record<string, LunchOrderView>;
   canOrder: boolean;
+  /**
+   * Admin previewing the family view. The board is fully interactive so the
+   * chrome can be checked, but choices stay in the browser and never reach an
+   * action or the kitchen counts.
+   */
+  previewOnly: boolean;
 };
 
 function displayNameFor(row: {
@@ -153,23 +167,58 @@ function buildDays(now: Date): LunchDay[] {
   });
 }
 
-export async function getLunchBoard(user: {
-  id: string;
-  displayName: string;
-  role: CampusRole;
-}): Promise<LunchBoard> {
+/** The stand-in child an admin orders for while previewing the parent view. */
+function previewDiner(): LunchDiner {
+  return {
+    id: PARENT_PREVIEW_STUDENT_ID,
+    displayName: PARENT_PREVIEW_STUDENT_NAME,
+    kind: "student",
+    relationship: PARENT_PREVIEW_RELATIONSHIP,
+    dietary: {
+      studentId: PARENT_PREVIEW_STUDENT_ID,
+      allergens: [...PARENT_PREVIEW_DIETARY.allergens],
+      restrictions: [...PARENT_PREVIEW_DIETARY.restrictions],
+      notes: PARENT_PREVIEW_DIETARY.notes,
+      appliedByName: null,
+      appliedAt: null,
+      updatedAt: new Date().toISOString(),
+    },
+    isPreview: true,
+  };
+}
+
+export async function getLunchBoard(
+  user: {
+    id: string;
+    displayName: string;
+    role: CampusRole;
+  },
+  options: { parentPreview?: boolean } = {},
+): Promise<LunchBoard> {
   const now = new Date();
   const days = buildDays(now);
   const canOrder = canOrderLunch(user.role);
 
+  // Nothing real is read or written in preview: the admin's own tray is left out
+  // so a stray tap cannot order their actual lunch either.
+  if (options.parentPreview) {
+    return {
+      days,
+      diners: [previewDiner()],
+      orders: {},
+      canOrder: true,
+      previewOnly: true,
+    };
+  }
+
   if (!canOrder) {
-    return { days, diners: [], orders: {}, canOrder };
+    return { days, diners: [], orders: {}, canOrder, previewOnly: false };
   }
 
   const diners = await listLunchDiners(user);
 
   if (diners.length === 0 || !isDatabaseConfigured() || days.length === 0) {
-    return { days, diners, orders: {}, canOrder };
+    return { days, diners, orders: {}, canOrder, previewOnly: false };
   }
 
   const first = days[0];
@@ -217,7 +266,7 @@ export async function getLunchBoard(user: {
     };
   }
 
-  return { days, diners, orders, canOrder };
+  return { days, diners, orders, canOrder, previewOnly: false };
 }
 
 export type PlaceLunchOrderInput = {

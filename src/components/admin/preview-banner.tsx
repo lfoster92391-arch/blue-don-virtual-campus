@@ -10,15 +10,23 @@ import { exitPreviewAction } from "@/features/admin/preview-actions";
 export function PreviewBanner({
   studentName,
   clubSlug,
+  parent,
 }: {
   studentName?: string | null;
   clubSlug?: FocusClubSlug | null;
+  parent?: boolean;
 }) {
-  const who = studentName
-    ? studentName
-    : clubSlug
-      ? `${focusClubName(clubSlug)} member view`
-      : "member view";
+  const who = parent
+    ? "a parent"
+    : studentName
+      ? studentName
+      : clubSlug
+        ? `${focusClubName(clubSlug)} member view`
+        : "member view";
+
+  const detail = parent
+    ? "Lunch orders and dietary forms are disabled — nothing you tap here is saved. Your admin session is unchanged."
+    : "Nav and club access match their membership. Your admin session is unchanged.";
 
   return (
     <div
@@ -32,8 +40,7 @@ export function PreviewBanner({
           <span className="mx-2 font-normal opacity-80">—</span>
           <span className="font-medium">Exit preview</span>
           <span className="mt-1 block text-xs font-normal opacity-90 sm:mt-0 sm:ml-2 sm:inline">
-            Nav and club access match their membership. Your admin session is
-            unchanged.
+            {detail}
           </span>
         </p>
         <form action={exitPreviewAction}>
