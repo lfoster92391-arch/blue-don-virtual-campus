@@ -119,6 +119,7 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "lunch:manage",
     "dietary:submit",
     "dietary:manage",
+    "cafeteria:manage",
   ],
   advisor: [
     ...CORE,
@@ -273,6 +274,7 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "lunch:manage",
     "dietary:submit",
     "dietary:manage",
+    "cafeteria:manage",
   ],
   coach: [
     ...CORE,
@@ -618,6 +620,15 @@ export function canOrderLunch(role: CampusRole): boolean {
 /** See kitchen counts and every diner's order for a service date. */
 export function canManageLunch(role: CampusRole): boolean {
   return hasPermission(role, "lunch:manage");
+}
+
+/**
+ * Handle cafeteria money — credit the envelopes families bring to school and
+ * record what a student has eaten. Narrower than `lunch:manage` on purpose:
+ * seeing kitchen counts is not the same as moving a balance.
+ */
+export function canManageCafeteriaAccounts(role: CampusRole): boolean {
+  return hasPermission(role, "cafeteria:manage");
 }
 
 /**

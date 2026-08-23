@@ -3,6 +3,8 @@ import {
   BarChart3,
   Briefcase,
   Calendar,
+  CalendarCheck,
+  ChefHat,
   CircleDollarSign,
   ClipboardCheck,
   ClipboardList,
@@ -42,7 +44,9 @@ import type { CampusRole } from "@/config/roles";
 import {
   CAMPUS_ROLES,
   canAccessAdmin,
+  canManageCafeteriaAccounts,
   canManageDietary,
+  canManageLunch,
   canOrderLunch,
   isFacultyClubLookupRole,
 } from "@/config/roles";
@@ -52,7 +56,11 @@ import {
  * `GLOBAL_ROLE_PERMISSIONS`.
  */
 const LUNCH_ORDER_ROLES: CampusRole[] = CAMPUS_ROLES.filter(canOrderLunch);
+const LUNCH_MANAGE_ROLES: CampusRole[] = CAMPUS_ROLES.filter(canManageLunch);
 const DIETARY_MANAGE_ROLES: CampusRole[] = CAMPUS_ROLES.filter(canManageDietary);
+const CAFETERIA_MANAGE_ROLES: CampusRole[] = CAMPUS_ROLES.filter(
+  canManageCafeteriaAccounts,
+);
 
 export type NavItem = {
   label: string;
@@ -280,11 +288,25 @@ export const focusedClubsNavigation: NavEntry[] = [
     roles: LUNCH_ORDER_ROLES,
   },
   {
+    label: "Your Lunch Selections",
+    href: "/lunch/selections",
+    icon: ClipboardCheck,
+    enabled: true,
+    roles: LUNCH_ORDER_ROLES,
+  },
+  {
     label: "Parent Portal",
     href: "/parent",
     icon: UserCheck,
     enabled: true,
     primary: true,
+    roles: ["parent"],
+  },
+  {
+    label: "Parent Guide",
+    href: "/parent/guide",
+    icon: BookOpen,
+    enabled: true,
     roles: ["parent"],
   },
   {
@@ -449,11 +471,39 @@ export const focusedClubsNavigation: NavEntry[] = [
         roles: ["admin"],
       },
       {
+        label: "Kitchen Prep Sheet",
+        href: "/lunch/kitchen",
+        icon: ChefHat,
+        enabled: true,
+        roles: LUNCH_MANAGE_ROLES,
+      },
+      {
+        label: "Lunch Menu Calendar",
+        href: "/admin/lunch-menu",
+        icon: CalendarCheck,
+        enabled: true,
+        roles: LUNCH_MANAGE_ROLES,
+      },
+      {
         label: "Dietary Forms",
         href: "/admin/dietary",
         icon: Salad,
         enabled: true,
         roles: DIETARY_MANAGE_ROLES,
+      },
+      {
+        label: "Cafeteria Accounts",
+        href: "/admin/cafeteria",
+        icon: CircleDollarSign,
+        enabled: true,
+        roles: CAFETERIA_MANAGE_ROLES,
+      },
+      {
+        label: "Parent Guide",
+        href: "/parent/guide",
+        icon: BookOpen,
+        enabled: true,
+        roles: ["admin", "advisor", "staff", "counselor"],
       },
     ],
   },
@@ -531,9 +581,23 @@ export const groupedNavigation: NavEntry[] = [
         roles: LUNCH_ORDER_ROLES,
       },
       {
+        label: "Your Lunch Selections",
+        href: "/lunch/selections",
+        icon: ClipboardCheck,
+        enabled: true,
+        roles: LUNCH_ORDER_ROLES,
+      },
+      {
         label: "Parent Portal",
         href: "/parent",
         icon: UserCheck,
+        enabled: true,
+        roles: ["parent"],
+      },
+      {
+        label: "Parent Guide",
+        href: "/parent/guide",
+        icon: BookOpen,
         enabled: true,
         roles: ["parent"],
       },
@@ -626,6 +690,27 @@ export const groupedNavigation: NavEntry[] = [
         icon: BarChart3,
         enabled: true,
         roles: ["counselor", "advisor", "admin"],
+      },
+      {
+        label: "Kitchen Prep Sheet",
+        href: "/lunch/kitchen",
+        icon: ChefHat,
+        enabled: true,
+        roles: LUNCH_MANAGE_ROLES,
+      },
+      {
+        label: "Lunch Menu Calendar",
+        href: "/admin/lunch-menu",
+        icon: CalendarCheck,
+        enabled: true,
+        roles: LUNCH_MANAGE_ROLES,
+      },
+      {
+        label: "Cafeteria Accounts",
+        href: "/admin/cafeteria",
+        icon: CircleDollarSign,
+        enabled: true,
+        roles: CAFETERIA_MANAGE_ROLES,
       },
     ],
   },

@@ -465,6 +465,10 @@ model User {
   dietaryRequestsReviewed    DietaryRequest[]          @relation("DietaryRequestReviewer")
   dietaryProfile             StudentDietaryProfile?    @relation("DietaryProfileStudent")
   dietaryProfilesApplied     StudentDietaryProfile[]   @relation("DietaryProfileApplier")
+  cafeteriaAccount           CafeteriaAccount?         @relation("CafeteriaAccountStudent")
+  cafeteriaEntriesRecorded   CafeteriaLedgerEntry[]    @relation("CafeteriaLedgerRecorder")
+  lunchMenuDaysPublished     LunchMenuDay[]            @relation("LunchMenuPublisher")
+  lunchMenuDaysEdited        LunchMenuDay[]            @relation("LunchMenuEditor")
 
   @@index([role])
   @@index([schoolId])
@@ -519,6 +523,34 @@ model LunchOrder {
   @@index([serviceDate])
   @@index([orderedById])
   @@map("lunch_orders")
+}
+
+/// One published cafeteria menu for one calendar date.
+///
+/// The rotating weekday menu in `src/config/school-hub.ts` is the fallback, not
+/// the source of truth: any date with a row here overrides it. A row is a draft
+/// until `publishedAt` is set, so the kitchen can build three weeks out without
+/// families seeing half-finished days.
+model LunchMenuDay {
+  id            String    @id @default(cuid())
+  serviceDate   DateTime  @unique @map("service_date") @db.Date
+  entree        String
+  vegetarian    String
+  /// Shown as a comma-joined line under the entree.
+  sides         String[]  @default([])
+  dessert       String?
+  /// Free text for the day — "Early dismissal, cold lunch only", etc.
+  note          String?
+  publishedAt   DateTime? @map("published_at")
+  publishedById String?   @map("published_by_id") @db.Uuid
+  updatedById   String    @map("updated_by_id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  publishedBy   User?     @relation("LunchMenuPublisher", fields: [publishedById], references: [id], onDelete: SetNull)
+  updatedBy     User      @relation("LunchMenuEditor", fields: [updatedById], references: [id], onDelete: Cascade)
+
+  @@index([serviceDate, publishedAt])
+  @@map("lunch_menu_days")
 }
 
 enum DietaryRequestStatus {
@@ -580,6 +612,55 @@ model StudentDietaryProfile {
 
   @@index([studentId])
   @@map("student_dietary_profiles")
+}
+
+enum CafeteriaLedgerKind {
+  CREDIT
+  CHARGE
+  ADJUSTMENT
+}
+
+/// A student's cafeteria money, kept in whole cents — one row per student.
+///
+/// Families pay at school in cash or by check, not in the app, so the balance
+/// only ever moves when the front office records an entry. `balanceCents` is a
+/// running total the ledger below has to agree with; it is stored rather than
+/// summed on read so the lunch board stays a single cheap query.
+model CafeteriaAccount {
+  id                   String                 @id @default(cuid())
+  studentId            String                 @unique @map("student_id") @db.Uuid
+  balanceCents         Int                    @default(0) @map("balance_cents")
+  /// When the family was last told the balance was running low, so a run of
+  /// small charges does not send a message every single time.
+  lowBalanceNotifiedAt DateTime?              @map("low_balance_notified_at")
+  createdAt            DateTime               @default(now()) @map("created_at")
+  updatedAt            DateTime               @updatedAt @map("updated_at")
+  student              User                   @relation("CafeteriaAccountStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  entries              CafeteriaLedgerEntry[]
+
+  @@map("cafeteria_accounts")
+}
+
+/// Every movement of cafeteria money, so an envelope can be traced back to the
+/// person who opened it. `amountCents` is always positive; `kind` says which
+/// way the balance moved. `balanceAfterCents` freezes the running total at the
+/// time of the entry so a later correction cannot rewrite history.
+model CafeteriaLedgerEntry {
+  id                String              @id @default(cuid())
+  accountId         String              @map("account_id")
+  kind              CafeteriaLedgerKind
+  amountCents       Int                 @map("amount_cents")
+  balanceAfterCents Int                 @map("balance_after_cents")
+  /// What was on the envelope, a check number, or why a balance was corrected.
+  note              String?
+  recordedById      String              @map("recorded_by_id") @db.Uuid
+  createdAt         DateTime            @default(now()) @map("created_at")
+  account           CafeteriaAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  recordedBy        User                @relation("CafeteriaLedgerRecorder", fields: [recordedById], references: [id], onDelete: Cascade)
+
+  @@index([accountId, createdAt])
+  @@index([recordedById])
+  @@map("cafeteria_ledger_entries")
 }
 
 model Organization {

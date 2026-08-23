@@ -222,6 +222,12 @@ export function LunchOrderBoard({ board }: LunchOrderBoardProps) {
                     </p>
                   )}
 
+                  {day.menuNote ? (
+                    <p className="mt-1 text-xs font-medium text-[#D4A017]">
+                      {day.menuNote}
+                    </p>
+                  ) : null}
+
                   <div
                     role="radiogroup"
                     aria-label={`Lunch choice for ${diner.displayName} on ${day.shortLabel}`}

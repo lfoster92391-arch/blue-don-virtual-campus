@@ -23,7 +23,8 @@ import {
   toLunchDateKey,
   type LunchChoice,
 } from "@/config/lunch";
-import { getLunchForWeekday, type LunchMenu } from "@/config/school-hub";
+import type { LunchMenu } from "@/config/school-hub";
+import { resolveLunchMenus } from "@/services/lunch-menu-service";
 import {
   PARENT_PREVIEW_DIETARY,
   PARENT_PREVIEW_RELATIONSHIP,
@@ -60,6 +61,8 @@ export type LunchDay = {
   /** False once the 9:00 AM cutoff has passed for that day. */
   isOpen: boolean;
   menu: LunchMenu | null;
+  /** Office note for the day, e.g. "Early dismissal — cold lunch only". */
+  menuNote: string | null;
 };
 
 export type LunchOrderView = {
@@ -146,11 +149,16 @@ export async function listLunchDiners(user: {
   }));
 }
 
-function buildDays(now: Date): LunchDay[] {
+async function buildDays(now: Date): Promise<LunchDay[]> {
   const today = startOfLunchDay(now);
+  const dates = listLunchServiceDates(now);
 
-  return listLunchServiceDates(now).map((date) => {
-    const menu = getLunchForWeekday(date.getUTCDay());
+  // Published menus win over the rotating weekday config; dates the office has
+  // not published fall back to it, so the board is never blank.
+  const menus = await resolveLunchMenus(dates.map(toLunchDateKey));
+
+  return dates.map((date) => {
+    const menu = menus[toLunchDateKey(date)] ?? null;
     return {
       dateKey: toLunchDateKey(date),
       dayName: menu?.dayName ?? date.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" }),
@@ -163,6 +171,7 @@ function buildDays(now: Date): LunchDay[] {
       isToday: date.getTime() === today.getTime(),
       isOpen: isLunchDateOpen(date, now),
       menu,
+      menuNote: menu?.note ?? null,
     };
   });
 }
@@ -196,7 +205,7 @@ export async function getLunchBoard(
   options: { parentPreview?: boolean } = {},
 ): Promise<LunchBoard> {
   const now = new Date();
-  const days = buildDays(now);
+  const days = await buildDays(now);
   const canOrder = canOrderLunch(user.role);
 
   // Nothing real is read or written in preview: the admin's own tray is left out
@@ -359,7 +368,7 @@ export type LunchKitchenCount = {
  */
 export async function getLunchKitchenCounts(): Promise<LunchKitchenCount[]> {
   const now = new Date();
-  const days = buildDays(now);
+  const days = await buildDays(now);
 
   if (!isDatabaseConfigured() || days.length === 0) {
     return [];

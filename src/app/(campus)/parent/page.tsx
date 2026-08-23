@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  BookOpen,
   CheckCircle2,
   Circle,
   ClipboardList,
@@ -9,6 +10,10 @@ import {
 } from "lucide-react";
 import { redirect } from "next/navigation";
 
+import {
+  CafeteriaBalances,
+  type CafeteriaBalanceRow,
+} from "@/components/cafeteria/cafeteria-balances";
 import { ChildClubApprovals } from "@/components/forms/child-club-approvals";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { ShellPage } from "@/components/layout/shell-page";
@@ -24,6 +29,7 @@ import {
 import { FORM_TYPE_LABELS } from "@/lib/forms/constants";
 import { isParentPreviewActive } from "@/lib/auth/preview";
 import { requireCampusAccess } from "@/lib/auth/session";
+import { getCafeteriaAccounts } from "@/services/cafeteria-account-service";
 import { getParentFormSummary } from "@/services/form-service";
 import {
   agreementStateLabel,
@@ -65,6 +71,27 @@ export default async function ParentPortalPage() {
 
   const linkedStudents = previewing ? [PREVIEW_STUDENT] : realLinkedStudents;
 
+  // The preview child has no account row, so this comes back empty and the
+  // balance block simply does not render while previewing.
+  const accounts = await getCafeteriaAccounts(
+    linkedStudents.map((student) => student.id),
+  );
+  const balanceRows: CafeteriaBalanceRow[] = linkedStudents
+    .map((student) => {
+      const account = accounts[student.id];
+      if (!account) {
+        return null;
+      }
+      return {
+        studentId: student.id,
+        studentName: student.displayName,
+        balanceLabel: account.balanceLabel,
+        balanceCents: account.balanceCents,
+        isLow: account.isLow,
+      };
+    })
+    .filter((row): row is CafeteriaBalanceRow => row !== null);
+
   const schoolYear = getCurrentSchoolYear();
   const outstandingAgreements = agreementStatuses.filter(
     (status) =>
@@ -90,11 +117,41 @@ export default async function ParentPortalPage() {
             size="sm"
             variant="outline"
             nativeButton={false}
+            render={<Link href="/parent/guide">Parent guide</Link>}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            nativeButton={false}
             render={<Link href="/forms-center">Open Forms Center</Link>}
           />
         </>
       }
     >
+      <DashboardCard
+        title="New here? Start with the parent guide"
+        description="Step-by-step: setting up your account, choosing lunches, paying the cafeteria, and how the school reaches you."
+        icon={<BookOpen className="size-5" />}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/parent/guide">Read the guide</Link>}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={
+              <Link href="/parent/guide#paying-for-lunch">
+                How lunch payments work
+              </Link>
+            }
+          />
+        </div>
+      </DashboardCard>
+
       {previewing ? (
         <div className="rounded-xl border border-[#D4A017]/40 bg-[#D4A017]/10 p-4">
           <p className="text-sm font-semibold text-foreground">
@@ -119,12 +176,28 @@ export default async function ParentPortalPage() {
             Orders for each day close at 9:00 AM that morning and can be changed
             until then.
           </p>
-          <Button
-            size="sm"
-            nativeButton={false}
-            render={<Link href="/lunch">Choose lunches</Link>}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              nativeButton={false}
+              render={<Link href="/lunch">Choose lunches</Link>}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              nativeButton={false}
+              render={
+                <Link href="/lunch/selections">See what you chose</Link>
+              }
+            />
+          </div>
         </div>
+
+        {balanceRows.length > 0 ? (
+          <div className="mt-4 border-t border-border pt-4">
+            <CafeteriaBalances rows={balanceRows} />
+          </div>
+        ) : null}
       </DashboardCard>
 
       <DashboardCard

@@ -1,12 +1,24 @@
 import Link from "next/link";
-import { ChefHat, Eye, Salad, UtensilsCrossed } from "lucide-react";
+import {
+  ChefHat,
+  ClipboardCheck,
+  Eye,
+  Salad,
+  UtensilsCrossed,
+  Wallet,
+} from "lucide-react";
 
+import {
+  CafeteriaBalances,
+  type CafeteriaBalanceRow,
+} from "@/components/cafeteria/cafeteria-balances";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import {
   DietaryRequestForm,
   type DietaryFormStudent,
 } from "@/components/dietary/dietary-request-form";
 import { LunchOrderBoard } from "@/components/lunch/lunch-order-board";
+import { LunchSelectionSummary } from "@/components/lunch/lunch-selection-summary";
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
 import { LUNCH_ORDER_CUTOFF_HOUR } from "@/config/lunch";
@@ -20,7 +32,9 @@ import {
 import { startParentPreviewAction } from "@/features/admin/preview-actions";
 import { formatMinutes } from "@/config/school-hub";
 import { isParentPreviewActive } from "@/lib/auth/preview";
+import { buildLunchSelectionSummary } from "@/lib/lunch-selections";
 import { requireCampusAccess } from "@/lib/auth/session";
+import { getCafeteriaAccounts } from "@/services/cafeteria-account-service";
 import { listDietaryRequests } from "@/services/dietary-service";
 import { getLunchBoard, getLunchKitchenCounts } from "@/services/lunch-service";
 
@@ -68,6 +82,29 @@ export default async function LunchPage() {
         })
       : [];
 
+  // The board only flashes "Saved" on the button just tapped, so families get a
+  // standing read-back of every choice underneath it.
+  const selectionSummary = buildLunchSelectionSummary(board);
+
+  const accounts = await getCafeteriaAccounts(
+    studentDiners.map((diner) => diner.id),
+  );
+  const balanceRows: CafeteriaBalanceRow[] = studentDiners
+    .map((diner) => {
+      const account = accounts[diner.id];
+      if (!account) {
+        return null;
+      }
+      return {
+        studentId: diner.id,
+        studentName: diner.displayName,
+        balanceLabel: account.balanceLabel,
+        balanceCents: account.balanceCents,
+        isLow: account.isLow,
+      };
+    })
+    .filter((row): row is CafeteriaBalanceRow => row !== null);
+
   const dietaryStudents: DietaryFormStudent[] = studentDiners.map((diner) => ({
     id: diner.id,
     displayName: diner.displayName,
@@ -89,14 +126,31 @@ export default async function LunchPage() {
           : "The rotating cafeteria menu for the week ahead."
       }
       actions={
-        canReviewDietary ? (
-          <Button
-            size="sm"
-            variant="outline"
-            nativeButton={false}
-            render={<Link href="/admin/dietary">Review dietary forms</Link>}
-          />
-        ) : undefined
+        <>
+          {canOrder ? (
+            <Button
+              size="sm"
+              variant="outline"
+              nativeButton={false}
+              render={<Link href="/parent/guide">Parent guide</Link>}
+            />
+          ) : null}
+          {canManage ? (
+            <Button
+              size="sm"
+              nativeButton={false}
+              render={<Link href="/lunch/kitchen">Kitchen prep sheet</Link>}
+            />
+          ) : null}
+          {canReviewDietary ? (
+            <Button
+              size="sm"
+              variant="outline"
+              nativeButton={false}
+              render={<Link href="/admin/dietary">Review dietary forms</Link>}
+            />
+          ) : null}
+        </>
       }
     >
       {canOrder ? (
@@ -130,6 +184,39 @@ export default async function LunchPage() {
         </DashboardCard>
       )}
 
+      {canOrder ? (
+        <section id="your-selections" className="scroll-mt-24">
+          <DashboardCard
+            title="Your selections"
+            description="Everything saved so far. Nothing else is needed from you — the cafeteria already has these."
+            icon={<ClipboardCheck className="size-5" />}
+            status={
+              selectionSummary.chosenCount > 0
+                ? {
+                    label: `${selectionSummary.chosenCount} saved`,
+                    variant: "success",
+                  }
+                : undefined
+            }
+          >
+            <LunchSelectionSummary
+              summary={selectionSummary}
+              previewOnly={board.previewOnly}
+            />
+          </DashboardCard>
+        </section>
+      ) : null}
+
+      {balanceRows.length > 0 ? (
+        <DashboardCard
+          title="Cafeteria balance"
+          description="Money the office has on file. Add to it by sending an envelope to school."
+          icon={<Wallet className="size-5" />}
+        >
+          <CafeteriaBalances rows={balanceRows} />
+        </DashboardCard>
+      ) : null}
+
       {showDietaryForm ? (
         <DashboardCard
           title="Allergies & dietary needs"
@@ -143,9 +230,17 @@ export default async function LunchPage() {
       {canManage ? (
         <DashboardCard
           title="Kitchen counts"
-          description="Trays to prepare per day across the whole school."
+          description="Every choice totalled per day across the whole school."
           icon={<ChefHat className="size-5" />}
           status={{ label: "Staff view", variant: "info" }}
+          actions={
+            <Button
+              size="sm"
+              variant="outline"
+              nativeButton={false}
+              render={<Link href="/lunch/kitchen">Full prep sheet</Link>}
+            />
+          }
         >
           {kitchenCounts.length > 0 ? (
             <div className="overflow-x-auto">
@@ -183,6 +278,17 @@ export default async function LunchPage() {
               No lunch orders recorded for the days ahead yet.
             </p>
           )}
+          <p className="mt-4 text-sm text-muted-foreground">
+            The{" "}
+            <Link
+              href="/lunch/kitchen"
+              className="font-medium text-[#2F80ED] underline underline-offset-4"
+            >
+              kitchen prep sheet
+            </Link>{" "}
+            breaks each day down by dish, lists who is eating, and flags the
+            allergies going out on the line.
+          </p>
         </DashboardCard>
       ) : null}
 

@@ -50,6 +50,28 @@ export async function listLinkedStudents(
   }));
 }
 
+/**
+ * Every parent account linked to a student. Used when the school has to reach
+ * a family in the app rather than the other way round — a low cafeteria
+ * balance, for instance.
+ */
+export async function listLinkedParentIds(
+  studentId: string,
+): Promise<string[]> {
+  if (!isDatabaseConfigured()) {
+    return [];
+  }
+
+  const links = await withDatabase((prisma) =>
+    prisma.parentStudentLink.findMany({
+      where: { parentId: { not: studentId }, studentId },
+      select: { parentId: true },
+    }),
+  );
+
+  return (links ?? []).map((link) => link.parentId);
+}
+
 export async function linkParentToStudent(input: {
   parentId: string;
   studentId: string;
