@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { CheckCircle2, Circle, ClipboardList, RefreshCw, UserCheck } from "lucide-react";
+import {
+  CheckCircle2,
+  Circle,
+  ClipboardList,
+  RefreshCw,
+  UserCheck,
+  UtensilsCrossed,
+} from "lucide-react";
 import { redirect } from "next/navigation";
 
 import { ChildClubApprovals } from "@/components/forms/child-club-approvals";
@@ -44,13 +51,39 @@ export default async function ParentPortalPage() {
       title="Parent Portal"
       description="Review agreement status and view your linked student's campus activity."
       actions={
-        <Button
-          size="sm"
-          nativeButton={false}
-          render={<Link href="/forms-center">Open Forms Center</Link>}
-        />
+        <>
+          <Button
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/lunch">Order lunch</Link>}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/forms-center">Open Forms Center</Link>}
+          />
+        </>
       }
     >
+      <DashboardCard
+        title="Cafeteria lunch"
+        description="Choose hot lunch, the vegetarian option, or a packed lunch for each school day."
+        icon={<UtensilsCrossed className="size-5" />}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            Orders for each day close at 9:00 AM that morning and can be changed
+            until then.
+          </p>
+          <Button
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/lunch">Choose lunches</Link>}
+          />
+        </div>
+      </DashboardCard>
+
       <DashboardCard
         title="Action required"
         description={`Agreements and approvals that need you for ${schoolYear}.`}

@@ -23,12 +23,15 @@ import {
   MonitorPlay,
   Package,
   Radio,
+  Salad,
   Scissors,
   ScrollText,
   Sparkles,
   Sun,
   Trophy,
+  UserCheck,
   Users,
+  UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
 
@@ -36,7 +39,20 @@ import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
 import { canBrowseAllFocusClubs } from "@/config/focus-club-access";
 import { FOCUS_CLUBS, type FocusClubSlug } from "@/config/focused-clubs";
 import type { CampusRole } from "@/config/roles";
-import { canAccessAdmin, isFacultyClubLookupRole } from "@/config/roles";
+import {
+  CAMPUS_ROLES,
+  canAccessAdmin,
+  canManageDietary,
+  canOrderLunch,
+  isFacultyClubLookupRole,
+} from "@/config/roles";
+
+/**
+ * Derived from permissions so the sidebar cannot drift out of sync with
+ * `GLOBAL_ROLE_PERMISSIONS`.
+ */
+const LUNCH_ORDER_ROLES: CampusRole[] = CAMPUS_ROLES.filter(canOrderLunch);
+const DIETARY_MANAGE_ROLES: CampusRole[] = CAMPUS_ROLES.filter(canManageDietary);
 
 export type NavItem = {
   label: string;
@@ -255,6 +271,23 @@ export const focusedClubsNavigation: NavEntry[] = [
     primary: true,
   },
   {
+    label: "Cafeteria Lunch",
+    href: "/lunch",
+    icon: UtensilsCrossed,
+    enabled: true,
+    mobile: true,
+    primary: true,
+    roles: LUNCH_ORDER_ROLES,
+  },
+  {
+    label: "Parent Portal",
+    href: "/parent",
+    icon: UserCheck,
+    enabled: true,
+    primary: true,
+    roles: ["parent"],
+  },
+  {
     label: FOCUS_CLUBS[0].name,
     icon: Cpu,
     defaultOpen: true,
@@ -415,6 +448,13 @@ export const focusedClubsNavigation: NavEntry[] = [
         enabled: true,
         roles: ["admin"],
       },
+      {
+        label: "Dietary Forms",
+        href: "/admin/dietary",
+        icon: Salad,
+        enabled: true,
+        roles: DIETARY_MANAGE_ROLES,
+      },
     ],
   },
 ];
@@ -483,6 +523,20 @@ export const groupedNavigation: NavEntry[] = [
     children: [
       { label: "My Journey", href: "/my-journey", icon: Map, enabled: true },
       { label: "School Hub", href: "/hub", icon: Landmark, enabled: true },
+      {
+        label: "Cafeteria Lunch",
+        href: "/lunch",
+        icon: UtensilsCrossed,
+        enabled: true,
+        roles: LUNCH_ORDER_ROLES,
+      },
+      {
+        label: "Parent Portal",
+        href: "/parent",
+        icon: UserCheck,
+        enabled: true,
+        roles: ["parent"],
+      },
       { label: "Calendar", href: "/calendar", icon: Calendar, enabled: true },
       { label: "Events", href: "/events", icon: Landmark, enabled: true },
       { label: "Campus Life", href: "/campus-life", icon: Megaphone, enabled: true },

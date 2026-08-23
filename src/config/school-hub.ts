@@ -276,6 +276,12 @@ export const HUB_RESOURCES: HubResourceLink[] = [
     href: "/calendar",
   },
   {
+    id: "lunch",
+    label: "Cafeteria Lunch",
+    description: "Order hot, vegetarian, or packed lunch for the week ahead.",
+    href: "/lunch",
+  },
+  {
     id: "forms",
     label: "Forms",
     description: "Published permission slips and school forms.",

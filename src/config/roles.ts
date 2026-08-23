@@ -115,6 +115,10 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "integrations:view_health",
     "ai:use",
     "ai:audit",
+    "lunch:order",
+    "lunch:manage",
+    "dietary:submit",
+    "dietary:manage",
   ],
   advisor: [
     ...CORE,
@@ -150,6 +154,10 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "feed:post",
     "athletics:view",
     "ai:use",
+    "lunch:order",
+    "lunch:manage",
+    "dietary:submit",
+    "dietary:manage",
   ],
   teacher: [
     ...CORE,
@@ -175,6 +183,8 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "feed:post",
     "athletics:view",
     "ai:use",
+    "lunch:order",
+    "dietary:submit",
   ],
   student: [
     ...CORE,
@@ -214,6 +224,8 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "future:explore",
     "tickets:create",
     "athletics:view",
+    "lunch:order",
+    "dietary:submit",
   ],
   sponsor: [
     ...CORE,
@@ -257,6 +269,10 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "feed:post",
     "feed:moderate",
     "athletics:view",
+    "lunch:order",
+    "lunch:manage",
+    "dietary:submit",
+    "dietary:manage",
   ],
   coach: [
     ...CORE,
@@ -275,6 +291,8 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "athletics:manage_team",
     "athletics:view",
     "partners:view",
+    "lunch:order",
+    "dietary:submit",
   ],
   counselor: [
     ...CORE,
@@ -287,6 +305,9 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "partners:view",
     "mentors:manage",
     "athletics:view",
+    "lunch:order",
+    "dietary:submit",
+    "dietary:manage",
   ],
 };
 
@@ -584,4 +605,45 @@ const LEADERSHIP_ANALYTICS_ROLES: CampusRole[] = [
 
 export function canViewLeadershipAnalytics(role: CampusRole): boolean {
   return LEADERSHIP_ANALYTICS_ROLES.includes(role);
+}
+
+/**
+ * Order cafeteria lunch. Parents order for their linked students; faculty and
+ * staff order their own. Sponsors and alumni are not on campus for lunch.
+ */
+export function canOrderLunch(role: CampusRole): boolean {
+  return hasPermission(role, "lunch:order");
+}
+
+/** See kitchen counts and every diner's order for a service date. */
+export function canManageLunch(role: CampusRole): boolean {
+  return hasPermission(role, "lunch:manage");
+}
+
+/**
+ * Roles that eat as themselves rather than ordering on someone else's behalf.
+ * Parents are excluded — they order for linked students, not for themselves.
+ */
+const SELF_LUNCH_ROLES: CampusRole[] = [
+  "admin",
+  "advisor",
+  "teacher",
+  "staff",
+  "coach",
+  "counselor",
+  "student",
+];
+
+export function ordersLunchForSelf(role: CampusRole): boolean {
+  return SELF_LUNCH_ROLES.includes(role) && canOrderLunch(role);
+}
+
+/** Submit a dietary / allergy form for a linked student. */
+export function canSubmitDietaryForm(role: CampusRole): boolean {
+  return hasPermission(role, "dietary:submit");
+}
+
+/** Accept or decline dietary forms and edit the record on a student account. */
+export function canManageDietary(role: CampusRole): boolean {
+  return hasPermission(role, "dietary:manage");
 }

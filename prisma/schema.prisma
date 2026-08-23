@@ -458,6 +458,13 @@ model User {
   studioGraphicsOperated     StudioGraphic[]           @relation("StudioGraphicOperator")
   studioRundownsOperated     StudioRunOfShow[]         @relation("StudioRunOfShowOperator")
   studioSponsorsMaintained   StudioSponsor[]           @relation("StudioSponsorOperator")
+  lunchOrders                LunchOrder[]              @relation("LunchOrderDiner")
+  lunchOrdersPlaced          LunchOrder[]              @relation("LunchOrderPlacedBy")
+  dietaryRequests            DietaryRequest[]          @relation("DietaryRequestStudent")
+  dietaryRequestsSubmitted   DietaryRequest[]          @relation("DietaryRequestSubmitter")
+  dietaryRequestsReviewed    DietaryRequest[]          @relation("DietaryRequestReviewer")
+  dietaryProfile             StudentDietaryProfile?    @relation("DietaryProfileStudent")
+  dietaryProfilesApplied     StudentDietaryProfile[]   @relation("DietaryProfileApplier")
 
   @@index([role])
   @@index([schoolId])
@@ -479,6 +486,100 @@ model ParentStudentLink {
   @@index([parentId])
   @@index([studentId])
   @@map("parent_student_links")
+}
+
+enum LunchChoiceKind {
+  HOT
+  VEGETARIAN
+  PACKED
+  NONE
+}
+
+/// One cafeteria order per diner per service date.
+///
+/// `dinerId` is whoever eats — a student when a parent orders for their child,
+/// or the faculty member themselves when a teacher or staff member orders their
+/// own lunch. `orderedById` is whoever placed it, so the office can tell a
+/// parent-placed order from a self-placed one. The unique key means changing an
+/// order updates the same row instead of stacking duplicates.
+model LunchOrder {
+  id          String          @id @default(cuid())
+  dinerId     String          @map("diner_id") @db.Uuid
+  orderedById String          @map("ordered_by_id") @db.Uuid
+  serviceDate DateTime        @map("service_date") @db.Date
+  choice      LunchChoiceKind
+  note        String?
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  diner       User            @relation("LunchOrderDiner", fields: [dinerId], references: [id], onDelete: Cascade)
+  orderedBy   User            @relation("LunchOrderPlacedBy", fields: [orderedById], references: [id], onDelete: Cascade)
+
+  @@unique([dinerId, serviceDate])
+  @@index([dinerId])
+  @@index([serviceDate])
+  @@index([orderedById])
+  @@map("lunch_orders")
+}
+
+enum DietaryRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+/// A dietary / allergy form submitted by a parent (or the office) for a student.
+///
+/// This is the paper trail: it records what a family asked for and who reviewed
+/// it. Accepting one copies its contents onto `StudentDietaryProfile`, which is
+/// the record the rest of the app reads. Declining leaves the profile untouched.
+model DietaryRequest {
+  id            String               @id @default(cuid())
+  studentId     String               @map("student_id") @db.Uuid
+  submittedById String               @map("submitted_by_id") @db.Uuid
+  status        DietaryRequestStatus @default(PENDING)
+  /// Allergen ids from `DIETARY_ALLERGENS` in src/config/dietary.ts.
+  allergens     String[]             @default([])
+  /// Restriction ids from `DIETARY_RESTRICTIONS` in src/config/dietary.ts.
+  restrictions  String[]             @default([])
+  /// Family-supplied detail, e.g. "carries an EpiPen in her bag".
+  notes         String?
+  reviewedById  String?              @map("reviewed_by_id") @db.Uuid
+  reviewedAt    DateTime?            @map("reviewed_at")
+  reviewNote    String?              @map("review_note")
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+  student       User                 @relation("DietaryRequestStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  submittedBy   User                 @relation("DietaryRequestSubmitter", fields: [submittedById], references: [id], onDelete: Cascade)
+  reviewedBy    User?                @relation("DietaryRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([studentId])
+  @@index([status])
+  @@index([submittedById])
+  @@map("dietary_requests")
+}
+
+/// The canonical dietary record on a student account — one row per student.
+///
+/// Only an accepted `DietaryRequest` (or a direct office edit) writes here, so
+/// the cafeteria and the lunch ordering board read approved facts rather than
+/// whatever a family last typed into a form.
+model StudentDietaryProfile {
+  id              String    @id @default(cuid())
+  studentId       String    @unique @map("student_id") @db.Uuid
+  allergens       String[]  @default([])
+  restrictions    String[]  @default([])
+  notes           String?
+  /// The accepted request this state came from, when it came from a form.
+  sourceRequestId String?   @map("source_request_id")
+  appliedById     String?   @map("applied_by_id") @db.Uuid
+  appliedAt       DateTime? @map("applied_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  student         User      @relation("DietaryProfileStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  appliedBy       User?     @relation("DietaryProfileApplier", fields: [appliedById], references: [id], onDelete: SetNull)
+
+  @@index([studentId])
+  @@map("student_dietary_profiles")
 }
 
 model Organization {

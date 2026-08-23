@@ -1,16 +1,21 @@
 import Link from "next/link";
 import { QrCode } from "lucide-react";
 
+import { DietarySummary } from "@/components/dietary/dietary-summary";
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
 import { ROLE_LABELS } from "@/config/roles";
 import { LEVEL_TIER_LABELS } from "@/lib/academy-engine/constants";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { getStudentProgressProfile } from "@/services/academy-engine-service";
+import { getDietaryProfile } from "@/services/dietary-service";
 
 export default async function ProfilePage() {
   const user = await requireCompleteProfile();
-  const progress = await getStudentProgressProfile(user.id);
+  const [progress, dietary] = await Promise.all([
+    getStudentProgressProfile(user.id),
+    getDietaryProfile(user.id),
+  ]);
 
   return (
     <ShellPage
@@ -36,6 +41,32 @@ export default async function ProfilePage() {
         <ProfileField label="Role" value={ROLE_LABELS[user.role]} />
         <ProfileField label="Status" value={user.status} />
       </div>
+
+      <section className="mt-8 rounded-xl border border-border bg-card p-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold text-[#0A2342] dark:text-white">
+            Cafeteria & dietary
+          </h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/lunch">Cafeteria lunch</Link>}
+          />
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Accepted by the school office and honored by the cafeteria.
+        </p>
+        <div className="mt-4">
+          <DietarySummary
+            allergens={dietary?.allergens ?? []}
+            restrictions={dietary?.restrictions ?? []}
+            notes={dietary?.notes}
+            appliedByName={dietary?.appliedByName}
+            appliedAt={dietary?.appliedAt}
+          />
+        </div>
+      </section>
 
       <section className="mt-8 rounded-xl border border-border bg-card p-5">
         <h2 className="text-lg font-semibold text-[#0A2342] dark:text-white">

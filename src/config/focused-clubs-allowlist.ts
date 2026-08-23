@@ -25,6 +25,10 @@ export const FOCUSED_MODE_ALLOWED_PREFIXES = [
   "/profile",
   "/settings",
   "/pass",
+  // Real school ops that outlive the club pivot: families still have to sign
+  // agreements and order cafeteria lunch.
+  "/parent",
+  "/lunch",
   "/admin",
   "/counselor",
   "/teacher",
