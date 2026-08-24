@@ -93,6 +93,17 @@ export function requiresSchoolEmail(role: CampusRole): boolean {
   return SCHOOL_EMAIL_ROLES.includes(role);
 }
 
+/**
+ * Registration gate — call this before creating a *new* account, not on every
+ * request.
+ *
+ * The school domain keeps the open internet from self-registering as a student.
+ * It is not a statement about who may sign in: administrators provision student
+ * accounts on outside addresses for families without a school mailbox, and
+ * re-checking the domain at session time would lock those students out of the
+ * campus (including published video). Callers that already have a provisioned
+ * profile row should skip this.
+ */
 export function validateEmailForRole(
   email: string,
   role: CampusRole,

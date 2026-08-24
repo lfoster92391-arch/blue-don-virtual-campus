@@ -91,15 +91,34 @@ function mapFallbackUser(
   };
 }
 
+/**
+ * True when this auth identity already has a campus profile row — provisioned
+ * by an administrator, or created before today's policy. This is what keeps the
+ * school-email rule a *registration* gate rather than a sign-in gate.
+ */
+async function campusAccountExists(userId: string): Promise<boolean> {
+  const existing = await withDatabase((prisma) =>
+    prisma.user.findUnique({ where: { id: userId }, select: { id: true } }),
+  );
+
+  return Boolean(existing);
+}
+
 export async function ensureUserProfile(input: EnsureUserInput): Promise<CampusUser | null> {
   if (!isDatabaseConfigured()) {
     return null;
   }
 
   const role = input.role ?? "student";
-  const emailCheck = validateEmailForRole(input.email, role);
-  if (!emailCheck.valid) {
-    throw new Error(emailCheck.message);
+
+  // The school-email rule keeps the open internet from self-registering as a
+  // student. It must not lock out an account an administrator already created
+  // with an outside address, so it only applies to brand-new profiles.
+  if (!(await campusAccountExists(input.id))) {
+    const emailCheck = validateEmailForRole(input.email, role);
+    if (!emailCheck.valid) {
+      throw new Error(emailCheck.message);
+    }
   }
 
   const isParent = role === "parent";
@@ -157,12 +176,9 @@ export async function completeOnboarding(input: {
     return null;
   }
 
+  // No domain re-check here: the profile row already exists, so the account was
+  // either admin-provisioned or passed the registration gate.
   const role = toCampusRole(existing.role);
-  const emailCheck = validateEmailForRole(existing.email, role);
-  if (!emailCheck.valid) {
-    throw new Error(emailCheck.message);
-  }
-
   const isParent = role === "parent";
 
   const user = await withDatabase((prisma) =>

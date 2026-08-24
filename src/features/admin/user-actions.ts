@@ -9,7 +9,6 @@ import {
   type CampusRole,
 } from "@/config/roles";
 import { isSupabaseAdminConfigured } from "@/config/env";
-import { validateEmailForRole } from "@/lib/auth/email-domain";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -140,6 +139,10 @@ export async function createCampusUserAction(
 ): Promise<AdminUserActionState> {
   const admin = await requireCompleteProfile();
 
+  // This gate is also what authorizes the email address below: an administrator
+  // may provision any role on an outside domain, because some students and
+  // families have no school mailbox. Self-service registration still enforces
+  // the school domain.
   if (!hasPermission(admin.role, "users:manage")) {
     return { error: "You do not have permission to create user accounts." };
   }
@@ -162,11 +165,6 @@ export async function createCampusUserAction(
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid account data." };
-  }
-
-  const emailCheck = validateEmailForRole(parsed.data.email, parsed.data.role);
-  if (!emailCheck.valid) {
-    return { error: emailCheck.message };
   }
 
   const client = createAdminClient();

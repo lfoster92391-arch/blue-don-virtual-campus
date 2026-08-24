@@ -52,7 +52,7 @@ export async function saveDailyRundownAction(
     if (!canEditValues && !canEditPrayer) {
       return {
         error:
-          "Only Broadcasting producers and advisors can update the show script.",
+          "Only the Broadcasting crew and advisors can update the show script.",
       };
     }
 

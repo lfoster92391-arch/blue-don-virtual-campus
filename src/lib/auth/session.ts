@@ -56,10 +56,17 @@ export async function getCurrentUser(): Promise<CampusUser | null> {
   }
 
   const user = buildCampusUserFromAuth(authUser, profile);
-  const emailCheck = validateEmailForRole(user.email, user.role);
 
-  if (!emailCheck.valid) {
-    return null;
+  // A provisioned profile row is the authorization: an administrator created it,
+  // or it passed the registration gate. Re-running the school-email rule here
+  // would sign out students the office deliberately onboarded with an outside
+  // address. Identities with no profile row (no database, or metadata-only) are
+  // still held to the rule.
+  if (!profile) {
+    const emailCheck = validateEmailForRole(user.email, user.role);
+    if (!emailCheck.valid) {
+      return null;
+    }
   }
 
   return user;

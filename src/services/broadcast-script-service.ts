@@ -15,7 +15,10 @@ import { isDatabaseConfigured } from "@/config/env";
 import { getLunchForWeekday } from "@/config/school-hub";
 import { canManageAcademy, type CampusRole } from "@/config/roles";
 import { isPrismaReady, withDatabase } from "@/lib/prisma";
-import { canManageCampusMedia } from "@/services/media-service";
+import {
+  canManageCampusMedia,
+  isBroadcastCrewMember,
+} from "@/services/media-service";
 
 export type { BroadcastDailyScriptView, BroadcastScriptSlotView };
 
@@ -259,11 +262,25 @@ export async function getTodaysBroadcastScript(
   }
 }
 
+/**
+ * Slot values are the students' own writing for today's show, so every ACTIVE
+ * member of the Broadcasting roster may fill them — not just the officers who
+ * hold `org:media:manage`. Prayer text and template structure stay narrower.
+ */
 export async function canEditBroadcastScriptValues(
   userId: string,
   role: CampusRole,
 ): Promise<boolean> {
-  return canManageCampusMedia(userId, role);
+  try {
+    if (await canManageCampusMedia(userId, role)) {
+      return true;
+    }
+
+    return await isBroadcastCrewMember(userId);
+  } catch (error) {
+    console.error("[broadcast-script] canEditBroadcastScriptValues failed:", error);
+    return false;
+  }
 }
 
 export async function canEditBroadcastScriptPrayer(

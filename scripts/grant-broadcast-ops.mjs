@@ -2,11 +2,16 @@
 // user, without touching their global `users.role`.
 //
 // Why an org role and not ADMIN/ADVISOR:
-//   Upload + Daily Rundown editing are gated by canManageCampusMedia()
-//   (src/services/media-service.ts), which is satisfied by the Broadcasting
-//   org permission `org:media:manage`. SECRETARY is the lowest officer role in
-//   ORG_ROLE_PERMISSIONS that carries it, so it is the default here. Flipping
-//   users.role to ADMIN/ADVISOR would grant campus-wide powers instead.
+//   Upload, OBS, sponsors, and the daily prayer are gated by
+//   canManageCampusMedia() (src/services/media-service.ts), which is satisfied
+//   by the Broadcasting org permission `org:media:manage`. SECRETARY is the
+//   lowest officer role in ORG_ROLE_PERMISSIONS that carries it, so it is the
+//   default here. Flipping users.role to ADMIN/ADVISOR would grant campus-wide
+//   powers instead.
+//
+//   Note: this script is not needed just to write the show. Filling the Daily
+//   Rundown slot values only requires ACTIVE Broadcasting membership at any
+//   org role — see canEditBroadcastScriptValues().
 //
 // Usage:
 //   node scripts/grant-broadcast-ops.mjs --email=someone@weirtonmadonna.org
@@ -181,7 +186,8 @@ async function main() {
         "\n[grant-broadcast-ops] Unlocked (org-scoped):\n" +
           "  - /media Control Room: upload video, go live, end broadcast\n" +
           "  - /broadcast/studio console\n" +
-          "  - Broadcasting > Daily Rundown: edit slot values + prayer\n" +
+          "  - Broadcasting > Daily Rundown: the daily prayer (slot values are\n" +
+          "    already open to every ACTIVE member)\n" +
           "  - Broadcasting club announcements, roster, resources, documents\n" +
           "\n[grant-broadcast-ops] Still denied (needs ADMIN/ADVISOR):\n" +
           "  - /admin governance, /admin/users, /admin/students, password resets\n" +
@@ -191,7 +197,8 @@ async function main() {
     } else {
       console.log(
         "\n[grant-broadcast-ops] This role does NOT carry org:media:manage — " +
-          "upload and Daily Rundown editing remain read-only.\n",
+          "upload, OBS, and the daily prayer remain read-only. Daily Rundown " +
+          "slot values are still editable with ACTIVE membership.\n",
       );
     }
 

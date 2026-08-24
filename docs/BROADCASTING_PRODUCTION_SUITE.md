@@ -50,7 +50,14 @@ Lisa — full Studio B production tools on top of Watch Broadcasting, Daily Rund
 | Who | Can |
 |-----|-----|
 | Any signed-in user | Countdown (view), watch, highlight reel, credits (view), book, submit announcement, join |
-| Broadcasting crew (`canManageCampusMedia`) | Set countdown, categorize, process bookings/submissions, equipment, applications, credit roll |
+| ACTIVE Broadcasting member (`isBroadcastCrewMember`) | Fill today's Daily Rundown slot values |
+| Broadcasting officers / advisors (`canManageCampusMedia`) | Set countdown, categorize, process bookings/submissions, equipment, applications, credit roll, daily prayer |
+| Advisors / admins (`canManageAcademy`) | Daily Rundown template structure |
+
+Watching is a signed-in campus check, not an email-domain check: students the
+office provisioned on an outside address (no school mailbox yet) can watch
+published video like anyone else. The `@weirtonmadonna.org` rule still applies
+to self-service registration.
 
 No XP on these surfaces.
 

@@ -47,8 +47,9 @@ export function CreateStudentForm() {
           Create student
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Provision a @{SCHOOL_EMAIL_DOMAIN} login, set a temporary password, and
-          optionally assign them to a club with a role.
+          Provision a login, set a temporary password, and optionally assign
+          them to a club with a role. Use @{SCHOOL_EMAIL_DOMAIN} when the student
+          has a school mailbox; an outside address works too.
         </p>
       </div>
 

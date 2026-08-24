@@ -9,8 +9,7 @@ import {
   focusClubRoleLabel,
 } from "@/config/focus-club-access";
 import { isSupabaseAdminConfigured } from "@/config/env";
-import { SCHOOL_EMAIL_DOMAIN } from "@/lib/auth/email-domain";
-import { validateEmailForRole } from "@/lib/auth/email-domain";
+import { isSchoolEmail, SCHOOL_EMAIL_DOMAIN } from "@/lib/auth/email-domain";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -96,10 +95,11 @@ export async function createStudentWithClubAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid student data." };
   }
 
-  const emailCheck = validateEmailForRole(parsed.data.email, "student");
-  if (!emailCheck.valid) {
-    return { error: emailCheck.message };
-  }
+  // Outside addresses are allowed on purpose: the `users:manage` check above is
+  // the authorization, and some students have no school mailbox yet. We only
+  // flag it back to the administrator. Self-service registration still enforces
+  // the school domain.
+  const isOutsideEmail = !isSchoolEmail(parsed.data.email);
 
   const client = createAdminClient();
   if (!client) {
@@ -160,8 +160,11 @@ export async function createStudentWithClubAction(
   }
 
   revalidateStudentPaths();
+  const emailNote = isOutsideEmail
+    ? ` Heads up: this is an outside address, not @${SCHOOL_EMAIL_DOMAIN}. The account works, but they cannot reset it through school mail.`
+    : "";
   return {
-    success: `Created ${profile.displayName} (${parsed.data.email}). They can sign in with the temporary password.${clubNote} School emails use @${SCHOOL_EMAIL_DOMAIN}.`,
+    success: `Created ${profile.displayName} (${parsed.data.email}). They can sign in with the temporary password.${clubNote}${emailNote}`,
   };
 }
 

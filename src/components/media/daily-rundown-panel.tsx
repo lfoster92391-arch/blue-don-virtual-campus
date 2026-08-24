@@ -145,7 +145,7 @@ export function DailyRundownPanel({
             Daily Rundown · Show Script
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Shared production sheet for {dateLabel}. Producers fill slots;
+            Shared production sheet for {dateLabel}. The crew fills slots;
             advisors set the daily prayer.
           </p>
           {script.updatedByName && script.updatedAt ? (
@@ -277,7 +277,8 @@ export function DailyRundownPanel({
             </Button>
           ) : (
             <p className="text-sm text-muted-foreground">
-              View-only for crew members — producers edit the shared rundown.
+              View-only — join the Broadcasting roster to edit the shared
+              rundown.
             </p>
           )}
         </form>

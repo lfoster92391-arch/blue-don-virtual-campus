@@ -174,6 +174,39 @@ export async function canManageCampusMedia(
   return hasBroadcastAcademyMembership(userId);
 }
 
+/**
+ * On the Broadcasting roster today — any ACTIVE club member or Broadcast
+ * Academy member, officer or not.
+ *
+ * This is deliberately weaker than {@link canManageCampusMedia}, which needs
+ * the `org:media:manage` officer permission. Publishing video, driving OBS, and
+ * selling sponsor slots stay with the officers; writing the crew's own show is
+ * the whole point of being on the crew.
+ */
+export async function isBroadcastCrewMember(userId: string): Promise<boolean> {
+  try {
+    const broadcastOrgId = await getBroadcastOrganizationId();
+    if (broadcastOrgId) {
+      const membership = await withDatabase((prisma) =>
+        prisma.organizationMembership.findUnique({
+          where: {
+            organizationId_userId: { organizationId: broadcastOrgId, userId },
+          },
+          select: { status: true },
+        }),
+      );
+      if (membership?.status === "ACTIVE") {
+        return true;
+      }
+    }
+
+    return await hasBroadcastAcademyMembership(userId);
+  } catch (error) {
+    console.error("[media] isBroadcastCrewMember failed:", error);
+    return false;
+  }
+}
+
 function demoBroadcastViews(): CampusMediaItemView[] {
   return DEMO_SCHOOL_BROADCASTS.map((item, index) => ({
     id: item.id,

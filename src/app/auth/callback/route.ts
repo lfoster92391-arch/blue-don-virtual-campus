@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
-import { isSupabaseConfigured } from "@/config/env";
+import { isDatabaseConfigured, isSupabaseConfigured } from "@/config/env";
 import { normalizeRole } from "@/config/roles";
 import { validateEmailForRole } from "@/lib/auth/email-domain";
 import { createClient } from "@/lib/supabase/server";
@@ -39,13 +39,21 @@ export async function GET(request: Request) {
       if (user?.email) {
         const resolvedRole =
           role ?? normalizeRole(user.user_metadata?.role as string | undefined) ?? "student";
-        const emailCheck = validateEmailForRole(user.email, resolvedRole);
 
-        if (!emailCheck.valid) {
-          await supabase.auth.signOut();
-          return NextResponse.redirect(
-            `${origin}/login?error=email_not_allowed&message=${encodeURIComponent(emailCheck.message)}`,
-          );
+        // Only new sign-ups face the school-email rule — an admin-provisioned
+        // account on an outside address has to survive its own confirmation and
+        // password-recovery links. When there is a database, ensureUserProfile()
+        // below decides that authoritatively by looking for an existing profile;
+        // this branch only covers the case where it is a no-op.
+        if (!isDatabaseConfigured()) {
+          const emailCheck = validateEmailForRole(user.email, resolvedRole);
+
+          if (!emailCheck.valid) {
+            await supabase.auth.signOut();
+            return NextResponse.redirect(
+              `${origin}/login?error=email_not_allowed&message=${encodeURIComponent(emailCheck.message)}`,
+            );
+          }
         }
 
         try {
