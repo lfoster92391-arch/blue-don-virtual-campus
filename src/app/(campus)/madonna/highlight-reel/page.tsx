@@ -81,8 +81,17 @@ export default async function MadonnaHighlightReelPage() {
       >
         <HighlightReelPlayer
           items={reel}
+          canManage={canManageMedia}
           emptyLabel="No clips in the reel yet. Crew: tick “Feature in Highlight Reel” when uploading, or use “Add to reel” on any sports video below."
         />
+        {canManageMedia && reel.length > 0 ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Crew: <strong className="text-foreground">Remove from reel</strong>{" "}
+            takes a clip out of the running order but keeps it in the video
+            library. <strong className="text-foreground">Delete upload</strong>{" "}
+            removes it from campus entirely.
+          </p>
+        ) : null}
       </DashboardCard>
 
       {canManageMedia ? (

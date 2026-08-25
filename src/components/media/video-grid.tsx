@@ -1,7 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import {
   Bookmark,
   BookmarkCheck,
@@ -12,9 +11,9 @@ import {
   Video,
 } from "lucide-react";
 
+import { MediaCrewControls } from "@/components/media/media-crew-controls";
 import { useWatchLater } from "@/components/media/use-watch-later";
 import type { CampusMediaCategoryKey } from "@/config/broadcast-production";
-import { updateMediaCategoryAction } from "@/features/broadcast-production/actions";
 import { isDirectVideoUrl, toMediaEmbedUrl } from "@/lib/media-embed";
 import { RECENT_WINDOW_DAYS } from "@/lib/media-recency";
 import type { CampusVideoCard } from "@/services/media-service";
@@ -33,11 +32,11 @@ type VideoGridProps = {
   /** Which tab opens first. Defaults to Recent when there is enough history. */
   defaultView?: GridView;
   /**
-   * Broadcasting crew only — shows the "Add to reel" toggle so a producer can
-   * curate the Sports Highlight Reel straight from the library.
+   * Broadcasting crew only — shows the reel toggle and the delete control so a
+   * producer can curate and prune the library from the grid itself.
    */
   canCurate?: boolean;
-  /** Category applied when curating an untagged upload into the reel. */
+  /** Category a clip falls back to when it leaves the reel. */
   curateCategory?: CampusMediaCategoryKey;
 };
 
@@ -62,8 +61,6 @@ export function VideoGrid({
   canCurate = false,
   curateCategory = "SPORTS_HIGHLIGHTS",
 }: VideoGridProps) {
-  const router = useRouter();
-  const [curating, startCurate] = useTransition();
   const recentCutoff = recentSince?.getTime() ?? null;
   const recentCount = useMemo(
     () =>
@@ -185,22 +182,8 @@ export function VideoGrid({
               onPlay={() => setPlayingId(item.id)}
               saved={savingEnabled && watchLater.has(item.id)}
               onToggleSave={savingEnabled ? () => watchLater.toggle(item.id) : undefined}
-              curating={curating}
-              onToggleReel={
-                canCurate && item.source === "media"
-                  ? () => {
-                      startCurate(async () => {
-                        await updateMediaCategoryAction(
-                          item.id,
-                          (item.category as CampusMediaCategoryKey | null) ??
-                            curateCategory,
-                          !item.isHighlightReel,
-                        );
-                        router.refresh();
-                      });
-                    }
-                  : undefined
-              }
+              canManage={canCurate && item.source === "media"}
+              curateCategory={curateCategory}
             />
           ))}
         </ul>
@@ -215,16 +198,16 @@ function VideoCard({
   onPlay,
   saved,
   onToggleSave,
-  curating,
-  onToggleReel,
+  canManage,
+  curateCategory,
 }: {
   item: CampusVideoCard;
   playing: boolean;
   onPlay: () => void;
   saved: boolean;
   onToggleSave?: () => void;
-  curating: boolean;
-  onToggleReel?: () => void;
+  canManage: boolean;
+  curateCategory: CampusMediaCategoryKey;
 }) {
   const published = formatDate(item.publishedAt ?? item.sortAt);
 
@@ -311,21 +294,14 @@ function VideoCard({
           </p>
         ) : null}
 
-        {onToggleReel ? (
-          <button
-            type="button"
-            onClick={onToggleReel}
-            disabled={curating}
-            aria-pressed={item.isHighlightReel}
-            className={`mt-3 inline-flex w-fit items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60 ${
-              item.isHighlightReel
-                ? "bg-[#C9A227]/15 text-[#8A6D14] dark:text-[#C9A227]"
-                : "bg-muted text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Sparkles className="size-3.5" aria-hidden="true" />
-            {item.isHighlightReel ? "In highlight reel" : "Add to reel"}
-          </button>
+        {canManage ? (
+          <MediaCrewControls
+            mediaId={item.id}
+            title={item.title}
+            isHighlightReel={item.isHighlightReel}
+            fallbackCategory={curateCategory}
+            className="mt-3"
+          />
         ) : null}
       </div>
     </li>

@@ -3,12 +3,18 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, ListVideo, Play, Sparkles } from "lucide-react";
 
+import { MediaCrewControls } from "@/components/media/media-crew-controls";
+import type { CampusMediaCategoryKey } from "@/config/broadcast-production";
 import { isDirectVideoUrl, toMediaEmbedUrl } from "@/lib/media-embed";
 import type { CampusVideoCard } from "@/services/media-service";
 
 type HighlightReelPlayerProps = {
   items: CampusVideoCard[];
   emptyLabel: string;
+  /** Broadcasting crew — shows the remove-from-reel and delete controls. */
+  canManage?: boolean;
+  /** Category a clip falls back to when it leaves the reel. */
+  fallbackCategory?: CampusMediaCategoryKey;
 };
 
 /**
@@ -19,7 +25,12 @@ type HighlightReelPlayerProps = {
  * Uploaded files auto-advance on `ended`; embedded players (YouTube/Vimeo)
  * cannot report completion from an iframe, so those advance on Next.
  */
-export function HighlightReelPlayer({ items, emptyLabel }: HighlightReelPlayerProps) {
+export function HighlightReelPlayer({
+  items,
+  emptyLabel,
+  canManage = false,
+  fallbackCategory = "SPORTS_HIGHLIGHTS",
+}: HighlightReelPlayerProps) {
   const [index, setIndex] = useState(0);
 
   if (items.length === 0) {
@@ -102,6 +113,15 @@ export function HighlightReelPlayer({ items, emptyLabel }: HighlightReelPlayerPr
         {current.description ? (
           <p className="text-sm text-muted-foreground">{current.description}</p>
         ) : null}
+
+        {canManage && current.source === "media" ? (
+          <MediaCrewControls
+            mediaId={current.id}
+            title={current.title}
+            isHighlightReel={current.isHighlightReel}
+            fallbackCategory={fallbackCategory}
+          />
+        ) : null}
       </div>
 
       <div className="space-y-2">
@@ -116,16 +136,19 @@ export function HighlightReelPlayer({ items, emptyLabel }: HighlightReelPlayerPr
           {items.map((item, itemIndex) => {
             const active = itemIndex === safeIndex;
             return (
-              <li key={item.id}>
+              <li
+                key={item.id}
+                className={`rounded-lg border transition-colors ${
+                  active
+                    ? "border-[#0A2342] bg-[#0A2342]/5 dark:border-[#C9A227] dark:bg-[#C9A227]/10"
+                    : "border-border hover:bg-muted"
+                }`}
+              >
                 <button
                   type="button"
                   onClick={() => setIndex(itemIndex)}
                   aria-current={active}
-                  className={`flex w-full items-start gap-3 rounded-lg border px-3 py-2 text-left transition-colors ${
-                    active
-                      ? "border-[#0A2342] bg-[#0A2342]/5 dark:border-[#C9A227] dark:bg-[#C9A227]/10"
-                      : "border-border hover:bg-muted"
-                  }`}
+                  className="flex w-full items-start gap-3 px-3 py-2 text-left"
                 >
                   <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-[#0A2342] text-[10px] font-bold text-white">
                     {active ? (
@@ -147,6 +170,17 @@ export function HighlightReelPlayer({ items, emptyLabel }: HighlightReelPlayerPr
                     </span>
                   </span>
                 </button>
+
+                {canManage && item.source === "media" ? (
+                  <MediaCrewControls
+                    mediaId={item.id}
+                    title={item.title}
+                    isHighlightReel={item.isHighlightReel}
+                    fallbackCategory={fallbackCategory}
+                    compact
+                    className="px-3 pb-2"
+                  />
+                ) : null}
               </li>
             );
           })}

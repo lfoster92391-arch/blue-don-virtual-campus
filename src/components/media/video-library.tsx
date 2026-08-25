@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { Radio, Sparkles, Video } from "lucide-react";
 
+import { MediaCrewControls } from "@/components/media/media-crew-controls";
 import {
   CAMPUS_MEDIA_CATEGORY_LABELS,
   type CampusMediaCategoryKey,
@@ -44,6 +45,10 @@ type VideoLibraryProps = {
   items: CampusMediaItemView[];
   emptyLabel?: string;
   title?: string;
+  /**
+   * Broadcasting crew — unlocks the category dropdown plus the reel and
+   * delete controls on every row.
+   */
   canCategorize?: boolean;
   highlightOnly?: boolean;
 };
@@ -177,7 +182,7 @@ export function VideoLibrary({
                 {open ? <ArchivePlayback item={item} /> : null}
 
                 {canCategorize ? (
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
                     <label className="text-xs text-muted-foreground" htmlFor={`cat-${item.id}`}>
                       Category
                     </label>
@@ -206,6 +211,15 @@ export function VideoLibrary({
                         ),
                       )}
                     </select>
+
+                    <MediaCrewControls
+                      mediaId={item.id}
+                      title={item.title}
+                      isHighlightReel={
+                        item.isHighlightReel || item.category === "HIGHLIGHT_REEL"
+                      }
+                      fallbackCategory={null}
+                    />
                   </div>
                 ) : null}
               </li>

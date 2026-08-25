@@ -101,6 +101,7 @@ export default async function MadonnaSportsRecapPage() {
         >
           <HighlightReelPlayer
             items={reel.slice(0, 12)}
+            canManage={canManageMedia}
             emptyLabel="No clips flagged for the reel yet."
           />
         </DashboardCard>
@@ -193,6 +194,13 @@ export default async function MadonnaSportsRecapPage() {
             <li>
               Ended live streams appear as replays when they carry a sports
               category or are linked to a highlight.
+            </li>
+            <li>
+              Posted the wrong clip?{" "}
+              <strong className="text-foreground">Remove from reel</strong> pulls
+              it out of the running order but leaves it in this library;{" "}
+              <strong className="text-foreground">Delete upload</strong> removes
+              it from campus for good.
             </li>
           </ol>
 

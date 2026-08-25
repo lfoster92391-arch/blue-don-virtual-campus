@@ -728,6 +728,129 @@ export async function resolveBroadcastOrganizationId(): Promise<string | null> {
   return getBroadcastOrganizationId();
 }
 
+/**
+ * Curation toggle for the Sports Highlight Reel.
+ *
+ * Two signals put a clip in the reel — the `isHighlightReel` flag and the
+ * `HIGHLIGHT_REEL` category — so clearing only the flag would leave the clip
+ * on the reel. When removing, a categorized clip is demoted to
+ * `fallbackCategory` (the surface's own category) so it stays in the library.
+ */
+export async function setCampusMediaReelFlag(input: {
+  mediaId: string;
+  actorId: string;
+  role: CampusRole;
+  isHighlightReel: boolean;
+  fallbackCategory?: CampusMediaCategory | null;
+}): Promise<{ ok: true } | { error: string }> {
+  if (!(await canManageCampusMedia(input.actorId, input.role))) {
+    return { error: "Only Broadcasting crew can curate the highlight reel." };
+  }
+
+  if (!isDatabaseConfigured() || !isPrismaReady()) {
+    return { error: "The media library is not connected right now." };
+  }
+
+  const existing = await withDatabase((prisma) =>
+    prisma.campusMediaItem.findUnique({
+      where: { id: input.mediaId },
+      select: { id: true, category: true },
+    }),
+  );
+
+  if (!existing) {
+    return { error: "That video is no longer in the library." };
+  }
+
+  const category = input.isHighlightReel
+    ? existing.category
+    : existing.category === "HIGHLIGHT_REEL"
+      ? (input.fallbackCategory ?? null)
+      : existing.category;
+
+  const updated = await withDatabase((prisma) =>
+    prisma.campusMediaItem.update({
+      where: { id: input.mediaId },
+      data: { isHighlightReel: input.isHighlightReel, category },
+      select: { id: true },
+    }),
+  );
+
+  if (!updated) {
+    return { error: "Unable to update the reel. Try again." };
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Permanently removes an upload or past broadcast from the media library.
+ *
+ * The row goes first because that is what every surface reads from; the
+ * stored object is best-effort cleanup afterwards. Storage that outlives its
+ * row is invisible waste, but a failed storage call that blocked the delete
+ * would leave the clip playing on a student-facing page, which is the outcome
+ * a producer is trying to prevent.
+ *
+ * Drive/YouTube items carry no `storagePath`, so the row is the whole record.
+ */
+export async function deleteCampusMediaItem(input: {
+  mediaId: string;
+  actorId: string;
+  role: CampusRole;
+}): Promise<{ ok: true; title: string } | { error: string }> {
+  if (!(await canManageCampusMedia(input.actorId, input.role))) {
+    return { error: "Only Broadcasting crew can delete campus videos." };
+  }
+
+  if (!isDatabaseConfigured() || !isPrismaReady()) {
+    return { error: "The media library is not connected right now." };
+  }
+
+  const existing = await withDatabase((prisma) =>
+    prisma.campusMediaItem.findUnique({
+      where: { id: input.mediaId },
+      select: { id: true, title: true, status: true, storagePath: true },
+    }),
+  );
+
+  if (!existing) {
+    return { error: "That video is no longer in the library." };
+  }
+
+  if (existing.status === "LIVE") {
+    return { error: "End the live broadcast before deleting it." };
+  }
+
+  const deleted = await withDatabase((prisma) =>
+    prisma.campusMediaItem.delete({
+      where: { id: input.mediaId },
+      select: { id: true },
+    }),
+  );
+
+  if (!deleted) {
+    return { error: "Unable to delete this video. Try again." };
+  }
+
+  if (existing.storagePath) {
+    try {
+      const admin = createAdminClient();
+      const { error } = (await admin?.storage
+        .from(CAMPUS_MEDIA_BUCKET)
+        .remove([existing.storagePath])) ?? { error: null };
+
+      if (error) {
+        console.error("[media] Storage cleanup failed:", error.message);
+      }
+    } catch (error) {
+      console.error("[media] Storage cleanup threw:", error);
+    }
+  }
+
+  return { ok: true, title: existing.title };
+}
+
 export function isCampusMediaStorageConfigured(): boolean {
   return isSupabaseAdminConfigured();
 }

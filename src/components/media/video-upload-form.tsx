@@ -239,6 +239,12 @@ export function VideoUploadForm({
           type="url"
           placeholder="https://youtube.com/watch?v=..."
         />
+        <p className="text-xs text-muted-foreground">
+          For school-wide viewing, use an unlisted YouTube link, a Drive file
+          shared as <strong className="text-foreground">Anyone with the link</strong>,
+          or upload the file directly. A Drive link left on{" "}
+          <em>Restricted</em> shows viewers “You need access”.
+        </p>
       </div>
 
       <div className="space-y-2">

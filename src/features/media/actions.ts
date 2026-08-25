@@ -3,16 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import type { CampusMediaCategoryKey } from "@/config/broadcast-production";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { upsertTodaysBroadcastAnnouncement } from "@/services/broadcast-announcement-service";
 import {
   canManageCampusMedia,
   createCampusVideoUpload,
   createCampusVideoUploadTicket,
+  deleteCampusMediaItem,
   endCampusLiveStream,
   getStudioStreamCredentials,
   resolveBroadcastOrganizationId,
   resolveUploadedCampusVideo,
+  setCampusMediaReelFlag,
   startCampusLiveStream,
   uploadCampusVideoFile,
   type CampusVideoUploadTicket,
@@ -201,6 +204,67 @@ export async function uploadCampusVideoAction(
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unable to upload video.",
+    };
+  }
+}
+
+/**
+ * Crew curation: add a clip to the Sports Highlight Reel or pull it back out.
+ * Removing keeps the video in the library — only the reel placement changes.
+ */
+export async function setHighlightReelFlagAction(
+  mediaId: string,
+  isHighlightReel: boolean,
+  fallbackCategory?: CampusMediaCategoryKey | null,
+): Promise<MediaActionState> {
+  try {
+    const user = await requireCompleteProfile();
+    const result = await setCampusMediaReelFlag({
+      mediaId,
+      actorId: user.id,
+      role: user.role,
+      isHighlightReel,
+      fallbackCategory: fallbackCategory ?? null,
+    });
+
+    if ("error" in result) {
+      return { error: result.error };
+    }
+
+    revalidateMediaPaths();
+    return {
+      success: isHighlightReel
+        ? "Added to the highlight reel."
+        : "Removed from the reel — still in the video library.",
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Unable to update the reel.",
+    };
+  }
+}
+
+/** Crew delete: pulls the video off every campus surface for good. */
+export async function deleteCampusMediaAction(
+  mediaId: string,
+): Promise<MediaActionState> {
+  try {
+    const user = await requireCompleteProfile();
+    const result = await deleteCampusMediaItem({
+      mediaId,
+      actorId: user.id,
+      role: user.role,
+    });
+
+    if ("error" in result) {
+      return { error: result.error };
+    }
+
+    revalidateMediaPaths();
+    return { success: `Deleted “${result.title}”.` };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Unable to delete this video.",
     };
   }
 }
