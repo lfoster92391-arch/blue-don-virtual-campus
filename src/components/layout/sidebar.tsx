@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { NavMembershipSections } from "@/components/layout/nav-membership-sections";
 import { NavTree } from "@/components/layout/nav-tree";
+import { canReachClubMessaging } from "@/config/focus-club-access";
 import { resolveGroupedNavigation } from "@/config/navigation";
 import type { CampusRole } from "@/config/roles";
 import { normalizeOrgRole, orgRoleCanViewFinances } from "@/config/roles";
@@ -41,9 +42,11 @@ export function Sidebar({
   const { sidebarCollapsed, toggleSidebar } = useShellStore();
   const membershipSlugs =
     membershipSlugsProp ?? context.clubs.map((club) => club.slug);
-  const navEntries = resolveGroupedNavigation(navRole ?? user.role, {
+  const effectiveRole = navRole ?? user.role;
+  const navEntries = resolveGroupedNavigation(effectiveRole, {
     membershipSlugs,
     financeClubSlugs: financeClubSlugsFromContext(context),
+    canMessageClubs: canReachClubMessaging(effectiveRole, context.clubs),
   });
 
   return (

@@ -30,7 +30,7 @@ export default async function MessageClubsPage() {
       ) : (
         <DashboardCard
           title="Nothing to send yet"
-          description="Group messaging is limited to club officers, advisors, and campus admin."
+          description="Group messaging is limited to campus staff and club officers — President, Vice President, and Secretary."
           icon={<MailWarning className="size-5" />}
         >
           <p className="text-sm text-muted-foreground">

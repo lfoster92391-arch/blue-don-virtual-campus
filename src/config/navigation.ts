@@ -54,6 +54,8 @@ export type NavItem = {
   clubSlug?: FocusClubSlug;
   /** When true, hide unless the user can view that club’s finances (or browses all clubs). */
   requiresFinanceAccess?: boolean;
+  /** When true, hide unless the user may address a whole club audience. */
+  requiresClubMessaging?: boolean;
 };
 
 
@@ -76,6 +78,8 @@ export type ResolveNavigationOptions = {
   membershipSlugs?: readonly string[];
   /** Focus-club slugs where the user may view finances (President / VP / Secretary). */
   financeClubSlugs?: readonly string[];
+  /** Whether this user may send to a whole club audience — see `canReachClubMessaging`. */
+  canMessageClubs?: boolean;
 };
 
 /** A top-level sidebar entry is either a direct link or a collapsible group. */
@@ -242,6 +246,14 @@ export const focusedClubsNavigation: NavEntry[] = [
     primary: true,
   },
   madonnaHubGroup,
+  {
+    label: "Message clubs",
+    href: "/messages/clubs",
+    icon: Mail,
+    enabled: true,
+    primary: true,
+    requiresClubMessaging: true,
+  },
   {
     label: "Watch Broadcasting",
     href: "/media",
@@ -435,13 +447,6 @@ export const focusedClubsNavigation: NavEntry[] = [
         roles: ["admin"],
       },
       {
-        label: "Message clubs",
-        href: "/messages/clubs",
-        icon: Mail,
-        enabled: true,
-        roles: ["admin", "advisor", "staff", "counselor"],
-      },
-      {
         label: "Parent Guide",
         href: "/parent/guide",
         icon: BookOpen,
@@ -483,6 +488,13 @@ function entryAllowedForFinances(
     return true;
   }
   return (financeClubSlugs ?? []).includes(item.clubSlug);
+}
+
+function entryAllowedForClubMessaging(
+  item: NavItem,
+  canMessageClubs: boolean | undefined,
+): boolean {
+  return !item.requiresClubMessaging || canMessageClubs === true;
 }
 
 /**
@@ -529,6 +541,13 @@ export const groupedNavigation: NavEntry[] = [
         icon: BookOpen,
         enabled: true,
         roles: ["parent"],
+      },
+      {
+        label: "Message clubs",
+        href: "/messages/clubs",
+        icon: Mail,
+        enabled: true,
+        requiresClubMessaging: true,
       },
       { label: "Calendar", href: "/calendar", icon: Calendar, enabled: true },
       { label: "Events", href: "/events", icon: Landmark, enabled: true },
@@ -594,13 +613,6 @@ export const groupedNavigation: NavEntry[] = [
         icon: LayoutGrid,
         enabled: true,
         roles: ["admin", "advisor", "staff"],
-      },
-      {
-        label: "Message clubs",
-        href: "/messages/clubs",
-        icon: Mail,
-        enabled: true,
-        roles: ["admin", "advisor", "staff", "counselor"],
       },
       {
         label: "Success Analytics",
@@ -684,7 +696,9 @@ export function resolveNavigationForRole(
  * when focused clubs mode is on): filters top-level entries and group children
  * by role, drops empty groups, and applies the faculty club lookup relabel.
  * In focused mode, club groups are also filtered by active memberships
- * (admins/advisors/staff still see all three clubs).
+ * (admins/advisors/staff still see all three clubs). "Message clubs" is gated
+ * on {@link ResolveNavigationOptions.canMessageClubs} rather than role alone,
+ * so club officers see it too.
  */
 export function resolveGroupedNavigation(
   role: CampusRole,
@@ -692,6 +706,7 @@ export function resolveGroupedNavigation(
 ): NavEntry[] {
   const membershipSlugs = options?.membershipSlugs;
   const financeClubSlugs = options?.financeClubSlugs;
+  const canMessageClubs = options?.canMessageClubs;
   const source = FOCUSED_CLUBS_MODE ? focusedClubsNavigation : groupedNavigation;
   const entries: NavEntry[] = [];
 
@@ -704,6 +719,9 @@ export function resolveGroupedNavigation(
         continue;
       }
       if (!entryAllowedForFinances(entry, role, financeClubSlugs)) {
+        continue;
+      }
+      if (!entryAllowedForClubMessaging(entry, canMessageClubs)) {
         continue;
       }
       const [item] = resolveNavigationForRole([entry], role);
@@ -729,7 +747,8 @@ export function resolveGroupedNavigation(
         (child) =>
           (!FOCUSED_CLUBS_MODE ||
             entryAllowedForMemberships(child.clubSlug, role, membershipSlugs)) &&
-          entryAllowedForFinances(child, role, financeClubSlugs),
+          entryAllowedForFinances(child, role, financeClubSlugs) &&
+          entryAllowedForClubMessaging(child, canMessageClubs),
       ),
       role,
     );

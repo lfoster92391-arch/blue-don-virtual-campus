@@ -133,7 +133,7 @@ export default async function MadonnaParticipatePage() {
       {clubAudiences.length > 0 ? (
         <DashboardCard
           title="Message your club"
-          description="Officers, advisors, and campus staff can send one message to a whole club — or to everyone in all three."
+          description="Campus staff and club officers can send one message to a whole club — or to everyone in all three."
           icon={<Mail className="size-5" />}
           actions={
             <Link

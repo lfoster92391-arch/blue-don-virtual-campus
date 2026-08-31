@@ -6,6 +6,8 @@ import {
 } from "@/config/focused-clubs";
 import {
   isFacultyClubLookupRole,
+  normalizeOrgRole,
+  orgRoleCanSendMessages,
   type CampusRole,
   type OrgMembershipRole,
 } from "@/config/roles";
@@ -16,6 +18,43 @@ import {
  */
 export function canBrowseAllFocusClubs(role: CampusRole): boolean {
   return isFacultyClubLookupRole(role);
+}
+
+/**
+ * Faculty and staff reach club messaging because of their job, not because
+ * they hold club office. Deliberately separate from the campus-admin checks in
+ * `command-center-permissions` so widening this never widens club finances,
+ * invoice requests, or the admin console.
+ */
+export function canStaffMessageFocusClubs(role: CampusRole): boolean {
+  return isFacultyClubLookupRole(role);
+}
+
+/** An ACTIVE President / Vice President / Secretary seat in any focus club. */
+export function holdsFocusClubOffice(
+  memberships: readonly { slug: string; role: string }[],
+): boolean {
+  return memberships.some((membership) => {
+    if (!isFocusClubSlug(membership.slug)) {
+      return false;
+    }
+    const orgRole = normalizeOrgRole(membership.role);
+    return orgRole ? orgRoleCanSendMessages(orgRole) : false;
+  });
+}
+
+/**
+ * Who gets the "Message clubs" destination: campus staff, or an officer of any
+ * focus club. Plain members do not — they read messages, they do not send them.
+ *
+ * Client-side mirror of `canBroadcastToFocusClubs`; the server still re-checks
+ * before anything is sent.
+ */
+export function canReachClubMessaging(
+  role: CampusRole,
+  memberships: readonly { slug: string; role: string }[],
+): boolean {
+  return canStaffMessageFocusClubs(role) || holdsFocusClubOffice(memberships);
 }
 
 /** Focus-club officer titles — same four roles across IT, Broadcasting, and Cricut. */

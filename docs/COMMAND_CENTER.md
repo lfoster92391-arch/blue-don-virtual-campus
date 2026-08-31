@@ -68,9 +68,17 @@ instead of blanking `/home`.
 | Role | Can message club members | Invoice/receipt requests |
 |------|--------------------------|--------------------------|
 | Admin / Advisor | Yes (any focus club) | Yes |
-| President / VP | Yes (their club) | Yes |
-| **Secretary** | Yes (their club) | **Yes — primary** |
+| Staff / Teacher / Coach / Counselor | Yes (any focus club) | No |
+| President / VP | Yes (any focus club) | Yes — their club only |
+| **Secretary** | Yes (any focus club) | **Yes — primary, their club only** |
 | Member | No | No |
+
+Messaging and money are separate grants on purpose. Faculty and staff reach
+club messaging through `canStaffMessageFocusClubs` (the same role set that
+already browses every club), never through `isCampusAdminLike`, so this does not
+hand them club finances or the admin console. `canRequestInvoiceReceipt` checks
+the sender's seat in *that* club rather than delegating to
+`canSendClubMessages`.
 
 ### Where to compose
 
@@ -96,22 +104,28 @@ and body, optionally attach a link, send. Recipients read it in the same
 | Cricut Club | Every ACTIVE Cricut Club member |
 | **Everyone in Groups** | All three rosters, **deduplicated** — someone in two clubs gets one message, not two |
 
-Permissions reuse `canSendClubMessages`, so admins, advisors, and academy
-managers see all four audiences; a club officer (President / VP / Secretary)
-sees only the club they hold office in. Nobody else gets an audience, and the
-page says so instead of erroring.
+`canBroadcastToFocusClubs` decides who sees the picker, and there are two ways
+in: campus staff by role, or an ACTIVE President / VP / Secretary seat in **any**
+focus club. Both get all four audiences. Officers are not fenced into their own
+club — the three clubs share a student body and run joint events, so an IT Club
+president announcing a shared build day can reach Broadcasting without asking an
+admin. Plain members get nothing, and the page says so instead of erroring.
 
 "Everyone in Groups" only appears when the sender can reach **two or more**
 clubs. Each club is sent as its own batch so every message keeps its
-`organizationId` and shows the club it came from.
+`organizationId` and shows the club it came from. The action re-resolves the
+sender's audiences server-side before writing, so a stale or hand-edited
+`audienceId` cannot widen the send.
 
 **Code:** `src/config/club-audiences.ts` → `src/services/club-audience-message-service.ts`
 → `sendClubAudienceMessageAction` → `sendStudentMessages`. No new table, no
 second messaging stack.
 
-**Nav:** Staff & Admin → Message clubs. Officers reach it from the
-Madonna Hub → Participate → "Message your club" card, which only renders when
-the viewer actually has an audience.
+**Nav:** a top-level **Message clubs** entry, gated on `canReachClubMessaging`
+(the client-side mirror of the server check) rather than on role alone, so staff
+and student officers both see it and nobody else does. Also reachable from
+Madonna Hub → Participate → "Message your club", which renders only when the
+viewer actually has an audience.
 
 ### Action button types
 

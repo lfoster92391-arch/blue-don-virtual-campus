@@ -17,6 +17,7 @@ import { isDatabaseConfigured } from "@/config/env";
 import { FOCUS_CLUB_SLUGS, type FocusClubSlug } from "@/config/focused-clubs";
 import type { CampusRole } from "@/config/roles";
 import {
+  canBroadcastToFocusClubs,
   canSendClubMessages,
   listActiveClubMemberIds,
 } from "@/lib/command-center-permissions";
@@ -78,10 +79,13 @@ async function resolveSendableClubs(
   role: CampusRole,
 ): Promise<{ org: FocusClubOrg; memberIds: string[] }[]> {
   const orgs = await listFocusClubOrganizations();
+  // Campus staff and officers of any focus club reach all three; the per-club
+  // check below is the fallback for anyone who gets here another way.
+  const everyClub = await canBroadcastToFocusClubs(userId, role);
 
   const resolved = await Promise.all(
     orgs.map(async (org) => {
-      if (!(await canSendClubMessages(userId, role, org.id))) {
+      if (!everyClub && !(await canSendClubMessages(userId, role, org.id))) {
         return null;
       }
       const memberIds = (await listActiveClubMemberIds(org.id)).filter(
@@ -98,9 +102,10 @@ async function resolveSendableClubs(
 }
 
 /**
- * Audience picker contents for one sender. Admins, advisors, and academy
- * managers see all three clubs plus "Everyone in Groups"; a club officer sees
- * only the club they hold office in.
+ * Audience picker contents for one sender. Campus admin, advisors, and staff
+ * see all three clubs plus "Everyone in Groups", and so does any active
+ * President / Vice President / Secretary of a focus club. Plain members get
+ * nothing to send.
  */
 export async function listClubAudiencesForSender(
   userId: string,
@@ -121,7 +126,7 @@ export async function listClubAudiencesForSender(
       return {
         options: [],
         unavailableReason:
-          "You are not an officer or advisor of IT Club, Broadcasting, or Cricut Club, so there is no group for you to message.",
+          "Group messaging is for campus staff and club officers. You are not a President, Vice President, or Secretary of IT Club, Broadcasting, or Cricut Club, so there is no group for you to message.",
       };
     }
 
