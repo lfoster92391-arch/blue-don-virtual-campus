@@ -9,6 +9,7 @@ import {
 } from "@/config/corner-store";
 import { isDatabaseConfigured, isSupabaseAdminConfigured } from "@/config/env";
 import type { CampusRole } from "@/config/roles";
+import { IMAGE_UPLOAD_MAX_LABEL } from "@/config/uploads";
 import type { CornerStoreStatus } from "@/generated/prisma/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isPrismaReady, withDatabase } from "@/lib/prisma";
@@ -250,7 +251,7 @@ export async function uploadCornerImage(
   }
 
   if (file.size > CORNER_IMAGE_MAX_BYTES) {
-    throw new Error("Photo must be 8 MB or smaller.");
+    throw new Error(`Photo must be ${IMAGE_UPLOAD_MAX_LABEL} or smaller.`);
   }
 
   if (!CORNER_IMAGE_TYPES.includes(file.type as (typeof CORNER_IMAGE_TYPES)[number])) {

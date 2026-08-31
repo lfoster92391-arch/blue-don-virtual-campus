@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import { Camera, ImageIcon, Upload, X } from "lucide-react";
 
+import { UploadGuardNotice } from "@/components/uploads/upload-guard-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,10 +11,12 @@ import {
   CORNER_PAYMENT_METHODS,
   formatPrice,
 } from "@/config/corner-store";
+import { CAMPUS_IMAGE_ACCEPT } from "@/config/uploads";
 import {
   createCornerListingAction,
   type CornerActionState,
 } from "@/features/corner/actions";
+import { useUploadGuard } from "@/lib/uploads/use-upload-guard";
 
 const initialState: CornerActionState = {};
 
@@ -29,28 +32,12 @@ export function ListingForm({ storageConfigured, organizations }: ListingFormPro
     createCornerListingAction,
     initialState,
   );
-  const [preview, setPreview] = useState<string | null>(null);
   const [priceInput, setPriceInput] = useState("");
   const [methods, setMethods] = useState<string[]>(["cash"]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoGuard = useUploadGuard({ inputRef: fileInputRef });
 
   const priceCents = Math.round((Number(priceInput) || 0) * 100);
-
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) {
-      setPreview(null);
-      return;
-    }
-    setPreview(URL.createObjectURL(file));
-  }
-
-  function clearPhoto() {
-    setPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  }
 
   function toggleMethod(id: string) {
     setMethods((prev) =>
@@ -65,17 +52,17 @@ export function ListingForm({ storageConfigured, organizations }: ListingFormPro
         <span className="text-sm font-medium">Photo</span>
         <div className="overflow-hidden rounded-xl border border-border">
           <div className="relative flex aspect-square w-full items-center justify-center bg-gradient-to-br from-[#0A2342]/5 to-[#2F80ED]/10">
-            {preview ? (
+            {photoGuard.preview ? (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={preview}
+                  src={photoGuard.preview}
                   alt="Listing preview"
                   className="h-full w-full object-cover"
                 />
                 <button
                   type="button"
-                  onClick={clearPhoto}
+                  onClick={photoGuard.clear}
                   className="absolute right-2 top-2 rounded-full bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
                   aria-label="Remove photo"
                 >
@@ -102,9 +89,9 @@ export function ListingForm({ storageConfigured, organizations }: ListingFormPro
           id="photo"
           name="photo"
           type="file"
-          accept="image/*"
+          accept={CAMPUS_IMAGE_ACCEPT}
           capture="environment"
-          onChange={handleFileChange}
+          onChange={photoGuard.onFileChange}
           className="sr-only"
         />
         <div className="flex flex-wrap gap-2">
@@ -137,9 +124,10 @@ export function ListingForm({ storageConfigured, organizations }: ListingFormPro
             Choose from library
           </Button>
         </div>
+        <UploadGuardNotice guard={photoGuard} />
         <p className="text-xs text-muted-foreground">
           Use your camera on mobile, or pick a photo from your phone or computer.
-          JPEG/PNG/WebP/HEIC up to 8 MB.
+          JPEG/PNG/WebP/HEIC — large photos are resized for you.
           {storageConfigured
             ? ""
             : " · Photo storage isn't configured yet — you can still post without a photo."}

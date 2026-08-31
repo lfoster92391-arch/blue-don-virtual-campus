@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 import { Camera, FileText, Plus, Trash2 } from "lucide-react";
 
 import {
@@ -10,8 +10,11 @@ import {
   type ClubInvoiceActionState,
 } from "@/features/club-invoices/actions";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
+import { UploadGuardNotice } from "@/components/uploads/upload-guard-notice";
 import { Button } from "@/components/ui/button";
+import { CAMPUS_IMAGE_ACCEPT_WITH_PDF } from "@/config/uploads";
 import { formatCents } from "@/lib/club-finance";
+import { useUploadGuard } from "@/lib/uploads/use-upload-guard";
 import type { ClubInvoiceView } from "@/services/club-invoice-service";
 
 const initialState: ClubInvoiceActionState = {};
@@ -57,6 +60,11 @@ export function ClubInvoicesPanel({
   const [lines, setLines] = useState<LineDraft[]>([
     { key: "1", description: "", quantity: "1", unitCost: "" },
   ]);
+  const receiptRef = useRef<HTMLInputElement>(null);
+  const receiptGuard = useUploadGuard({
+    inputRef: receiptRef,
+    allowNonImage: true,
+  });
 
   const estimatedTotal = useMemo(() => {
     return lines.reduce((sum, line) => {
@@ -223,12 +231,15 @@ export function ClubInvoicesPanel({
                 {!storageConfigured ? " · storage not configured yet" : ""}
               </span>
               <input
+                ref={receiptRef}
                 name="receipt"
                 type="file"
-                accept="image/*,application/pdf"
+                accept={CAMPUS_IMAGE_ACCEPT_WITH_PDF}
                 capture="environment"
+                onChange={receiptGuard.onFileChange}
                 className="rounded-md border border-border bg-background px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-[#0A2342] file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white"
               />
+              <UploadGuardNotice guard={receiptGuard} />
             </label>
 
             <div>

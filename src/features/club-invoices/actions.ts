@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { IMAGE_UPLOAD_MAX_LABEL } from "@/config/uploads";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import {
   approveClubInvoice,
@@ -91,8 +92,7 @@ export async function submitClubInvoiceAction(
       const uploaded = await uploadInvoiceReceipt(file, user.id);
       if (!uploaded) {
         return {
-          error:
-            "Could not upload the receipt. Use a photo or PDF under 10 MB, or ask an admin to configure storage.",
+          error: `Could not upload the receipt. Use a photo or PDF under ${IMAGE_UPLOAD_MAX_LABEL}, or ask an admin to configure storage.`,
         };
       }
       receiptUrl = uploaded.publicUrl;

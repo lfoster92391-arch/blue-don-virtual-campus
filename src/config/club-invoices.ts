@@ -3,6 +3,8 @@
  * Posts to ClubLedgerEntry as WITHDRAWAL when approved.
  */
 
+import { IMAGE_UPLOAD_MAX_BYTES } from "@/config/uploads";
+
 export const CLUB_INVOICE_BUCKET =
   process.env.SUPABASE_CLUB_INVOICE_BUCKET?.trim() ||
   process.env.SUPABASE_CAMPUS_MEDIA_BUCKET?.trim() ||
@@ -10,7 +12,7 @@ export const CLUB_INVOICE_BUCKET =
 
 export const CLUB_INVOICE_STORAGE_PREFIX = "club-invoices";
 
-export const CLUB_INVOICE_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+export const CLUB_INVOICE_IMAGE_MAX_BYTES = IMAGE_UPLOAD_MAX_BYTES;
 
 export const CLUB_INVOICE_IMAGE_TYPES = [
   "image/jpeg",

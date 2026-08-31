@@ -10,6 +10,7 @@
  */
 
 import { sampleList } from "@/config/app-mode";
+import { IMAGE_UPLOAD_MAX_BYTES } from "@/config/uploads";
 
 export const CRICUT_CLUB_SLUG = "cricut-club" as const;
 
@@ -22,7 +23,7 @@ export const CRICUT_SHOP_BUCKET =
 export const CRICUT_SHOP_STORAGE_PREFIX = "cricut-shop";
 export const CRICUT_DESIGN_STORAGE_PREFIX = "cricut-designs";
 
-export const CRICUT_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+export const CRICUT_IMAGE_MAX_BYTES = IMAGE_UPLOAD_MAX_BYTES;
 
 export const CRICUT_IMAGE_TYPES = [
   "image/jpeg",

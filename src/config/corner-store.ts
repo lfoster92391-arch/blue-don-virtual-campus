@@ -9,6 +9,7 @@
  */
 
 import { sampleList } from "@/config/app-mode";
+import { IMAGE_UPLOAD_MAX_BYTES } from "@/config/uploads";
 
 /**
  * Storage bucket for listing photos. Reuses the existing `campus-media` bucket
@@ -22,7 +23,7 @@ export const CORNER_STORE_BUCKET =
 
 export const CORNER_STORAGE_PREFIX = "corner-store";
 
-export const CORNER_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+export const CORNER_IMAGE_MAX_BYTES = IMAGE_UPLOAD_MAX_BYTES;
 
 export const CORNER_IMAGE_TYPES = [
   "image/jpeg",

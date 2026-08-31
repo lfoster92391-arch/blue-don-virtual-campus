@@ -3,12 +3,15 @@
 import { useActionState, useRef, useState } from "react";
 import { ImageIcon, X } from "lucide-react";
 
+import { UploadGuardNotice } from "@/components/uploads/upload-guard-notice";
 import { Button } from "@/components/ui/button";
 import { formatShopPrice } from "@/config/cricut-shop";
+import { CAMPUS_IMAGE_ACCEPT } from "@/config/uploads";
 import {
   createCricutListingAction,
   type CricutShopActionState,
 } from "@/features/cricut-shop/actions";
+import { useUploadGuard } from "@/lib/uploads/use-upload-guard";
 
 const initialState: CricutShopActionState = {};
 
@@ -21,30 +24,27 @@ export function CricutListingForm({
     createCricutListingAction,
     initialState,
   );
-  const [preview, setPreview] = useState<string | null>(null);
   const [priceInput, setPriceInput] = useState("");
   const [availableToSell, setAvailableToSell] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoGuard = useUploadGuard({ inputRef: fileInputRef });
   const priceCents = Math.round((Number(priceInput) || 0) * 100);
 
   return (
     <form action={formAction} className="space-y-4">
       <div className="overflow-hidden rounded-xl border border-border">
         <div className="relative flex aspect-square w-full items-center justify-center bg-gradient-to-br from-[#DB2777]/10 to-[#0A2342]/5">
-          {preview ? (
+          {photoGuard.preview ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={preview}
+                src={photoGuard.preview}
                 alt="Listing preview"
                 className="h-full w-full object-cover"
               />
               <button
                 type="button"
-                onClick={() => {
-                  setPreview(null);
-                  if (fileInputRef.current) fileInputRef.current.value = "";
-                }}
+                onClick={photoGuard.clear}
                 className="absolute right-2 top-2 rounded-full bg-black/60 p-1.5 text-white"
                 aria-label="Remove photo"
               >
@@ -69,14 +69,12 @@ export function CricutListingForm({
         ref={fileInputRef}
         name="photo"
         type="file"
-        accept="image/*"
+        accept={CAMPUS_IMAGE_ACCEPT}
         capture="environment"
         className="text-sm"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          setPreview(file ? URL.createObjectURL(file) : null);
-        }}
+        onChange={photoGuard.onFileChange}
       />
+      <UploadGuardNotice guard={photoGuard} />
       {!storageConfigured ? (
         <p className="text-xs text-muted-foreground">
           Photo storage isn’t configured — you can still list without an image.

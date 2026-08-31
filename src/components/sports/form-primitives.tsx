@@ -1,7 +1,12 @@
 "use client";
 
+import { useRef } from "react";
+
+import { UploadGuardNotice } from "@/components/uploads/upload-guard-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CAMPUS_IMAGE_ACCEPT_WITH_SVG } from "@/config/uploads";
+import { useUploadGuard } from "@/lib/uploads/use-upload-guard";
 import { cn } from "@/lib/utils";
 import type { SportsActionState } from "@/features/sports-highlights/actions";
 
@@ -139,6 +144,9 @@ export function ImageField({
   currentUrl?: string | null;
   hint?: string;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const guard = useUploadGuard({ inputRef });
+
   return (
     <div className="space-y-2 rounded-lg border border-dashed border-border p-3">
       <p className="text-sm font-medium">{label}</p>
@@ -161,15 +169,19 @@ export function ImageField({
       {storageConfigured ? (
         <div className="space-y-1.5">
           <label htmlFor={`sports-${fileName}`} className="text-xs text-muted-foreground">
-            Upload an image (PNG, JPG, WEBP, or SVG — up to 4 MB)
+            Upload an image (PNG, JPG, WEBP, SVG, or a photo straight off your
+            phone — big photos are resized automatically)
           </label>
           <input
+            ref={inputRef}
             id={`sports-${fileName}`}
             name={fileName}
             type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+            accept={CAMPUS_IMAGE_ACCEPT_WITH_SVG}
+            onChange={guard.onFileChange}
             className="w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-[#0A2342] file:px-3 file:py-1.5 file:text-sm file:text-white"
           />
+          <UploadGuardNotice guard={guard} />
         </div>
       ) : (
         <p className="text-xs text-amber-600 dark:text-amber-400">

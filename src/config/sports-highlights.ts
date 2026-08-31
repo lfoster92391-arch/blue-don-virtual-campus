@@ -6,6 +6,8 @@
  * No XP / gamification on these surfaces.
  */
 
+import { IMAGE_UPLOAD_MAX_BYTES } from "@/config/uploads";
+
 export const SPORTS_STORAGE_PREFIX = "sports-schools";
 
 /**
@@ -23,7 +25,7 @@ export const CAMPUS_TEAM_LABEL = "MHS";
 
 export const CAMPUS_TEAM_LOGO_URL = "/images/sports/madonna-dons-logo.png";
 
-export const SPORTS_LOGO_MAX_BYTES = 4 * 1024 * 1024;
+export const SPORTS_LOGO_MAX_BYTES = IMAGE_UPLOAD_MAX_BYTES;
 
 export const SPORTS_LOGO_TYPES = [
   "image/jpeg",
