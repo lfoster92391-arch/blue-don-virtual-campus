@@ -12,6 +12,7 @@ import {
 import type { ReactNode } from "react";
 
 import { BriefingSection } from "@/components/home/briefing-section";
+import { FuelTheDonsRow } from "@/components/lunch/fuel-the-dons-link";
 import { AdvisorMessagesPanel } from "@/components/home/advisor-messages-panel";
 import { ClubOpsPulsePanel } from "@/components/home/club-ops-pulse";
 import { CommandCenterMeetings } from "@/components/home/command-center-meetings";
@@ -372,15 +373,7 @@ export function TodayAtMadonna({
             schedule={hub.bell}
             isSchoolDay={hub.isSchoolDay}
           />
-          {hub.lunch.today ? (
-            <p className="mt-4 text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">Lunch today:</span>{" "}
-              {hub.lunch.today.entree}
-              {hub.lunch.today.sides.length
-                ? ` with ${hub.lunch.today.sides.join(", ")}`
-                : ""}
-            </p>
-          ) : null}
+          <FuelTheDonsRow className="mt-4" />
         </BriefingSection>
 
         <BriefingSection

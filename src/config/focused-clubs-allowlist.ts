@@ -7,6 +7,9 @@
 /** Exact path prefixes that remain reachable in focused mode. */
 export const FOCUSED_MODE_ALLOWED_PREFIXES = [
   "/home",
+  // The Madonna Hub front door and its five sections (Today / Sports /
+  // Broadcast / Campus / Participate), plus the legacy URLs that redirect into
+  // them. One prefix covers every child.
   "/madonna",
   "/organizations/it-club",
   "/organizations/broadcasting",
@@ -26,7 +29,8 @@ export const FOCUSED_MODE_ALLOWED_PREFIXES = [
   "/settings",
   "/pass",
   // Real school ops that outlive the club pivot: families still have to sign
-  // agreements and order cafeteria lunch.
+  // agreements. `/lunch` stays reachable only as the retired landing page that
+  // points at FuelTheDons — see src/config/fuel-the-dons.ts.
   "/parent",
   "/lunch",
   "/admin",

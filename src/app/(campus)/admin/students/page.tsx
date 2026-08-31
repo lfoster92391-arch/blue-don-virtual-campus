@@ -149,10 +149,9 @@ export default async function AdminStudentsPage() {
           </h2>
         </div>
         <p className="text-sm text-muted-foreground">
-          Open the Parent Portal and the cafeteria lunch board as a family sees
-          them, without linking a student to your account. A sample student
-          stands in for a real child, and lunch orders and dietary forms are
-          disabled so nothing reaches the kitchen or the office queue.
+          Open the Parent Portal as a family sees it, without linking a student
+          to your account. A sample student stands in for a real child, and
+          nothing you do while previewing saves.
         </p>
         <form action={startParentPreviewAction}>
           <Button type="submit" size="sm" variant="outline">

@@ -1,8 +1,21 @@
-# Cafeteria Lunch & Dietary Records
+# Cafeteria Lunch & Dietary Records — RETIRED
 
-Real school operations that sit outside the club-focus pivot: families order
-lunch, and the office keeps allergy records. Both stay reachable in
-`FOCUSED_CLUBS_MODE`.
+> **This system is no longer live.** Madonna runs menus, lunch orders, and
+> cafeteria payments on **FuelTheDons**; the campus app links out instead of
+> keeping its own. `/lunch` is a short page pointing at FuelTheDons, and
+> `/lunch/selections`, `/lunch/kitchen`, `/admin/lunch-menu`, `/admin/dietary`,
+> and `/admin/cafeteria` redirect to it. Every nav entry is gone.
+>
+> The Prisma tables (`LunchOrder`, `CafeteriaAccount`, `CafeteriaLedgerEntry`,
+> dietary records, published menus) and their services remain in the repo —
+> retiring the UX did not require a destructive migration, and the rows still
+> answer a historical question. Dropping them is optional later work.
+>
+> See `docs/MADONNA_HUB.md` for what replaced it. **Everything below describes
+> the retired system and is kept for reference only.**
+
+Real school operations that sat outside the club-focus pivot: families ordered
+lunch, and the office kept allergy records.
 
 ## Who can do what
 

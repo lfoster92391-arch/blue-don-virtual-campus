@@ -35,9 +35,10 @@ function revalidateBroadcastPaths() {
   revalidatePath("/organizations/broadcasting");
   revalidatePath("/home");
   revalidatePath("/madonna");
-  revalidatePath("/madonna/announcements");
-  revalidatePath("/madonna/sports-recap");
-  revalidatePath("/madonna/highlight-reel");
+  revalidatePath("/madonna/today");
+  revalidatePath("/madonna/broadcast");
+  revalidatePath("/madonna/sports");
+  revalidatePath("/madonna/sports/reel");
 }
 
 const bookingServices = z.enum([

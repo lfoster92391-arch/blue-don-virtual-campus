@@ -3,8 +3,6 @@ import {
   BarChart3,
   Briefcase,
   Calendar,
-  CalendarCheck,
-  ChefHat,
   CircleDollarSign,
   ClipboardCheck,
   ClipboardList,
@@ -25,7 +23,6 @@ import {
   MonitorPlay,
   Package,
   Radio,
-  Salad,
   Scissors,
   ScrollText,
   Sparkles,
@@ -33,34 +30,15 @@ import {
   Trophy,
   UserCheck,
   Users,
-  UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
 
 import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
 import { canBrowseAllFocusClubs } from "@/config/focus-club-access";
 import { FOCUS_CLUBS, type FocusClubSlug } from "@/config/focused-clubs";
+import { MADONNA_HUB_SECTIONS } from "@/config/madonna-hub";
 import type { CampusRole } from "@/config/roles";
-import {
-  CAMPUS_ROLES,
-  canAccessAdmin,
-  canManageCafeteriaAccounts,
-  canManageDietary,
-  canManageLunch,
-  canOrderLunch,
-  isFacultyClubLookupRole,
-} from "@/config/roles";
-
-/**
- * Derived from permissions so the sidebar cannot drift out of sync with
- * `GLOBAL_ROLE_PERMISSIONS`.
- */
-const LUNCH_ORDER_ROLES: CampusRole[] = CAMPUS_ROLES.filter(canOrderLunch);
-const LUNCH_MANAGE_ROLES: CampusRole[] = CAMPUS_ROLES.filter(canManageLunch);
-const DIETARY_MANAGE_ROLES: CampusRole[] = CAMPUS_ROLES.filter(canManageDietary);
-const CAFETERIA_MANAGE_ROLES: CampusRole[] = CAMPUS_ROLES.filter(
-  canManageCafeteriaAccounts,
-);
+import { canAccessAdmin, isFacultyClubLookupRole } from "@/config/roles";
 
 export type NavItem = {
   label: string;
@@ -220,6 +198,35 @@ export const legacyNavigation: NavItem[] = [
 ];
 
 /**
+ * The Madonna Hub as one sidebar group: the front door plus its five sections.
+ * Children are derived from {@link MADONNA_HUB_SECTIONS} so the sidebar cannot
+ * drift from the pages.
+ */
+const madonnaHubGroup: NavGroup = {
+  label: "Madonna Hub",
+  icon: Landmark,
+  defaultOpen: true,
+  primary: true,
+  children: [
+    {
+      label: "Hub",
+      href: "/madonna",
+      icon: Landmark,
+      enabled: true,
+      mobile: true,
+      primary: true,
+    },
+    ...MADONNA_HUB_SECTIONS.map((section) => ({
+      label: section.label,
+      href: section.href,
+      icon: section.icon,
+      enabled: true,
+      primary: true,
+    })),
+  ],
+};
+
+/**
  * Club-focus pivot navigation — Home + three clubs (+ Staff for admin roles).
  * Club finances and IT Help live under IT Club only.
  * Used when {@link FOCUSED_CLUBS_MODE} is on. Soft-wiped routes redirect via middleware.
@@ -233,35 +240,7 @@ export const focusedClubsNavigation: NavEntry[] = [
     mobile: true,
     primary: true,
   },
-  {
-    label: "Madonna Hub",
-    href: "/madonna",
-    icon: Landmark,
-    enabled: true,
-    mobile: true,
-    primary: true,
-  },
-  {
-    label: "Madonna Announcements",
-    href: "/madonna/announcements",
-    icon: Megaphone,
-    enabled: true,
-    primary: true,
-  },
-  {
-    label: "Madonna Sports Recap",
-    href: "/madonna/sports-recap",
-    icon: Trophy,
-    enabled: true,
-    primary: true,
-  },
-  {
-    label: "Sports Highlight Reel",
-    href: "/madonna/highlight-reel",
-    icon: Sparkles,
-    enabled: true,
-    primary: true,
-  },
+  madonnaHubGroup,
   {
     label: "Watch Broadcasting",
     href: "/media",
@@ -277,22 +256,6 @@ export const focusedClubsNavigation: NavEntry[] = [
     enabled: true,
     mobile: true,
     primary: true,
-  },
-  {
-    label: "Cafeteria Lunch",
-    href: "/lunch",
-    icon: UtensilsCrossed,
-    enabled: true,
-    mobile: true,
-    primary: true,
-    roles: LUNCH_ORDER_ROLES,
-  },
-  {
-    label: "Your Lunch Selections",
-    href: "/lunch/selections",
-    icon: ClipboardCheck,
-    enabled: true,
-    roles: LUNCH_ORDER_ROLES,
   },
   {
     label: "Parent Portal",
@@ -471,34 +434,6 @@ export const focusedClubsNavigation: NavEntry[] = [
         roles: ["admin"],
       },
       {
-        label: "Kitchen Prep Sheet",
-        href: "/lunch/kitchen",
-        icon: ChefHat,
-        enabled: true,
-        roles: LUNCH_MANAGE_ROLES,
-      },
-      {
-        label: "Lunch Menu Calendar",
-        href: "/admin/lunch-menu",
-        icon: CalendarCheck,
-        enabled: true,
-        roles: LUNCH_MANAGE_ROLES,
-      },
-      {
-        label: "Dietary Forms",
-        href: "/admin/dietary",
-        icon: Salad,
-        enabled: true,
-        roles: DIETARY_MANAGE_ROLES,
-      },
-      {
-        label: "Cafeteria Accounts",
-        href: "/admin/cafeteria",
-        icon: CircleDollarSign,
-        enabled: true,
-        roles: CAFETERIA_MANAGE_ROLES,
-      },
-      {
         label: "Parent Guide",
         href: "/parent/guide",
         icon: BookOpen,
@@ -574,20 +509,6 @@ export const groupedNavigation: NavEntry[] = [
       { label: "My Journey", href: "/my-journey", icon: Map, enabled: true },
       { label: "School Hub", href: "/hub", icon: Landmark, enabled: true },
       {
-        label: "Cafeteria Lunch",
-        href: "/lunch",
-        icon: UtensilsCrossed,
-        enabled: true,
-        roles: LUNCH_ORDER_ROLES,
-      },
-      {
-        label: "Your Lunch Selections",
-        href: "/lunch/selections",
-        icon: ClipboardCheck,
-        enabled: true,
-        roles: LUNCH_ORDER_ROLES,
-      },
-      {
         label: "Parent Portal",
         href: "/parent",
         icon: UserCheck,
@@ -604,28 +525,10 @@ export const groupedNavigation: NavEntry[] = [
       { label: "Calendar", href: "/calendar", icon: Calendar, enabled: true },
       { label: "Events", href: "/events", icon: Landmark, enabled: true },
       { label: "Campus Life", href: "/campus-life", icon: Megaphone, enabled: true },
-      { label: "Madonna Hub", href: "/madonna", icon: Landmark, enabled: true },
-      {
-        label: "Madonna Announcements",
-        href: "/madonna/announcements",
-        icon: Megaphone,
-        enabled: true,
-      },
-      {
-        label: "Madonna Sports Recap",
-        href: "/madonna/sports-recap",
-        icon: Trophy,
-        enabled: true,
-      },
-      {
-        label: "Sports Highlight Reel",
-        href: "/madonna/highlight-reel",
-        icon: Sparkles,
-        enabled: true,
-      },
       { label: "Media", href: "/media", icon: Headphones, enabled: true },
     ],
   },
+  madonnaHubGroup,
   {
     label: "Tools & Resources",
     icon: Briefcase,
@@ -690,27 +593,6 @@ export const groupedNavigation: NavEntry[] = [
         icon: BarChart3,
         enabled: true,
         roles: ["counselor", "advisor", "admin"],
-      },
-      {
-        label: "Kitchen Prep Sheet",
-        href: "/lunch/kitchen",
-        icon: ChefHat,
-        enabled: true,
-        roles: LUNCH_MANAGE_ROLES,
-      },
-      {
-        label: "Lunch Menu Calendar",
-        href: "/admin/lunch-menu",
-        icon: CalendarCheck,
-        enabled: true,
-        roles: LUNCH_MANAGE_ROLES,
-      },
-      {
-        label: "Cafeteria Accounts",
-        href: "/admin/cafeteria",
-        icon: CircleDollarSign,
-        enabled: true,
-        roles: CAFETERIA_MANAGE_ROLES,
       },
     ],
   },

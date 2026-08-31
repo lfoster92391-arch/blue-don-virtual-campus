@@ -1062,7 +1062,7 @@ export async function listSportsRecapVideos(options?: {
 }
 
 /**
- * Announcement videos for the Madonna Announcements page — anything tagged
+ * Announcement videos for the Madonna Broadcast page — anything tagged
  * `MORNING_ANNOUNCEMENTS` plus media attached to a Daily Announcement.
  */
 export async function listAnnouncementVideos(options?: {

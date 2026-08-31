@@ -2,48 +2,30 @@ import Link from "next/link";
 import {
   Bell,
   BookOpen,
-  ClipboardCheck,
   Compass,
   LifeBuoy,
-  Salad,
   UserPlus,
   UtensilsCrossed,
-  Wallet,
 } from "lucide-react";
 
-import {
-  CafeteriaBalances,
-  type CafeteriaBalanceRow,
-} from "@/components/cafeteria/cafeteria-balances";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
+import { FuelTheDonsLink, FuelTheDonsRow } from "@/components/lunch/fuel-the-dons-link";
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
-import {
-  CAFETERIA_CREDIT_CONTACT,
-  CAFETERIA_CREDIT_LOCATION,
-  CAFETERIA_LOW_BALANCE_CENTS,
-  formatCafeteriaMoney,
-} from "@/config/cafeteria";
-import { LUNCH_CHOICE_META, LUNCH_ORDER_CUTOFF_HOUR } from "@/config/lunch";
-import { formatMinutes } from "@/config/school-hub";
+import { FUEL_THE_DONS_NAME } from "@/config/fuel-the-dons";
 import { IT_CONTACT_EMAIL } from "@/lib/auth/email-domain";
 import { requireCampusAccess } from "@/lib/auth/session";
-import { getCafeteriaAccounts } from "@/services/cafeteria-account-service";
-import { listLinkedStudents } from "@/services/parent-student-service";
 
 export const metadata = {
   title: "Parent Guide",
   description:
-    "How to create a parent account, choose lunches, pay the cafeteria, and get campus news at Madonna High School.",
+    "How to create a parent account, what it can do, where lunch lives, and how Madonna High School reaches you.",
 };
 
 const CONTENTS = [
   { href: "#create-account", label: "Create your account" },
   { href: "#getting-around", label: "What you can do" },
-  { href: "#choosing-lunch", label: "Choose lunches" },
-  { href: "#check-selections", label: "Check what saved" },
-  { href: "#allergies", label: "Allergies" },
-  { href: "#paying-for-lunch", label: "Pay for lunch" },
+  { href: "#lunch", label: "Lunch" },
   { href: "#notifications", label: "How we reach you" },
   { href: "#help", label: "Get help" },
 ];
@@ -82,48 +64,24 @@ function Section({
 }
 
 export default async function ParentGuidePage() {
-  const user = await requireCampusAccess();
-
-  // Shown only to a signed-in parent who actually has a tracked balance, so
-  // the guide doubles as a quick check without becoming a second lunch page.
-  const linkedStudents = await listLinkedStudents(user.id);
-  const accounts = await getCafeteriaAccounts(
-    linkedStudents.map((student) => student.id),
-  );
-  const balanceRows: CafeteriaBalanceRow[] = linkedStudents
-    .map((student) => {
-      const account = accounts[student.id];
-      if (!account) {
-        return null;
-      }
-      return {
-        studentId: student.id,
-        studentName: student.displayName,
-        balanceLabel: account.balanceLabel,
-        balanceCents: account.balanceCents,
-        isLow: account.isLow,
-      };
-    })
-    .filter((row): row is CafeteriaBalanceRow => row !== null);
-
-  const cutoffLabel = formatMinutes(LUNCH_ORDER_CUTOFF_HOUR * 60);
+  await requireCampusAccess();
 
   return (
     <ShellPage
       title="Parent Guide"
-      description="Everything a Madonna parent needs, start to finish — setting up your account, choosing your student's lunches, paying the cafeteria, and keeping up with campus news."
+      description="Everything a Madonna parent needs, start to finish — setting up your account, what you can see, where lunch lives, and how the school keeps you in the loop."
       actions={
         <>
           <Button
             size="sm"
             nativeButton={false}
-            render={<Link href="/lunch">Cafeteria lunch</Link>}
+            render={<Link href="/parent">Parent Portal</Link>}
           />
           <Button
             size="sm"
             variant="outline"
             nativeButton={false}
-            render={<Link href="/parent">Parent Portal</Link>}
+            render={<Link href="/madonna">Madonna Hub</Link>}
           />
         </>
       }
@@ -146,18 +104,6 @@ export default async function ParentGuidePage() {
           ))}
         </ul>
       </DashboardCard>
-
-      {balanceRows.length > 0 ? (
-        <Section id="your-balances">
-          <DashboardCard
-            title="Your cafeteria balances"
-            description="What the office currently has on file for your student."
-            icon={<Wallet className="size-5" />}
-          >
-            <CafeteriaBalances rows={balanceRows} showGuideLink={false} />
-          </DashboardCard>
-        </Section>
-      ) : null}
 
       <Section id="create-account">
         <DashboardCard
@@ -290,9 +236,9 @@ export default async function ParentGuidePage() {
           <dl className="grid gap-4 sm:grid-cols-2">
             {[
               {
-                title: "Home",
-                href: "/home",
-                body: "Today at Madonna — the daily schedule, the weather, today's announcements, and any messages sent to you.",
+                title: "Madonna Hub",
+                href: "/madonna",
+                body: "The front door. Today's schedule and announcement, the next game, the campus broadcast, and school info.",
               },
               {
                 title: "Parent Portal",
@@ -300,34 +246,29 @@ export default async function ParentGuidePage() {
                 body: "Your linked students, agreements waiting for your signature, and club permission requests from your child.",
               },
               {
-                title: "Cafeteria Lunch",
-                href: "/lunch",
-                body: "Choose a lunch for each school day, see your cafeteria balance, and send in an allergy form.",
+                title: "Today",
+                href: "/madonna/today",
+                body: "The bell schedule, campus weather, and the announcement Broadcasting read this morning.",
               },
               {
-                title: "Your Lunch Selections",
-                href: "/lunch/selections",
-                body: "A plain list of every lunch you have saved, which days are still open, and what is locked in.",
+                title: "Sports",
+                href: "/madonna/sports",
+                body: "Schedules, scores, and game video for Madonna teams.",
               },
               {
-                title: "Madonna Hub",
-                href: "/madonna",
-                body: "The school's front page inside the campus — announcements, sports recaps, and the highlight reel.",
+                title: "Broadcast",
+                href: "/madonna/broadcast",
+                body: "Watch the student broadcast live, or catch up on any past announcement show.",
               },
               {
-                title: "Announcements",
-                href: "/madonna/announcements",
-                body: "Today's broadcast announcements plus the archive of past days.",
+                title: "Campus",
+                href: "/madonna/campus",
+                body: "Bell schedule, calendar, weather station, lunch, and the Madonna archive.",
               },
               {
-                title: "Watch Broadcasting",
-                href: "/media",
-                body: "Live streams and recorded video from the student broadcast team.",
-              },
-              {
-                title: "Blue Don Sports",
-                href: "/sports",
-                body: "Schedules, scores, and game coverage for Madonna teams.",
+                title: "Home",
+                href: "/home",
+                body: "Messages sent to you, plus anything waiting on your signature.",
               },
               {
                 title: "Your profile",
@@ -361,344 +302,31 @@ export default async function ParentGuidePage() {
         </DashboardCard>
       </Section>
 
-      <Section id="choosing-lunch">
+      <Section id="lunch">
         <DashboardCard
-          title="3. Choose your student's lunches"
-          description={`Orders for each day close at ${cutoffLabel} that morning.`}
+          title="3. Lunch"
+          description={`Menus, orders, and cafeteria payments are on ${FUEL_THE_DONS_NAME} — not in this app.`}
           icon={<UtensilsCrossed className="size-5" />}
+          status={{ label: "Outside this site", variant: "info" }}
         >
-          <Steps
-            steps={[
-              {
-                id: "open",
-                body: (
-                  <>
-                    Open{" "}
-                    <Link
-                      href="/lunch"
-                      className="font-medium text-[#2F80ED] underline underline-offset-4"
-                    >
-                      Cafeteria Lunch
-                    </Link>{" "}
-                    from the menu on the left, or from the Parent Portal.
-                  </>
-                ),
-              },
-              {
-                id: "find-child",
-                body: (
-                  <>
-                    Your student&apos;s name is at the top of their own section.
-                    If more than one child is linked to you, each gets a
-                    section.
-                  </>
-                ),
-              },
-              {
-                id: "read-menu",
-                body: <>Each row is one school day and shows that day&apos;s menu.</>,
-              },
-              {
-                id: "pick",
-                body: (
-                  <>
-                    Tap one of the four choices for that day:
-                    <ul className="mt-2 space-y-1">
-                      {Object.values(LUNCH_CHOICE_META).map((choice) => (
-                        <li key={choice.choice}>
-                          <span className="font-medium text-foreground">
-                            {choice.label}
-                          </span>{" "}
-                          — {choice.hint}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                ),
-              },
-              {
-                id: "saved",
-                body: (
-                  <>
-                    Your choice saves the moment you tap it and shows a{" "}
-                    <span className="font-medium text-foreground">Saved</span>{" "}
-                    check. There is no separate submit button, and nothing to
-                    send at the end.
-                  </>
-                ),
-              },
-              {
-                id: "confirm",
-                body: (
-                  <>
-                    Scroll to{" "}
-                    <span className="font-medium text-foreground">
-                      Your selections
-                    </span>{" "}
-                    at the bottom of the page to see everything you have chosen
-                    in one list. See{" "}
-                    <Link
-                      href="#check-selections"
-                      className="font-medium text-[#2F80ED] underline underline-offset-4"
-                    >
-                      the next section
-                    </Link>
-                    .
-                  </>
-                ),
-              },
-              {
-                id: "change",
-                body: (
-                  <>
-                    Change your mind by tapping a different choice. You can
-                    change a day right up until {cutoffLabel} that morning.
-                  </>
-                ),
-              },
-              {
-                id: "closed",
-                body: (
-                  <>
-                    After the cutoff the day shows{" "}
-                    <span className="font-medium text-foreground">
-                      Ordering closed
-                    </span>{" "}
-                    with a lock. Call the office if something changes after
-                    that.
-                  </>
-                ),
-              },
-              {
-                id: "ahead",
-                body: (
-                  <>
-                    You can set two full school weeks ahead. Many families do
-                    the whole stretch on Sunday night.
-                  </>
-                ),
-              },
-            ]}
-          />
-        </DashboardCard>
-      </Section>
+          <FuelTheDonsRow />
 
-      <Section id="check-selections">
-        <DashboardCard
-          title="4. Check what you already saved"
-          description="A running list of every choice on file, so you never have to wonder whether a tap went through."
-          icon={<ClipboardCheck className="size-5" />}
-          actions={
-            <Button
-              size="sm"
-              variant="outline"
-              nativeButton={false}
-              render={<Link href="/lunch/selections">Open my selections</Link>}
-            />
-          }
-        >
-          <Steps
-            steps={[
-              {
-                id: "where",
-                body: (
-                  <>
-                    Open{" "}
-                    <Link
-                      href="/lunch/selections"
-                      className="font-medium text-[#2F80ED] underline underline-offset-4"
-                    >
-                      Your Lunch Selections
-                    </Link>{" "}
-                    from the menu, or scroll to the{" "}
-                    <span className="font-medium text-foreground">
-                      Your selections
-                    </span>{" "}
-                    card at the bottom of the Cafeteria Lunch page.
-                  </>
-                ),
-              },
-              {
-                id: "read",
-                body: (
-                  <>
-                    Each student gets their own list: the date, what you picked,
-                    and the dish behind it. A green{" "}
-                    <span className="font-medium text-foreground">Saved</span>{" "}
-                    means the cafeteria already has it.
-                  </>
-                ),
-              },
-              {
-                id: "gaps",
-                body: (
-                  <>
-                    Days still waiting on you are marked{" "}
-                    <span className="font-medium text-foreground">
-                      Not chosen yet
-                    </span>
-                    , and the top of the list counts them for you.
-                  </>
-                ),
-              },
-              {
-                id: "fix",
-                body: (
-                  <>
-                    Anything you want to change, tap{" "}
-                    <span className="font-medium text-foreground">
-                      Change a lunch
-                    </span>{" "}
-                    to go back to the board. Locked days show a padlock — those
-                    are past the {cutoffLabel} cutoff.
-                  </>
-                ),
-              },
-            ]}
-          />
-        </DashboardCard>
-      </Section>
-
-      <Section id="allergies">
-        <DashboardCard
-          title="5. Tell the cafeteria about allergies"
-          description="Food allergies and dietary restrictions are reviewed by the office before they take effect."
-          icon={<Salad className="size-5" />}
-        >
-          <Steps
-            steps={[
-              {
-                id: "form",
-                body: (
-                  <>
-                    On the{" "}
-                    <Link
-                      href="/lunch"
-                      className="font-medium text-[#2F80ED] underline underline-offset-4"
-                    >
-                      Cafeteria Lunch
-                    </Link>{" "}
-                    page, scroll to{" "}
-                    <span className="font-medium text-foreground">
-                      Allergies &amp; dietary needs
-                    </span>
-                    .
-                  </>
-                ),
-              },
-              {
-                id: "fill",
-                body: (
-                  <>
-                    Pick your student, check off the allergens and restrictions,
-                    and add anything the kitchen should know — for example,
-                    &ldquo;carries an EpiPen in her bag.&rdquo;
-                  </>
-                ),
-              },
-              {
-                id: "review",
-                body: (
-                  <>
-                    The office reviews the form. Once it is accepted, the
-                    allergy shows next to your student&apos;s name every time
-                    someone orders a lunch for them.
-                  </>
-                ),
-              },
-              {
-                id: "urgent",
-                body: (
-                  <>
-                    A severe allergy is worth a phone call to the office as
-                    well. Do not rely on the form alone for something serious.
-                  </>
-                ),
-              },
-            ]}
-          />
-        </DashboardCard>
-      </Section>
-
-      <Section id="paying-for-lunch">
-        <DashboardCard
-          title="6. Pay for lunch"
-          description="Madonna does not take card payments online. Cafeteria money comes to school."
-          icon={<Wallet className="size-5" />}
-          status={{ label: "No online checkout", variant: "info" }}
-        >
-          <Steps
-            steps={[
-              {
-                id: "envelope",
-                body: (
-                  <>
-                    Put cash or a check in an{" "}
-                    <span className="font-medium text-foreground">envelope</span>
-                    .
-                  </>
-                ),
-              },
-              {
-                id: "name",
-                body: (
-                  <>
-                    Write your{" "}
-                    <span className="font-medium text-foreground">
-                      student&apos;s name
-                    </span>{" "}
-                    on the outside of the envelope. This is the part that
-                    matters most — an envelope without a name cannot be credited
-                    to the right account.
-                  </>
-                ),
-              },
-              {
-                id: "send",
-                body: (
-                  <>
-                    Send the envelope to {CAFETERIA_CREDIT_LOCATION} with your
-                    student, or drop it off yourself.
-                  </>
-                ),
-              },
-              {
-                id: "dalfol",
-                body: (
-                  <>
-                    <span className="font-medium text-foreground">
-                      {CAFETERIA_CREDIT_CONTACT}
-                    </span>{" "}
-                    adds the money to your student&apos;s cafeteria account.
-                  </>
-                ),
-              },
-              {
-                id: "see-it",
-                body: (
-                  <>
-                    The new balance appears on the{" "}
-                    <Link
-                      href="/lunch"
-                      className="font-medium text-[#2F80ED] underline underline-offset-4"
-                    >
-                      Cafeteria Lunch
-                    </Link>{" "}
-                    page. If it does not show up within a day, call the office.
-                  </>
-                ),
-              },
-            ]}
-          />
-
-          <div className="mt-5 rounded-xl border border-[#D4A017]/40 bg-[#D4A017]/10 p-4 text-sm">
-            <p className="font-semibold text-foreground">
-              Never send a card number
+          <div className="mt-4 space-y-3 text-sm text-muted-foreground">
+            <p>
+              This campus site used to take lunch orders. It no longer does —{" "}
+              <FuelTheDonsLink /> is the one place the kitchen works from, so
+              anything you choose or pay there is what your student gets.
             </p>
-            <p className="mt-1 text-muted-foreground">
-              Nobody at Madonna will ask for card or bank details through this
-              site, by email, or by text. Cafeteria money is cash or a check,
-              handed to {CAFETERIA_CREDIT_LOCATION}.
+            <p>
+              A food allergy or dietary restriction is worth a phone call to the
+              school office as well. Do not rely on a web form alone for
+              something serious.
+            </p>
+            <p>
+              Questions about a charge, a credit, or a missed order go to the
+              school office or to {FUEL_THE_DONS_NAME} directly. Nobody at
+              Madonna will ask for card or bank details through this site, by
+              email, or by text.
             </p>
           </div>
         </DashboardCard>
@@ -706,44 +334,31 @@ export default async function ParentGuidePage() {
 
       <Section id="notifications">
         <DashboardCard
-          title="7. How the school reaches you"
+          title="4. How the school reaches you"
           description="Notices arrive inside the app. Sign in to see them."
           icon={<Bell className="size-5" />}
         >
           <dl className="space-y-4 text-sm">
             <div>
               <dt className="font-medium text-foreground">
-                Low cafeteria balance
-              </dt>
-              <dd className="mt-1 text-muted-foreground">
-                When your student&apos;s balance drops to{" "}
-                {formatCafeteriaMoney(CAFETERIA_LOW_BALANCE_CENTS)} or below, a
-                message lands in your{" "}
-                <Link
-                  href="/home"
-                  className="font-medium text-[#2F80ED] underline underline-offset-4"
-                >
-                  Home
-                </Link>{" "}
-                page with the current balance and a link to the lunch page. You
-                get one message per slide downward, not one a day. Send an
-                envelope and the reminder stops.
-              </dd>
-            </div>
-            <div>
-              <dt className="font-medium text-foreground">
                 Daily announcements
               </dt>
               <dd className="mt-1 text-muted-foreground">
-                Today&apos;s announcements appear on your Home page and in full
-                on{" "}
+                Today&apos;s announcement appears on{" "}
                 <Link
-                  href="/madonna/announcements"
+                  href="/madonna/today"
                   className="font-medium text-[#2F80ED] underline underline-offset-4"
                 >
-                  Madonna Announcements
+                  Today
+                </Link>{" "}
+                and in full — with the archive of past days — on{" "}
+                <Link
+                  href="/madonna/broadcast"
+                  className="font-medium text-[#2F80ED] underline underline-offset-4"
+                >
+                  Broadcast
                 </Link>
-                , where you can also read past days.
+                .
               </dd>
             </div>
             <div>
@@ -782,7 +397,7 @@ export default async function ParentGuidePage() {
 
       <Section id="help">
         <DashboardCard
-          title="8. When something is wrong"
+          title="5. When something is wrong"
           description="Who to ask, depending on what you need."
           icon={<LifeBuoy className="size-5" />}
         >
@@ -804,20 +419,11 @@ export default async function ParentGuidePage() {
             </div>
             <div>
               <dt className="font-medium text-foreground">
-                A balance looks wrong, or an envelope was never credited
+                Anything about lunch — a menu, an order, a charge
               </dt>
               <dd className="mt-1 text-muted-foreground">
-                Call {CAFETERIA_CREDIT_LOCATION} and ask for{" "}
-                {CAFETERIA_CREDIT_CONTACT}.
-              </dd>
-            </div>
-            <div>
-              <dt className="font-medium text-foreground">
-                A lunch needs to change after the cutoff
-              </dt>
-              <dd className="mt-1 text-muted-foreground">
-                Call {CAFETERIA_CREDIT_LOCATION}. The kitchen count is already
-                set, but they can usually sort it out.
+                Start at <FuelTheDonsLink />, then call the school office if it
+                is not sorted out there.
               </dd>
             </div>
             <div>

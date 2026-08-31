@@ -277,8 +277,8 @@ export const HUB_RESOURCES: HubResourceLink[] = [
   },
   {
     id: "lunch",
-    label: "Cafeteria Lunch",
-    description: "Order hot, vegetarian, or packed lunch for the week ahead.",
+    label: "Lunch",
+    description: "Menus, ordering, and payments — handled on FuelTheDons.",
     href: "/lunch",
   },
   {

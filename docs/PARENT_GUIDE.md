@@ -3,14 +3,18 @@
 The parent-facing walkthrough for Blue Don Virtual Campus, and the reference for
 whoever has to answer a parent's question at the front desk.
 
-- **In the app:** `/parent/guide` — linked from the Parent Portal, the Cafeteria
-  Lunch page, and the sidebar (parents see **Parent Guide**; staff see it under
+- **In the app:** `/parent/guide` — linked from the Parent Portal, the Madonna
+  Hub, and the sidebar (parents see **Parent Guide**; staff see it under
   **Staff & Admin**).
 - **Production:** <https://campus.assetpilotedu.com/parent/guide>
 
 The page needs a signed-in account but no particular role, so office staff can
 read a family exactly what a family sees. Admins previewing the family view
-(**Preview as parent** on `/lunch`) get the same guide.
+(**Preview as parent** on `/admin/students`) get the same guide.
+
+> **Lunch is not in this app.** Menus, ordering, and cafeteria payments are on
+> **FuelTheDons**. The campus lunch system was retired — see
+> [§3](#3-lunch-is-on-fuelthedons) and `docs/MADONNA_HUB.md`.
 
 ---
 
@@ -41,177 +45,88 @@ family and then approved *and linked* by hand.
 There is no linking code and no self-service claim flow. Extra children are
 linked by an admin from `/service-desk/users`.
 
-## 2. Choosing meals
-
-Route: `/lunch` (nav: **Cafeteria Lunch**).
-
-1. Each linked student gets their own section. A teacher who is also a Madonna
-   parent sees their own tray plus each child.
-2. Each row is one weekday, showing that day's entree and sides from the menu the
-   office published, plus any note for that day ("Early dismissal — cold lunch
-   only"). The board offers the next 10 service days.
-3. Four choices: **Hot lunch**, **Vegetarian**, **Packing lunch**, **Not eating**.
-   Only the first two count as trays for the kitchen.
-4. Tapping saves immediately through `placeLunchOrderAction`. There is no submit
-   button.
-5. A day locks at **9:00 AM** that morning (`LUNCH_ORDER_CUTOFF_HOUR`, enforced
-   server-side, evaluated in UTC).
-6. An accepted dietary record shows next to the student's name, and a restriction
-   that rules out meat marks **Hot lunch** as a conflict.
-
-### Confirming what saved
-
-The board only flashes **Saved** on the button just tapped, and that flash is
-gone on the next page load. Two surfaces answer "did it take?":
-
-- **Your selections** card at the bottom of `/lunch` — every saved choice, per
-  student, with the dish and a green check, plus a count of open days with no
-  choice.
-- `/lunch/selections` (nav: **Your Lunch Selections**) — the same thing as a full
-  page, including days nobody has answered yet and a padlock on locked days.
-
-Both are built by `buildLunchSelectionSummary()` in `src/lib/lunch-selections.ts`
-from the same `LunchBoard` the ordering board uses, so they cannot disagree with
-what the kitchen sees.
-
-## 3. What a parent account can actually do
+## 2. What a parent account can actually do
 
 Inventory of shipped, parent-reachable surfaces (focused-clubs mode on):
 
 | Surface | Route | Notes |
 | --- | --- | --- |
-| Today at Madonna | `/home` | Schedule, weather, announcements, messages sent to the parent |
-| Parent Portal | `/parent` | Linked students, agreements, child club approvals, cafeteria balance |
-| Cafeteria Lunch | `/lunch` | Ordering, saved selections, balance, dietary form |
-| Your Lunch Selections | `/lunch/selections` | Read-back of every saved choice |
+| Madonna Hub | `/madonna` | Front door: today's schedule and announcement, next game, next broadcast, section tiles |
+| Today | `/madonna/today` | Bell schedule, weather, today's announcement in full |
+| Sports | `/madonna/sports` | Schedules, scores, student coverage, recap video |
+| Broadcast | `/madonna/broadcast` | Blue Don Live plus the announcement archive |
+| Campus | `/madonna/campus` | Bell schedule, calendar, lunch link, archive, parent guide |
+| Participate | `/madonna/participate` | Submitting an announcement, covering a game, joining a club |
+| Parent Portal | `/parent` | Linked students, agreements, child club approvals |
 | Parent Guide | `/parent/guide` | This document, in app |
-| Madonna Hub | `/madonna` | Announcements, sports recap, highlight reel |
-| Announcements | `/madonna/announcements` | Today plus the archive |
+| Today at Madonna | `/home` | Command Center — messages sent to the parent, agreements |
 | Watch Broadcasting | `/media` | Live and recorded student video |
-| Blue Don Sports | `/sports` | Schedules and coverage |
+| Blue Don Sports | `/sports` | The full athletics hub |
 | Profile / Settings | `/profile`, `/settings` | Name, password, display |
+
+Parents see the same five hub sections as students, with parent-oriented copy —
+`describeMadonnaSection(section, role)` in `src/config/madonna-hub.ts` swaps the
+description, and the hub adds Parent Portal / Parent Guide links.
 
 Deliberately absent, and the guide says so plainly: no grades, no attendance, no
 direct parent-to-teacher messaging, and no visibility into other families.
 
 > `/forms-center` is **not** on the focused-mode allowlist, so the Parent Portal's
-> Forms Center button redirects to `/home` while focused mode is on. Unrelated to
-> this work, but worth knowing before someone reports it as a bug.
+> Forms Center button redirects to `/home` while focused mode is on. Worth
+> knowing before someone reports it as a bug.
 
-## 4. Paying for lunch — the process
+## 3. Lunch is on FuelTheDons
 
-**There is no card checkout anywhere in the app, and there should not be one.**
+The app used to take lunch orders, publish a menu calendar, print a kitchen prep
+sheet, review dietary forms, and keep a cafeteria ledger. **All of that is
+retired.** Madonna runs lunch on FuelTheDons, and the campus site links out.
 
-1. Cash or a check goes in an **envelope**.
-2. The **student's name** is written on the outside. This is the part that fails
-   most often; an unnamed envelope cannot be credited.
-3. The envelope comes to the school office.
-4. **Mrs. Dalfol** records it at `/admin/cafeteria` (nav: **Cafeteria Accounts**,
-   under Staff & Admin).
-5. The new balance appears on `/lunch`, `/lunch/selections`, `/parent`, and
-   `/parent/guide` immediately.
+- Config: `src/config/fuel-the-dons.ts` (`NEXT_PUBLIC_FUEL_THE_DONS_URL`
+  overrides the URL).
+- Component: `FuelTheDonsRow` / `FuelTheDonsLink` in
+  `src/components/lunch/fuel-the-dons-link.tsx` — new tab, host shown, clearly
+  labelled as leaving the site.
+- Where a parent finds it: `/parent`, `/parent/guide` (§3 in the app),
+  `/madonna`, `/madonna/today`, `/madonna/campus`, `/hub`, `/home`, and `/lunch`.
 
-The guide also carries a plain warning that nobody from Madonna will ever ask a
-family for card or bank details through the site, email, or text.
+`/lunch` is now a short page that says where lunch lives; `/lunch/selections`,
+`/lunch/kitchen`, `/admin/lunch-menu`, `/admin/dietary`, and `/admin/cafeteria`
+redirect there. Nav entries are gone. The guide tells families that a severe
+allergy still deserves a phone call to the office, and repeats that nobody from
+Madonna will ever ask for card or bank details through the site, email, or text.
 
-### How the balance is modeled
+The Prisma tables and services from the old system are still in the repo —
+retiring the UX did not need a destructive migration. Their history is in
+`docs/CAFETERIA_LUNCH.md`, kept for reference only.
 
-Added by this work, since nothing tracked cafeteria money before.
-
-- `CafeteriaAccount` — one row per student, `balanceCents` (whole cents) plus
-  `lowBalanceNotifiedAt`. A row is created lazily on the first entry, so families
-  who pack every day never get a balance or a nudge.
-- `CafeteriaLedgerEntry` — every movement, with `kind` (`CREDIT` / `CHARGE` /
-  `ADJUSTMENT`), a positive `amountCents`, the frozen `balanceAfterCents`, a
-  note, and `recordedById`. An envelope can always be traced to whoever opened it.
-- Migration: `prisma/migrations/20260823200000_cafeteria_accounts`.
-- Permission: `cafeteria:manage`, held by **admin** and **staff** only.
-  Deliberately narrower than `lunch:manage` — seeing kitchen counts is not the
-  same as moving money. Mrs. Dalfol needs a `staff` (or admin) account.
-- Corrections require a note. Single entries are capped at $1,000 as a typo guard.
-- Reads and writes share a transaction, so two people crediting at once cannot
-  post against a stale total.
-
-Charges are recorded by the office too — nothing debits automatically, because
-there is no per-meal price modeled yet. If Madonna wants meals to charge
-themselves, that is the next step: a price per choice and a nightly job that
-posts `CHARGE` entries from `LunchOrder`.
-
-## 5. Notifications
+## 4. Notifications
 
 What actually exists today, which is what the guide describes:
 
 | Notice | Where it lands | How it is created |
 | --- | --- | --- |
-| Low cafeteria balance | Command Center messages on `/home` | `recordCafeteriaLedgerEntry()` sends a `StudentMessage` to every linked parent |
-| Daily announcements | `/home` briefing and `/madonna/announcements` | `BroadcastAnnouncement` |
+| Daily announcements | `/madonna/today`, `/madonna/broadcast`, `/home` briefing | `BroadcastAnnouncement` |
 | Agreements awaiting signature | `/parent` and `/home` | `AgreementsWidget` |
 | Staff messages | `/home` | `StudentMessage` addressed to the parent's user id |
 
-Low-balance rules:
+The low cafeteria balance message went away with the ledger. The header bell
+(`notifications-menu.tsx`) is still a placeholder and the dashboard notification
+widget still runs on mock data; neither is mentioned in the guide, because
+neither does anything yet. The app sends no SMS, and only sends email for account
+plumbing (confirmation, password reset).
 
-- Triggers at **$10.00 or less**, including a negative balance
-  (`CAFETERIA_LOW_BALANCE_CENTS`).
-- One message per slide downward. A second message only after
-  `CAFETERIA_LOW_BALANCE_QUIET_HOURS` (72h), so a run of daily charges does not
-  produce a run of daily messages.
-- `lowBalanceNotifiedAt` is cleared once a family tops the account back up, which
-  re-arms the warning for next time.
-- Delivered to every linked parent via `listLinkedParentIds()` and
-  `sendSystemStudentMessages()` — the same Command Center inbox that carries
-  advisor and club messages, so families have one place to look.
+## 5. Routing and focused mode
 
-The header bell (`notifications-menu.tsx`) is still a placeholder and the
-dashboard notification widget still runs on mock data. Neither is mentioned in
-the guide, because neither does anything yet. The app sends no SMS, and only
-sends email for account plumbing (confirmation, password reset).
+`/parent`, `/madonna`, `/lunch`, and `/admin` are all on
+`FOCUSED_MODE_ALLOWED_PREFIXES`, and every parent-reachable route nests under one
+of them — including all five hub sections, which need no separate entries. A
+future top-level parent route would.
 
-## 6. Kitchen and menu side
+## 6. Follow-ups
 
-Staff need quantities, not a list of taps.
-
-- `/lunch` **Kitchen counts** — the original per-day table of Hot / Vegetarian /
-  Packed / Not eating plus trays to prepare. Still there, now linking onward.
-- `/lunch/kitchen` (nav: **Kitchen Prep Sheet**, under Staff & Admin) — the new
-  surface, gated on `lunch:manage`:
-  - window totals across the next 10 service days,
-  - per day: count tiles labelled with the actual dish (Hot shows the entree,
-    Vegetarian shows the vegetarian dish), trays to prepare, response count, and
-    whether the day is still open or locked,
-  - serving lists by dish with staff trays marked,
-  - **Allergies on the line** — everyone eating a tray who has an accepted
-    dietary record, by name, with allergens and restrictions,
-  - free-text notes families left on an order.
-
-Built by `getLunchKitchenPlan()` in `src/services/lunch-kitchen-service.ts`: one
-query over the window joined to dietary profiles and the published menu.
-Read-only and soft-failing, so a database hiccup shows an empty prep sheet rather
-than a broken page during service.
-
-Days are grouped into school weeks with per-week totals, which is what makes the
-sheet usable on a Sunday — see **Weekend head counts** in
-`docs/CAFETERIA_LUNCH.md`. Short version: the sheet is open every day of the
-week, on a weekend it counts the week ahead, expands the next upcoming day
-instead of "today", and says so in a banner.
-
-Staff publish the menu itself at `/admin/lunch-menu` (nav: **Lunch Menu
-Calendar**): edit each day, save it as a draft, then publish the week to
-families, optionally messaging every parent account that it is up. Days that are
-never published fall back to the standard rotating menu.
-
-## 7. Routing and focused mode
-
-`/parent`, `/lunch`, and `/admin` were already on
-`FOCUSED_MODE_ALLOWED_PREFIXES`. Every route added here nests under one of them
-(`/parent/guide`, `/lunch/selections`, `/lunch/kitchen`, `/admin/cafeteria`,
-`/admin/lunch-menu`), so the allowlist needed no change. A future top-level
-parent route would.
-
-## 8. Follow-ups
-
-- Per-meal pricing so charges post themselves instead of being keyed in.
-- A receipt or statement a family can print for a whole month.
-- The header bell is still a placeholder; low-balance notices only surface on
-  `/home`.
+- A deeper parent hub: per-child views, multi-role accounts (a teacher who is
+  also a Madonna parent), and supporter/alumni accounts.
+- A receipt or statement a family can print — now a FuelTheDons question.
+- The header bell is still a placeholder.
 - `/forms-center` is off the focused-mode allowlist while the Parent Portal still
   links to it.

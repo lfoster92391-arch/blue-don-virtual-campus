@@ -4,9 +4,7 @@ import { getSchoolYear } from "@/config/school-year";
 import {
   REGULAR_BELL_SCHEDULE,
   SCHEDULE_NOTES,
-  getLunchForWeekday,
   type BellPeriod,
-  type LunchMenu,
   type ScheduleNote,
 } from "@/config/school-hub";
 import { listEventsForDay } from "@/services/event-service";
@@ -30,12 +28,6 @@ export type HubBellSchedule = {
   notes: ScheduleNote[];
 };
 
-export type HubLunch = {
-  today: LunchMenu | null;
-  tomorrow: LunchMenu | null;
-  tomorrowIsWeekend: boolean;
-};
-
 export type HubDigest = {
   today: Date;
   dayName: string;
@@ -43,7 +35,6 @@ export type HubDigest = {
   schoolYear: string;
   isSchoolDay: boolean;
   bell: HubBellSchedule;
-  lunch: HubLunch;
   weather: CampusWeather;
   eventCount: number;
   formsDueCount: number;
@@ -144,15 +135,6 @@ function buildBellSchedule(
   };
 }
 
-function buildLunch(weekday: number): HubLunch {
-  const tomorrowWeekday = (weekday + 1) % 7;
-  return {
-    today: getLunchForWeekday(weekday),
-    tomorrow: getLunchForWeekday(tomorrowWeekday),
-    tomorrowIsWeekend: !isSchoolDay(tomorrowWeekday),
-  };
-}
-
 export type HubDigestUser = {
   id: string;
   role: CampusRole;
@@ -213,7 +195,6 @@ export function buildEmptyHubDigest(date: Date = new Date()): HubDigest {
     schoolYear: getSchoolYear(date),
     isSchoolDay: isSchoolDay(weekday),
     bell: buildBellSchedule(weekday, minutes),
-    lunch: buildLunch(weekday),
     weather: unavailableWeather(),
     eventCount: 0,
     formsDueCount: 0,
@@ -273,7 +254,6 @@ export async function getTodayHubDigest(
     schoolYear: getSchoolYear(date),
     isSchoolDay: isSchoolDay(weekday),
     bell: buildBellSchedule(weekday, minutes),
-    lunch: buildLunch(weekday),
     weather,
     eventCount: events.length,
     formsDueCount,

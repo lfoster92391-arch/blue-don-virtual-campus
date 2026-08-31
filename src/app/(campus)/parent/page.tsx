@@ -6,14 +6,10 @@ import {
   ClipboardList,
   RefreshCw,
   UserCheck,
-  UtensilsCrossed,
 } from "lucide-react";
 import { redirect } from "next/navigation";
 
-import {
-  CafeteriaBalances,
-  type CafeteriaBalanceRow,
-} from "@/components/cafeteria/cafeteria-balances";
+import { FuelTheDonsRow } from "@/components/lunch/fuel-the-dons-link";
 import { ChildClubApprovals } from "@/components/forms/child-club-approvals";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { ShellPage } from "@/components/layout/shell-page";
@@ -29,7 +25,6 @@ import {
 import { FORM_TYPE_LABELS } from "@/lib/forms/constants";
 import { isParentPreviewActive } from "@/lib/auth/preview";
 import { requireCampusAccess } from "@/lib/auth/session";
-import { getCafeteriaAccounts } from "@/services/cafeteria-account-service";
 import { getParentFormSummary } from "@/services/form-service";
 import {
   agreementStateLabel,
@@ -71,27 +66,6 @@ export default async function ParentPortalPage() {
 
   const linkedStudents = previewing ? [PREVIEW_STUDENT] : realLinkedStudents;
 
-  // The preview child has no account row, so this comes back empty and the
-  // balance block simply does not render while previewing.
-  const accounts = await getCafeteriaAccounts(
-    linkedStudents.map((student) => student.id),
-  );
-  const balanceRows: CafeteriaBalanceRow[] = linkedStudents
-    .map((student) => {
-      const account = accounts[student.id];
-      if (!account) {
-        return null;
-      }
-      return {
-        studentId: student.id,
-        studentName: student.displayName,
-        balanceLabel: account.balanceLabel,
-        balanceCents: account.balanceCents,
-        isLow: account.isLow,
-      };
-    })
-    .filter((row): row is CafeteriaBalanceRow => row !== null);
-
   const schoolYear = getCurrentSchoolYear();
   const outstandingAgreements = agreementStatuses.filter(
     (status) =>
@@ -111,13 +85,13 @@ export default async function ParentPortalPage() {
           <Button
             size="sm"
             nativeButton={false}
-            render={<Link href="/lunch">Order lunch</Link>}
+            render={<Link href="/parent/guide">Parent guide</Link>}
           />
           <Button
             size="sm"
             variant="outline"
             nativeButton={false}
-            render={<Link href="/parent/guide">Parent guide</Link>}
+            render={<Link href="/madonna">Madonna Hub</Link>}
           />
           <Button
             size="sm"
@@ -130,7 +104,7 @@ export default async function ParentPortalPage() {
     >
       <DashboardCard
         title="New here? Start with the parent guide"
-        description="Step-by-step: setting up your account, choosing lunches, paying the cafeteria, and how the school reaches you."
+        description="Step-by-step: setting up your account, what a parent account can do, and how the school reaches you."
         icon={<BookOpen className="size-5" />}
       >
         <div className="flex flex-wrap items-center gap-2">
@@ -144,8 +118,8 @@ export default async function ParentPortalPage() {
             variant="outline"
             nativeButton={false}
             render={
-              <Link href="/parent/guide#paying-for-lunch">
-                How lunch payments work
+              <Link href="/parent/guide#getting-around">
+                What you can do here
               </Link>
             }
           />
@@ -159,46 +133,13 @@ export default async function ParentPortalPage() {
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             {PARENT_PREVIEW_STUDENT_NAME} stands in for a real child so the whole
-            parent portal and lunch board are visible. Lunch orders and dietary
-            forms are disabled while previewing, and the kitchen never sees this
-            sample student. Exit from the yellow banner at the top.
+            parent portal is visible. Nothing saves while previewing. Exit from
+            the yellow banner at the top.
           </p>
         </div>
       ) : null}
 
-      <DashboardCard
-        title="Cafeteria lunch"
-        description="Choose hot lunch, the vegetarian option, or a packed lunch for each school day."
-        icon={<UtensilsCrossed className="size-5" />}
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
-            Orders for each day close at 9:00 AM that morning and can be changed
-            until then.
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              nativeButton={false}
-              render={<Link href="/lunch">Choose lunches</Link>}
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              nativeButton={false}
-              render={
-                <Link href="/lunch/selections">See what you chose</Link>
-              }
-            />
-          </div>
-        </div>
-
-        {balanceRows.length > 0 ? (
-          <div className="mt-4 border-t border-border pt-4">
-            <CafeteriaBalances rows={balanceRows} />
-          </div>
-        ) : null}
-      </DashboardCard>
+      <FuelTheDonsRow />
 
       <DashboardCard
         title="Action required"

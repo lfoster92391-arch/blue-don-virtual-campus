@@ -12,13 +12,14 @@ import {
 } from "lucide-react";
 
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
+import { FuelTheDonsRow } from "@/components/lunch/fuel-the-dons-link";
 import { ShellPage } from "@/components/layout/shell-page";
 import { AnnouncementsStrip } from "@/components/school-hub/announcements-strip";
 import { BellScheduleWidget } from "@/components/school-hub/bell-schedule-widget";
 import { DirectoryList } from "@/components/school-hub/directory-list";
-import { LunchMenuCard } from "@/components/school-hub/lunch-menu-card";
 import { Button } from "@/components/ui/button";
 import { CAMPUS_FEED } from "@/config/campus-feed";
+import { FUEL_THE_DONS_NAME } from "@/config/fuel-the-dons";
 import {
   HUB_EXPLORE_GROUPS,
   HUB_QUICK_LINKS,
@@ -193,10 +194,10 @@ export default async function HubPage() {
 
         <DashboardCard
           title="Lunch Menu"
-          description="Today's cafeteria menu and tomorrow's preview."
+          description={`Menus and ordering live on ${FUEL_THE_DONS_NAME}.`}
           icon={<UtensilsCrossed className="size-5" />}
         >
-          <LunchMenuCard lunch={digest.lunch} />
+          <FuelTheDonsRow />
         </DashboardCard>
       </div>
 
