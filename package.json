@@ -18,6 +18,7 @@
     "db:seed:sports": "npx tsx prisma/seed-sports.ts",
     "sports:opponent-logos": "npx tsx scripts/prepare-opponent-logos.ts",
     "sports:import-opponents": "npx tsx scripts/import-opponent-schools.ts",
+    "sports:import-schedule": "npx tsx scripts/import-sports-schedule.ts",
     "db:reset:clean": "prisma migrate reset --force --skip-seed && npm run db:seed",
     "postinstall": "prisma generate"
   },

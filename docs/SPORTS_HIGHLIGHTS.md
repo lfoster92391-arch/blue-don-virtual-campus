@@ -82,6 +82,42 @@ marked Final with both scores.
 A one-off opponent text field is still there for invitationals and meets that
 aren't a single school.
 
+#### Bulk import from a printed schedule
+
+A whole season off a printed sheet goes in with one script instead of 30 trips
+through the form:
+
+| Command | What it does |
+|---------|--------------|
+| `npm run sports:import-schedule -- --dry-run` | Prints every row it would create, update, or leave alone |
+| `npm run sports:import-schedule` | Writes the games |
+
+The 2026 football and volleyball sheets are transcribed in
+`scripts/madonna-2026-schedule-data.ts` — dates, Eastern kickoff times,
+home/away, and the opponent's directory slug. Edit that file and re-run to fix a
+row or add next season.
+
+Times are written as Eastern wall-clock and converted to UTC by the script, so
+the November games land on EST and the rest on EDT without anyone doing the
+arithmetic. A row whose sheet says TBD is stored at midnight — an obvious
+placeholder rather than a plausible tip-off — and its venue tag says "time TBD".
+
+Games are keyed on **sport + Eastern calendar date**, not the exact timestamp,
+so a second run fixes a kickoff that went in at the wrong time instead of
+scheduling the game twice. A re-run rewrites the schedule facts (kickoff, site,
+opponent) but leaves anything Lisa typed — venue, crew note, headline, scores —
+alone unless you pass `--force`. Games already marked final, postponed, or
+canceled only ever get blanks filled in, so a played game keeps its result, and
+dates the sheet doesn't list are never touched.
+
+Opponents missing from the directory are created without a logo, mascot, city,
+or state, for the same reason the opponent manifest leaves them blank: a guess
+puts wrong details on the scoreboard. The script lists what it created so Lisa
+can add logos from the Sports desk.
+
+Byes are deliberately skipped. A bye with no opponent would sit in the upcoming
+list and in the broadcast "next game" picker as though it were playable.
+
 ### 4. Review what students send in
 
 **Sports desk → Highlight queue** and **Student write-ups.** Publish, feature,
