@@ -43,7 +43,8 @@ This document captures the current-state audit, partner brand analysis, pain poi
 | `docs/blueprint/06_UI_SYSTEM.md` | **Not present in repo** — referenced in `docs/blueprint/README.md` only |
 | `src/app/globals.css` | Active token layer (shadcn + Blue Don brand vars) |
 | `src/config/site.ts` | Brand assets, colors, site metadata |
-| `public/icons/source-logo.png` | Campus Badge Studio logo (navy knight/shield/DONS) |
+| `public/brand/mhs-broadcasting-logo.png` | MHS Broadcasting mark (navy rounded tile, knight/shield/camera) — header, sidebar, auth |
+| `public/icons/source-logo.png` | Same mark flattened on navy; the input for generated favicon and PWA icons |
 
 ### 1.2 Typography
 
@@ -114,7 +115,7 @@ Fetched from [www.assetpilotedu.com](https://www.assetpilotedu.com) HTML + CSS (
 | Neutrals | Slate scale (`slate-900` headings, `slate-500` body) | shadcn oklch grays + silver borders |
 | Typography | Inter, bold headlines, uppercase eyebrow `tracking-[0.14em]` | Inter, semibold, `tracking-[0.18em]` eyebrows |
 | Layout feel | Clean white landing, minimal chrome, rounded-2xl CTAs | App shell with navy sidebar, card-heavy interior |
-| Logo | `asset-logo-header.png` (horizontal) | `source-logo.png` (Campus Badge Studio shield) |
+| Logo | `asset-logo-header.png` (horizontal) | `mhs-broadcasting-logo.png` (square MHS Broadcasting tile) |
 
 ### 2.2 Should campus align with Asset Pilot?
 

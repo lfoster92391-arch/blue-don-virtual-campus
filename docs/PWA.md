@@ -34,12 +34,18 @@ The install banner also shows brief iOS instructions when Safari is detected.
 
 ## Regenerating icons
 
-Icons are generated from `public/icons/icon.svg`:
+Icons are generated from `public/icons/source-logo.png` (the MHS Broadcasting
+mark, flattened on navy so iOS home screens never show transparency). The SVGs
+in `public/icons/` are only a fallback for when that PNG is missing.
 
 ```bash
 npm install -D sharp
 node scripts/generate-pwa-icons.mjs
 ```
+
+Filenames stay the same across brand changes, so bump `BRAND_ASSET_VERSION` in
+`src/config/site.ts` after regenerating. That query string is what pushes a new
+favicon and new home-screen icon past browser and OS caches.
 
 ## Local testing
 

@@ -11,12 +11,17 @@ const SOURCE_EMBLEM = join(iconsDir, "source-emblem.png");
 const FULL_SVG = join(iconsDir, "icon.svg");
 const EMBLEM_SVG = join(iconsDir, "icon-emblem.svg");
 
-/** Crop region for emblem from full source-logo.png (percent of image). */
+/**
+ * Crop region for emblem from full source-logo.png (percent of image). The MHS
+ * Broadcasting mark is a single square lockup that reads at every size, so the
+ * emblem is the whole frame. Narrow this if a wide horizontal logo is ever the
+ * source again, or drop a pre-cropped source-emblem.png next to it.
+ */
 const EMBLEM_CROP = {
-  left: 0.12,
-  top: 0.06,
-  width: 0.76,
-  height: 0.52,
+  left: 0,
+  top: 0,
+  width: 1,
+  height: 1,
 };
 
 let sharp;

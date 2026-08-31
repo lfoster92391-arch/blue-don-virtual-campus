@@ -5,9 +5,22 @@ import { CURRENT_WAVE_ID } from "@/config/waves";
 export { CURRENT_WAVE_ID, WAVES, getCurrentWave, getWave, getWaveLabel, phaseToWave } from "@/config/waves";
 export type { Wave, WaveStatus } from "@/config/waves";
 
+/**
+ * Bump when the brand mark is redrawn. Favicons and installed PWA icons keep
+ * their filenames, so browsers and home screens serve the old artwork until the
+ * URL changes. Only append it to plain `<link>` icon URLs: since Next 16,
+ * next/image rejects a local src with a query string unless
+ * `images.localPatterns.search` allows it.
+ */
+export const BRAND_ASSET_VERSION = "2";
+
+/**
+ * The MHS Broadcasting mark is one square lockup, so the emblem and the full
+ * logo are the same file at different render sizes.
+ */
 export const brandAssets = {
-  logo: "/icons/source-logo.png",
-  emblem: "/icons/apple-touch-icon.png",
+  logo: "/brand/mhs-broadcasting-logo.png",
+  emblem: "/brand/mhs-broadcasting-logo.png",
   icon192: "/icons/icon-192.png",
   icon512: "/icons/icon-512.png",
 } as const;
