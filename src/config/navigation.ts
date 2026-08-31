@@ -18,6 +18,7 @@ import {
   Home,
   Landmark,
   LayoutGrid,
+  Mail,
   Map,
   Megaphone,
   MonitorPlay,
@@ -434,6 +435,13 @@ export const focusedClubsNavigation: NavEntry[] = [
         roles: ["admin"],
       },
       {
+        label: "Message clubs",
+        href: "/messages/clubs",
+        icon: Mail,
+        enabled: true,
+        roles: ["admin", "advisor", "staff", "counselor"],
+      },
+      {
         label: "Parent Guide",
         href: "/parent/guide",
         icon: BookOpen,
@@ -586,6 +594,13 @@ export const groupedNavigation: NavEntry[] = [
         icon: LayoutGrid,
         enabled: true,
         roles: ["admin", "advisor", "staff"],
+      },
+      {
+        label: "Message clubs",
+        href: "/messages/clubs",
+        icon: Mail,
+        enabled: true,
+        roles: ["admin", "advisor", "staff", "counselor"],
       },
       {
         label: "Success Analytics",

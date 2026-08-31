@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { ArrowRight, Headphones, Megaphone, Trophy, Users } from "lucide-react";
+import {
+  ArrowRight,
+  Headphones,
+  Mail,
+  Megaphone,
+  Trophy,
+  Users,
+} from "lucide-react";
 
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { MadonnaSectionNav } from "@/components/madonna/madonna-hub-panels";
@@ -7,6 +14,7 @@ import { ShellPage } from "@/components/layout/shell-page";
 import { AnnouncementSubmitForm } from "@/components/media/broadcast-suite-panels";
 import { FOCUS_CLUBS } from "@/config/focused-clubs";
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { listClubAudiencesForSender } from "@/services/club-audience-message-service";
 
 export const metadata = {
   title: "Participate at Madonna",
@@ -17,6 +25,10 @@ export const metadata = {
 export default async function MadonnaParticipatePage() {
   const user = await requireCompleteProfile();
   const isParent = user.role === "parent";
+  const { options: clubAudiences } = await listClubAudiencesForSender(
+    user.id,
+    user.role,
+  );
 
   return (
     <ShellPage
@@ -117,6 +129,29 @@ export default async function MadonnaParticipatePage() {
           ))}
         </div>
       </DashboardCard>
+
+      {clubAudiences.length > 0 ? (
+        <DashboardCard
+          title="Message your club"
+          description="Officers, advisors, and campus staff can send one message to a whole club — or to everyone in all three."
+          icon={<Mail className="size-5" />}
+          actions={
+            <Link
+              href="/messages/clubs"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-[#2F80ED] hover:underline"
+            >
+              Compose
+              <ArrowRight className="size-3.5" aria-hidden="true" />
+            </Link>
+          }
+        >
+          <p className="text-sm text-muted-foreground">
+            You can message{" "}
+            {clubAudiences.map((audience) => audience.label).join(", ")}. It
+            lands in each member&rsquo;s Command Center on the home page.
+          </p>
+        </DashboardCard>
+      ) : null}
 
       <DashboardCard
         title="Ask for something"

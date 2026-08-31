@@ -74,11 +74,44 @@ instead of blanking `/home`.
 
 ### Where to compose
 
+- **Whole group, one screen:** `/messages/clubs` → Message clubs (see below)
 - **Admin:** `/admin/students` → Message students
 - **Club officers:** `/organizations/{slug}?tab=messages`
   - Advisor request form
   - Invoice/receipt request form (Secretary+)
   - Pending receipt-request status list
+
+### Message clubs — group audiences
+
+**Route:** `/messages/clubs`
+
+One compose form for whole-group announcements. Pick an audience, write a title
+and body, optionally attach a link, send. Recipients read it in the same
+**Messages & advisor requests** panel on `/home` — there is no second inbox.
+
+| Audience | Goes to |
+|----------|---------|
+| IT Club | Every ACTIVE IT Club member |
+| Broadcasting | Every ACTIVE Broadcasting member |
+| Cricut Club | Every ACTIVE Cricut Club member |
+| **Everyone in Groups** | All three rosters, **deduplicated** — someone in two clubs gets one message, not two |
+
+Permissions reuse `canSendClubMessages`, so admins, advisors, and academy
+managers see all four audiences; a club officer (President / VP / Secretary)
+sees only the club they hold office in. Nobody else gets an audience, and the
+page says so instead of erroring.
+
+"Everyone in Groups" only appears when the sender can reach **two or more**
+clubs. Each club is sent as its own batch so every message keeps its
+`organizationId` and shows the club it came from.
+
+**Code:** `src/config/club-audiences.ts` → `src/services/club-audience-message-service.ts`
+→ `sendClubAudienceMessageAction` → `sendStudentMessages`. No new table, no
+second messaging stack.
+
+**Nav:** Staff & Admin → Message clubs. Officers reach it from the
+Madonna Hub → Participate → "Message your club" card, which only renders when
+the viewer actually has an audience.
 
 ### Action button types
 

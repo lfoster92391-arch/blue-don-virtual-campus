@@ -15,6 +15,8 @@ export const FOCUSED_MODE_ALLOWED_PREFIXES = [
   "/organizations/broadcasting",
   "/organizations/cricut-club",
   "/cricut",
+  // Group messaging to the focus clubs — officers and staff compose here.
+  "/messages",
   "/media",
   "/broadcast",
   "/sports",

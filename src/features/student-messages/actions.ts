@@ -8,6 +8,7 @@ import type {
   StudentMessageKind,
 } from "@/lib/command-center";
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { sendClubAudienceMessage } from "@/services/club-audience-message-service";
 import {
   buildCalendarActions,
   buildDefaultAdvisorActions,
@@ -149,6 +150,61 @@ export async function sendStudentMessageAction(
     revalidateMessagePaths(organizationSlug);
     return {
       success: `Sent to ${result.count} student${result.count === 1 ? "" : "s"}.`,
+    };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Unable to send message.",
+    };
+  }
+}
+
+/**
+ * "Message clubs" compose page — one club audience, or everyone in all three.
+ * Recipients read it in the same Command Center panel on /home.
+ */
+export async function sendClubAudienceMessageAction(
+  _prev: StudentMessageActionState,
+  formData: FormData,
+): Promise<StudentMessageActionState> {
+  try {
+    const user = await requireCompleteProfile();
+    const audienceId = String(formData.get("audienceId") ?? "").trim();
+    const title = String(formData.get("title") ?? "").trim();
+    const body = String(formData.get("body") ?? "").trim();
+    const href = String(formData.get("href") ?? "").trim();
+
+    if (!audienceId) {
+      return { error: "Pick who this goes to." };
+    }
+    if (!title) {
+      return { error: "Message title is required." };
+    }
+
+    const result = await sendClubAudienceMessage({
+      fromUserId: user.id,
+      role: user.role,
+      audienceId,
+      title,
+      body: body || null,
+      href: href || null,
+    });
+
+    if (result.error) {
+      return { error: result.error };
+    }
+
+    revalidateMessagePaths();
+    revalidatePath("/messages/clubs");
+
+    const breakdown = result.delivered
+      .map((entry) => `${entry.club} (${entry.count})`)
+      .join(", ");
+
+    return {
+      success: `Sent to ${result.count} ${
+        result.count === 1 ? "person" : "people"
+      }${breakdown ? ` — ${breakdown}.` : "."}`,
     };
   } catch (error) {
     return {
