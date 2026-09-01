@@ -39,6 +39,7 @@ import {
   JoinApplicationReviewList,
   JoinClubPortal,
 } from "@/components/media/broadcast-suite-panels";
+import { HowWeGoLiveCard } from "@/components/media/how-we-go-live";
 import { LiveBroadcastPanel } from "@/components/media/live-broadcast-panel";
 import {
   SportsAudienceSections,
@@ -52,7 +53,10 @@ import type {
 import { VideoLibrary } from "@/components/media/video-library";
 import { VideoUploadForm } from "@/components/media/video-upload-form";
 import { Button } from "@/components/ui/button";
-import type { BlueDonLiveRtmpPublicConfig } from "@/config/broadcast-media";
+import {
+  isWithinAirPreviewWindow,
+  type BlueDonLiveRtmpPublicConfig,
+} from "@/config/broadcast-media";
 import type { BroadcastDailyScriptView } from "@/config/broadcast-script";
 import type {
   BroadcastAnnouncementSubmissionView,
@@ -88,6 +92,7 @@ import {
   GraduationCap,
   Megaphone,
   MonitorPlay,
+  Radio,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -932,24 +937,70 @@ function MediaPanel(props: ClubTabPanelsProps) {
 
   if (isBroadcasting) {
     const isCrew = props.isBroadcastCrew !== false;
+    const schedule = props.broadcastSchedule ?? {
+      id: null,
+      organizationId: null,
+      nextAirAt: null,
+      title: null,
+      notes: null,
+      updatedByName: null,
+    };
+
     return (
       <div className="space-y-8">
+        {canManageMedia && props.rtmpConfig ? (
+          <>
+            <DashboardCard
+              title="Go live"
+              description="Five steps from an empty studio to on air. Nothing here needs a stream key."
+              icon={<Radio className="size-5" />}
+              status={
+                props.activeLive
+                  ? { label: "On air", variant: "warning" }
+                  : { label: "Studio B", variant: "info" }
+              }
+            >
+              <LiveBroadcastPanel
+                activeLive={props.activeLive ?? null}
+                isProducer
+                currentUserId={props.currentUserId ?? ""}
+                rtmp={props.rtmpConfig}
+                previewWindow={isWithinAirPreviewWindow(schedule.nextAirAt)}
+                scheduledTitle={schedule.title}
+              />
+            </DashboardCard>
+
+            <HowWeGoLiveCard />
+          </>
+        ) : (
+          <DashboardCard
+            title="Blue Don Live"
+            description="Watch when Broadcasting is on air."
+            icon={<Camera className="size-5" />}
+          >
+            {props.rtmpConfig ? (
+              <LiveBroadcastPanel
+                activeLive={props.activeLive ?? null}
+                isProducer={false}
+                currentUserId={props.currentUserId ?? ""}
+                rtmp={props.rtmpConfig}
+                previewWindow={isWithinAirPreviewWindow(schedule.nextAirAt)}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Live stream status loads with Watch Broadcasting.
+              </p>
+            )}
+          </DashboardCard>
+        )}
+
         <DashboardCard
           title="Next live"
           description="Countdown visible to the whole campus on Watch Broadcasting."
           icon={<Megaphone className="size-5" />}
         >
           <BroadcastCountdown
-            schedule={
-              props.broadcastSchedule ?? {
-                id: null,
-                organizationId: null,
-                nextAirAt: null,
-                title: null,
-                notes: null,
-                updatedByName: null,
-              }
-            }
+            schedule={schedule}
             canSet={Boolean(canManageMedia)}
           />
         </DashboardCard>
@@ -967,75 +1018,15 @@ function MediaPanel(props: ClubTabPanelsProps) {
 
         {canManageMedia ? (
           <DashboardCard
-            title="Broadcast Control Studio"
-            description="Full-screen production console for Studio B — scenes, program, run of show, and transport."
-            icon={<MonitorPlay className="size-5" />}
-            status={{ label: "Crew only", variant: "info" }}
-          >
-            <p className="text-sm text-muted-foreground">
-              Opens the dark 1080p console outside the campus shell. On-air
-              state, today&apos;s run of show, the crew roster, the next air
-              countdown, and tonight&apos;s score read live campus data.
-            </p>
-            <div className="mt-4">
-              <Button
-                size="sm"
-                nativeButton={false}
-                render={
-                  <Link href="/broadcast/studio">
-                    Open Broadcast Studio
-                    <ArrowRight className="size-3.5" />
-                  </Link>
-                }
-              />
-            </div>
-          </DashboardCard>
-        ) : null}
-
-        {canManageMedia && props.rtmpConfig ? (
-          <div className="grid gap-6 lg:grid-cols-2">
-            <DashboardCard
-              title="Media archive"
-              description="Publish clips with on-demand categories or mark a highlight reel."
-              icon={<Camera className="size-5" />}
-            >
-              <VideoUploadForm
-                storageConfigured={Boolean(props.mediaStorageConfigured)}
-              />
-            </DashboardCard>
-            <DashboardCard
-              title="Control room"
-              description="OBS / RTMP go-live workflow for Studio B."
-              icon={<Megaphone className="size-5" />}
-            >
-              <LiveBroadcastPanel
-                activeLive={props.activeLive ?? null}
-                isProducer
-                currentUserId={props.currentUserId ?? ""}
-                rtmp={props.rtmpConfig}
-              />
-            </DashboardCard>
-          </div>
-        ) : (
-          <DashboardCard
-            title="Blue Don Live"
-            description="Watch when Broadcasting is on air."
+            title="Media archive"
+            description="Publish clips with on-demand categories or mark a highlight reel."
             icon={<Camera className="size-5" />}
           >
-            {props.rtmpConfig ? (
-              <LiveBroadcastPanel
-                activeLive={props.activeLive ?? null}
-                isProducer={false}
-                currentUserId={props.currentUserId ?? ""}
-                rtmp={props.rtmpConfig}
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Live stream status loads with Watch Broadcasting.
-              </p>
-            )}
+            <VideoUploadForm
+              storageConfigured={Boolean(props.mediaStorageConfigured)}
+            />
           </DashboardCard>
-        )}
+        ) : null}
 
         <DashboardCard
           title="Highlight Reel"
@@ -1062,6 +1053,42 @@ function MediaPanel(props: ClubTabPanelsProps) {
             canCategorize={Boolean(canManageMedia)}
           />
         </DashboardCard>
+
+        {canManageMedia ? (
+          <DashboardCard
+            title="Advanced · Advisor setup"
+            description="The full production console and the machines behind it."
+            icon={<MonitorPlay className="size-5" />}
+            status={{ label: "Advisors", variant: "info" }}
+            expandable
+            defaultExpanded={false}
+          >
+            <p className="text-sm text-muted-foreground">
+              The Broadcast Control Studio is the dark 1080p console outside the
+              campus shell — scenes, program, graphics, sponsors, run of show,
+              and the game score, all driving OBS through the Studio Bridge.
+              Students running a normal show do not need it; whoever is calling
+              a game does.
+            </p>
+            <div className="mt-4">
+              <Button
+                size="sm"
+                nativeButton={false}
+                render={
+                  <Link href="/broadcast/studio">
+                    Open Broadcast Studio
+                    <ArrowRight className="size-3.5" />
+                  </Link>
+                }
+              />
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Stream keys, the RTMP target, and first-time OBS setup are under
+              Advanced inside Go live. Bridge and overlay install steps are in
+              docs/STUDIO_BRIDGE_SETUP.md and docs/STUDIO_OVERLAY_SETUP.md.
+            </p>
+          </DashboardCard>
+        ) : null}
 
         {!isCrew ? (
           <p className="text-sm text-muted-foreground">

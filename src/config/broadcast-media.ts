@@ -43,6 +43,94 @@ const OBS_SCENE_TIPS = [
 ];
 
 /**
+ * The five steps a student crew member actually performs. Nothing here names a
+ * protocol, a port, or a bitrate — the technical setup is the advisor's job and
+ * lives behind the Advanced disclosure.
+ */
+const STUDENT_GO_LIVE_STEPS = [
+  {
+    title: "Open the studio",
+    detail:
+      "On the Studio B computer, open OBS — it is already set up, so do not change its settings. Then open Broadcast Studio here for scenes, graphics, and the score.",
+  },
+  {
+    title: "Pick today's show",
+    detail: "Name what campus should see on the player.",
+  },
+  {
+    title: "Check your preview",
+    detail:
+      "Camera is pointed at the desk, the mic meter moves when you talk, and OBS says Streaming in the bottom bar.",
+  },
+  {
+    title: "Go live",
+    detail:
+      "This puts you on air for everyone signed in to campus. Nothing goes out before you press it.",
+  },
+  {
+    title: "End broadcast",
+    detail:
+      "When the show is over, end it here and press Stop Streaming in OBS. The show saves to Past Broadcasts.",
+  },
+];
+
+/** One tap fills the show name for the broadcasts Madonna runs every week. */
+const SHOW_PRESETS = [
+  "Morning Announcements",
+  "Blue Don News",
+  "Pep Rally",
+  "Game Night",
+  "Mass",
+];
+
+/** Matches STUDIO_PREVIEW_WINDOW_MINUTES so every surface calls "Preview" alike. */
+const AIR_PREVIEW_WINDOW_MINUTES = 15;
+
+/**
+ * True inside the quarter hour either side of the scheduled air time. Resolved
+ * on the server so the status badge does not flip during hydration.
+ */
+export function isWithinAirPreviewWindow(
+  nextAirAt: Date | null | undefined,
+): boolean {
+  if (!nextAirAt) {
+    return false;
+  }
+  const minutesAway = (nextAirAt.getTime() - Date.now()) / 60_000;
+  return Math.abs(minutesAway) <= AIR_PREVIEW_WINDOW_MINUTES;
+}
+
+/** Plain checks a student can confirm by looking at the desk and the screen. */
+const PREVIEW_CHECKS = [
+  "The camera shows the desk, not the ceiling.",
+  "The mic meter moves when you talk — green, never red.",
+  "OBS says Streaming in its bottom bar.",
+];
+
+/**
+ * "How we go live at Madonna" — the house rules for the crew, in school
+ * language. Not a feature list; this is what an advisor would say out loud.
+ */
+export const MADONNA_GO_LIVE_NOTES = [
+  {
+    label: "Who runs the show",
+    text: "Two students at minimum — one on camera and mic in Studio B, one on this page. Your advisor is the backup, not the operator.",
+  },
+  {
+    label: "When we air",
+    text: "Morning Announcements go out at 8:05. Games, assemblies, and Mass air whenever the Next live countdown says so.",
+  },
+  {
+    label: "Who is watching",
+    text: "Everyone signed in to campus can watch at Watch Broadcasting. Families see the archive after the show ends.",
+  },
+  {
+    label: "If something breaks",
+    text: "End the broadcast, fix it, and go live again — the archive keeps whatever already aired. Ask your advisor before touching OBS settings.",
+  },
+];
+
+/**
  * Display-safe streaming guidance. Contains no credentials, so it is the only
  * RTMP shape allowed to cross a server → client component boundary.
  */
@@ -50,6 +138,10 @@ export type BlueDonLiveRtmpPublicConfig = {
   /** True when the school configured a shared studio key in the environment. */
   hasSharedStreamKey: boolean;
   streamKeyHint: string;
+  /** The student path. Everything below this line is Advanced-only copy. */
+  goLiveSteps: { title: string; detail: string }[];
+  showPresets: string[];
+  previewChecks: string[];
   obsChecklist: string[];
   sceneTips: { label: string; tip: string }[];
 };
@@ -83,6 +175,9 @@ export function getBlueDonLiveRtmpPublicConfig(): BlueDonLiveRtmpPublicConfig {
     streamKeyHint: hasSharedStreamKey
       ? "School studio stream key — reveal it here when you are ready to configure OBS."
       : "Ask your Broadcast Academy advisor for your studio stream key, or reveal the per-session key after you Go Live.",
+    goLiveSteps: STUDENT_GO_LIVE_STEPS,
+    showPresets: SHOW_PRESETS,
+    previewChecks: PREVIEW_CHECKS,
     obsChecklist: OBS_CHECKLIST,
     sceneTips: OBS_SCENE_TIPS,
   };

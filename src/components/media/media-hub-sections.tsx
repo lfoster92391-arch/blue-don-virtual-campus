@@ -4,7 +4,6 @@ import {
   Clapperboard,
   Clock,
   Megaphone,
-  MonitorPlay,
   Radio,
   Sparkles,
   Trophy,
@@ -22,12 +21,14 @@ import {
   JoinClubPortal,
 } from "@/components/media/broadcast-suite-panels";
 import { DailyAnnouncement } from "@/components/media/daily-announcement";
+import { HowWeGoLiveCard } from "@/components/media/how-we-go-live";
 import { LiveBroadcastPanel } from "@/components/media/live-broadcast-panel";
 import { VideoLibrary } from "@/components/media/video-library";
 import { VideoUploadForm } from "@/components/media/video-upload-form";
 import { Button } from "@/components/ui/button";
 import {
   BROADCAST_ORG_SLUG,
+  isWithinAirPreviewWindow,
   type BlueDonLiveRtmpPublicConfig,
 } from "@/config/broadcast-media";
 import type { BroadcastAnnouncementView } from "@/services/broadcast-announcement-service";
@@ -95,6 +96,34 @@ export function MediaHubSections({
         ) : null}
       </DashboardCard>
 
+      {canManageMedia ? (
+        <>
+          <DashboardCard
+            title="Go live"
+            description="Five steps from an empty studio to on air. Nothing here needs a stream key."
+            icon={<Radio className="size-5" />}
+            status={
+              activeLive
+                ? { label: "On air", variant: "warning" }
+                : { label: "Studio B", variant: "info" }
+            }
+          >
+            <div id="live">
+              <LiveBroadcastPanel
+                activeLive={activeLive}
+                isProducer
+                currentUserId={currentUserId}
+                rtmp={rtmp}
+                previewWindow={isWithinAirPreviewWindow(schedule.nextAirAt)}
+                scheduledTitle={schedule.title}
+              />
+            </div>
+          </DashboardCard>
+
+          <HowWeGoLiveCard />
+        </>
+      ) : null}
+
       <DashboardCard
         title="Next live"
         description="Countdown to the next Blue Don Live air time."
@@ -121,49 +150,14 @@ export function MediaHubSections({
       </DashboardCard>
 
       {canManageMedia ? (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <DashboardCard
-            title="Upload Video"
-            description="Publish a finished video to the school library (stored on campus)."
-            icon={<Upload className="size-5" />}
-            status={{ label: "Crew only", variant: "info" }}
-          >
-            <VideoUploadForm storageConfigured={storageConfigured} />
-          </DashboardCard>
-
-          <DashboardCard
-            title="Go Live"
-            description="OBS control room — stream stays on campus; optional YouTube embed."
-            icon={<Radio className="size-5" />}
-            status={
-              activeLive
-                ? { label: "On air", variant: "warning" }
-                : { label: "Studio", variant: "info" }
-            }
-            actions={
-              <Button
-                size="sm"
-                variant="outline"
-                nativeButton={false}
-                render={
-                  <Link href="/broadcast/studio">
-                    <MonitorPlay className="size-3.5" />
-                    Broadcast Studio
-                  </Link>
-                }
-              />
-            }
-          >
-            <div id="live">
-              <LiveBroadcastPanel
-                activeLive={activeLive}
-                isProducer={canManageMedia}
-                currentUserId={currentUserId}
-                rtmp={rtmp}
-              />
-            </div>
-          </DashboardCard>
-        </div>
+        <DashboardCard
+          title="Upload Video"
+          description="Publish a finished video to the school library (stored on campus)."
+          icon={<Upload className="size-5" />}
+          status={{ label: "Crew only", variant: "info" }}
+        >
+          <VideoUploadForm storageConfigured={storageConfigured} />
+        </DashboardCard>
       ) : (
         <DashboardCard
           title="Blue Don Live"
@@ -181,6 +175,7 @@ export function MediaHubSections({
               isProducer={false}
               currentUserId={currentUserId}
               rtmp={rtmp}
+              previewWindow={isWithinAirPreviewWindow(schedule.nextAirAt)}
             />
           </div>
         </DashboardCard>

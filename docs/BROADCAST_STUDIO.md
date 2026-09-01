@@ -510,8 +510,18 @@ server action rather than a browser fetch.
 
 - Sidebar → Broadcasting → **Broadcast Studio**
 - Broadcasting org page header → **Broadcast Studio** (crew only)
-- Control Room tab (`/organizations/broadcasting?tab=media`) → **Open Broadcast Studio** card
-- Watch Broadcasting (`/media`) → Go Live card header → **Broadcast Studio**
+- Control Room tab (`/organizations/broadcasting?tab=media`) → **Go live** panel, step 1 → **Open Broadcast Studio**
+- Control Room tab → **Advanced · Advisor setup** card (collapsed) → **Open Broadcast Studio**
+- Watch Broadcasting (`/media`) and `/madonna/broadcast` → **Go live** panel, step 1
+
+## Students do not start here
+
+The console is the advisor / game-caller surface. A student running Morning
+Announcements works the five-step **Go live** panel on the campus surfaces
+instead, and never sees an RTMP URL or stream key unless they open
+**Advanced · Advisor setup**. That path is documented in
+[`STUDENT_GO_LIVE.md`](./STUDENT_GO_LIVE.md); nothing on this page changed to
+make it possible.
 
 ## Data model
 

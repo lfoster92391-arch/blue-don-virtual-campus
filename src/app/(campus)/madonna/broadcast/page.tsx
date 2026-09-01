@@ -10,7 +10,10 @@ import { DailyAnnouncement } from "@/components/media/daily-announcement";
 import { LiveBroadcastPanel } from "@/components/media/live-broadcast-panel";
 import { LiveNowPanel } from "@/components/media/live-now-panel";
 import { VideoGrid } from "@/components/media/video-grid";
-import { getBlueDonLiveRtmpPublicConfig } from "@/config/broadcast-media";
+import {
+  getBlueDonLiveRtmpPublicConfig,
+  isWithinAirPreviewWindow,
+} from "@/config/broadcast-media";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { recentWindowStart } from "@/lib/media-recency";
 import { getTodaysBroadcastAnnouncement } from "@/services/broadcast-announcement-service";
@@ -102,8 +105,8 @@ export default async function MadonnaBroadcastPage() {
 
       {canManageMedia ? (
         <DashboardCard
-          title="Control room"
-          description="Go live, end the broadcast, and check the OBS target."
+          title="Go live"
+          description="Five steps from an empty studio to on air. Nothing here needs a stream key."
           icon={<Radio className="size-5" />}
           status={
             activeLive
@@ -116,6 +119,8 @@ export default async function MadonnaBroadcastPage() {
             isProducer
             currentUserId={user.id}
             rtmp={rtmp}
+            previewWindow={isWithinAirPreviewWindow(schedule.nextAirAt)}
+            scheduledTitle={schedule.title}
           />
         </DashboardCard>
       ) : null}

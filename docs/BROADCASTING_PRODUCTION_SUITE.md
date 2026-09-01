@@ -26,7 +26,7 @@ Lisa — full Studio B production tools on top of Watch Broadcasting, Daily Rund
 | Tab | Query | What it does |
 |-----|--------|--------------|
 | Daily Rundown | `?tab=script` | Morning show script (existing) |
-| Control Room | `?tab=media` | Upload (with categories), OBS, countdown set |
+| Control Room | `?tab=media` | Five-step **Go live** panel, upload (with categories), countdown set. OBS and stream keys sit under Advanced — see `docs/STUDENT_GO_LIVE.md` |
 | Bookings | `?tab=bookings` | Accept / decline / complete coverage requests |
 | Submissions | `?tab=submissions` | Approve announcement submissions |
 | Equipment | `?tab=equipment` | Gear checklist check-in |
