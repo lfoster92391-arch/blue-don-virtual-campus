@@ -2,6 +2,7 @@ import {
   BookOpen,
   BarChart3,
   Briefcase,
+  Calculator,
   Calendar,
   CircleDollarSign,
   ClipboardCheck,
@@ -408,6 +409,15 @@ export const focusedClubsNavigation: NavEntry[] = [
         enabled: true,
         primary: true,
         clubSlug: FOCUS_CLUBS[2].slug,
+      },
+      {
+        label: "Cashier",
+        href: "/cricut/pos",
+        icon: Calculator,
+        enabled: true,
+        primary: true,
+        clubSlug: FOCUS_CLUBS[2].slug,
+        requiresFinanceAccess: true,
       },
       {
         label: "Designs",

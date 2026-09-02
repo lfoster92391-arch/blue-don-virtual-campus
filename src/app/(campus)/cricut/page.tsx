@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  Calculator,
   ClipboardList,
   Lightbulb,
   ShoppingBag,
@@ -61,6 +62,19 @@ export default async function CricutHubPage() {
             nativeButton={false}
             render={<Link href="/cricut/shop">Shop</Link>}
           />
+          {canManage ? (
+            <Button
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              render={
+                <Link href="/cricut/pos">
+                  <Calculator />
+                  Cashier
+                </Link>
+              }
+            />
+          ) : null}
           <Button
             variant="outline"
             size="sm"
