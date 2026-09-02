@@ -133,7 +133,7 @@ const BROADCAST_CREW_ONLY_TABS = new Set([
 
 type OrganizationPageProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ tab?: string; sport?: string }>;
+  searchParams: Promise<{ tab?: string; sport?: string; period?: string }>;
 };
 
 export default async function OrganizationPage({
@@ -141,7 +141,11 @@ export default async function OrganizationPage({
   searchParams,
 }: OrganizationPageProps) {
   const { slug } = await params;
-  const { tab: tabParam, sport: sportParam } = await searchParams;
+  const {
+    tab: tabParam,
+    sport: sportParam,
+    period: periodParam,
+  } = await searchParams;
   const user = await requireCompleteProfile();
   const identity = await resolveAccessIdentity(user);
 
@@ -271,7 +275,7 @@ export default async function OrganizationPage({
           organization.academy && user.role === "student"
             ? getAcademyJoinPipelineStatus(user.id, organization.academy.id)
             : Promise.resolve(null),
-          getClubFinanceSnapshot(organization.id),
+          getClubFinanceSnapshot(organization.id, periodParam),
           canManageClubFinances(user.id, user.role, organization.id),
           canViewClubFinances(user.id, user.role, organization.id),
           listClubCalendarEvents({ organizationId: organization.id }),

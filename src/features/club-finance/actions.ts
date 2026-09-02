@@ -24,7 +24,27 @@ const moneySchema = z.object({
   memo: z.string().trim().max(240).optional(),
   fundraiserId: z.string().optional(),
   type: z.enum(["DEPOSIT", "WITHDRAWAL"]),
+  occurredOn: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter the transaction date as YYYY-MM-DD")
+    .optional(),
 });
+
+/**
+ * `YYYY-MM-DD` from a date input is midday local time, not midnight UTC, so
+ * an entry cannot slip into the previous month for negative-offset campuses.
+ */
+function parseOccurredOn(value: string | undefined): Date | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  const parsed = new Date(year, month - 1, day, 12, 0, 0, 0);
+
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
 
 const fundraiserSchema = z.object({
   organizationId: z.string().min(1),
@@ -61,6 +81,7 @@ export async function addClubLedgerEntryAction(
       memo: formData.get("memo") || undefined,
       fundraiserId: formData.get("fundraiserId") || undefined,
       type: formData.get("type"),
+      occurredOn: formData.get("occurredOn") || undefined,
     });
 
     if (!parsed.success) {
@@ -76,6 +97,7 @@ export async function addClubLedgerEntryAction(
       memo: parsed.data.memo,
       fundraiserId: parsed.data.fundraiserId,
       createdById: user.id,
+      occurredAt: parseOccurredOn(parsed.data.occurredOn),
     });
 
     if (!id) {

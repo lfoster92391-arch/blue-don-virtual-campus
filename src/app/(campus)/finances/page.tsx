@@ -47,7 +47,7 @@ export default async function FinancesHubPage() {
   return (
     <ShellPage
       title="Club Finances"
-      description="Balances, ledgers, and fundraisers for clubs you can access as an officer or administrator."
+      description="All-time balances, ledgers, and fundraisers for clubs you can access as an officer or administrator. Open a ledger to break it down by month."
       actions={
         <span className="inline-flex items-center gap-1.5 rounded-full bg-[#2F80ED]/10 px-3 py-1 text-xs font-medium text-[#2F80ED]">
           <CircleDollarSign className="size-3.5" aria-hidden="true" />
@@ -68,7 +68,7 @@ export default async function FinancesHubPage() {
               title={club.name}
               description={
                 snapshot
-                  ? `${snapshot.entries.length} ledger entries · ${snapshot.fundraisers.length} fundraisers`
+                  ? `${snapshot.totalEntryCount} ledger entries · ${snapshot.fundraisers.length} fundraisers`
                   : "Organization not seeded yet — run db:seed"
               }
               status={

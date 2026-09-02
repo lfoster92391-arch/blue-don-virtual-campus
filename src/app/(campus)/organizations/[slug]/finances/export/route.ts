@@ -12,9 +12,10 @@ type RouteContext = {
   params: Promise<{ slug: string }>;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const user = await requireCompleteProfile();
   const { slug } = await context.params;
+  const periodParam = new URL(request.url).searchParams.get("period");
 
   const org = await prisma.organization.findUnique({
     where: { slug },
@@ -30,13 +31,15 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const snapshot = await getClubFinanceSnapshot(org.id);
+  const snapshot = await getClubFinanceSnapshot(org.id, periodParam);
   if (!snapshot) {
     return NextResponse.json({ error: "Finances unavailable" }, { status: 503 });
   }
 
   const csv = ledgerToCsv(snapshot.entries);
-  const filename = `${org.slug}-ledger-${new Date().toISOString().slice(0, 10)}.csv`;
+  const filename = `${org.slug}-ledger-${snapshot.period.key}-${new Date()
+    .toISOString()
+    .slice(0, 10)}.csv`;
 
   return new NextResponse(csv, {
     status: 200,

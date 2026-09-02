@@ -79,6 +79,46 @@ Models: `ClubInvoice`, `ClubInvoiceLine` (+ `ClubLedgerEntry.invoiceId` / `recei
 - Tabs: **Invoices** on IT / Broadcasting / Cricut  
 - **IT Finances** shows all focus-club balances + pending invoices for approval  
 
+## Ledger periods (month / school year / all time)
+
+`ClubLedgerEntry` carries two dates:
+
+| Field | Meaning |
+|-------|---------|
+| `occurredAt` | When the money actually moved. Everything filters and groups on this. |
+| `createdAt` | When the row was typed in. |
+
+They differ on backfills — the original IT Club ledger was entered in one
+sitting on Aug 4–5 2026, so `createdAt` alone collapsed a whole year of
+transactions into a single month. The **Date of transaction** field on the
+deposit/withdrawal form backdates a receipt into the month it belongs to.
+
+`/organizations/[slug]?tab=finances&period=…` accepts:
+
+| `period` | Window |
+|----------|--------|
+| omitted / `all` | All time (default) |
+| `school-year` | Aug 1 of the current school year → today |
+| `YYYY-MM` | That calendar month, e.g. `2026-09` |
+
+Unknown values fall back to all time, so a stale bookmark can never hide money.
+
+The picker only lists months that actually have entries, and **the all-time
+balance stays on screen in every period** alongside opening balance, deposits
+in, expenses out, and closing balance. An empty month therefore reads
+"$0.00 in / $0.00 out" while still showing the real balance carried into and
+out of it — a new month never looks like the money vanished.
+
+Fundraiser progress bars stay all-time (a goal is cumulative); a period-scoped
+"raised in <month>" line appears underneath when a specific period is selected.
+A fundraiser with no tagged ledger entries says so explicitly instead of just
+reading `$0.00`.
+
+Cricut register sales (`src/features/pos/actions.ts`) post through
+`addClubLedgerEntry`, so POS revenue lands in the same ledger and respects the
+same period logic with no extra wiring. CSV export honors the selected period
+and includes both dates.
+
 ## How to try
 
 1. `npx prisma migrate deploy` then `npm run db:seed`  

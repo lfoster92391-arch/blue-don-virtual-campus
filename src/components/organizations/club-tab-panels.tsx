@@ -826,7 +826,7 @@ function FinancesPanel(props: ClubTabPanelsProps) {
       {isItHub ? (
         <DashboardCard
           title="All clubs — balances"
-          description="IT tracks money across IT Club, Broadcasting, and Cricut."
+          description="All-time totals across IT Club, Broadcasting, and Cricut."
         >
           <ul className="grid gap-3 sm:grid-cols-3">
             {[props.financeSnapshot, ...otherClubs].map((snap) => (
@@ -839,7 +839,7 @@ function FinancesPanel(props: ClubTabPanelsProps) {
                   {formatCents(snap.balanceCents)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {snap.entries.length} ledger entries
+                  {snap.totalEntryCount} ledger entries
                 </p>
                 <Link
                   href={`/organizations/${snap.organizationSlug}?tab=finances`}
@@ -1181,6 +1181,11 @@ function FundraisersPanel(props: ClubTabPanelsProps) {
                       style={{ width: `${pct}%` }}
                     />
                   </div>
+                  {f.taggedEntryCount === 0 ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Nothing tagged to this fundraiser yet.
+                    </p>
+                  ) : null}
                 </li>
               );
             })}

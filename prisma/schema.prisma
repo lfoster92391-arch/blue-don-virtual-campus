@@ -2651,6 +2651,9 @@ enum ClubFundraiserStatus {
   CANCELLED
 }
 
+/// `createdAt` is when the row was typed in; `occurredAt` is when the money
+/// actually moved. Backfilled ledgers are entered in one sitting, so only
+/// `occurredAt` can group a ledger into real months.
 model ClubLedgerEntry {
   id            String              @id @default(cuid())
   organizationId String             @map("organization_id")
@@ -2661,6 +2664,7 @@ model ClubLedgerEntry {
   invoiceId     String?             @unique @map("invoice_id")
   receiptUrl    String?             @map("receipt_url")
   createdById   String              @map("created_by_id") @db.Uuid
+  occurredAt    DateTime            @default(now()) @map("occurred_at")
   createdAt     DateTime            @default(now()) @map("created_at")
   organization  Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   fundraiser    ClubFundraiser?     @relation(fields: [fundraiserId], references: [id], onDelete: SetNull)
@@ -2668,6 +2672,7 @@ model ClubLedgerEntry {
   createdBy     User                @relation("ClubLedgerCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([organizationId, createdAt])
+  @@index([organizationId, occurredAt])
   @@index([fundraiserId])
   @@index([createdById])
   @@map("club_ledger_entries")
