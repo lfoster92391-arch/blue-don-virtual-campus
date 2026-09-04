@@ -8,6 +8,7 @@ import type {
   StudentMessageKind,
 } from "@/lib/command-center";
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { parseCampusFormDateTime } from "@/lib/datetime/campus-local";
 import { sendClubAudienceMessage } from "@/services/club-audience-message-service";
 import {
   buildCalendarActions,
@@ -112,9 +113,11 @@ export async function sendStudentMessageAction(
     }
 
     const calendarStart = calendarStartRaw
-      ? new Date(calendarStartRaw)
+      ? parseCampusFormDateTime(calendarStartRaw)
       : null;
-    const calendarEnd = calendarEndRaw ? new Date(calendarEndRaw) : null;
+    const calendarEnd = calendarEndRaw
+      ? parseCampusFormDateTime(calendarEndRaw)
+      : null;
 
     const payload = {
       fromUserId: user.id,
@@ -125,14 +128,8 @@ export async function sendStudentMessageAction(
       kind,
       actions,
       calendarTitle: calendarTitle || null,
-      calendarStart:
-        calendarStart && !Number.isNaN(calendarStart.getTime())
-          ? calendarStart
-          : null,
-      calendarEnd:
-        calendarEnd && !Number.isNaN(calendarEnd.getTime())
-          ? calendarEnd
-          : null,
+      calendarStart: calendarStart,
+      calendarEnd: calendarEnd,
       calendarLocation: calendarLocation || null,
     };
 

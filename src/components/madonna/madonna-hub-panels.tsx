@@ -19,6 +19,7 @@ import {
   CAMPUS_TEAM_NAME,
   GAME_SITE_LABELS,
 } from "@/config/sports-highlights";
+import { formatCampusDateTime } from "@/lib/datetime/campus-local";
 import { cn } from "@/lib/utils";
 import type { BroadcastAnnouncementView } from "@/services/broadcast-announcement-service";
 import type { HubBellSchedule } from "@/services/school-hub-service";
@@ -30,16 +31,6 @@ function greetingFor(date: Date): string {
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
   return "Good evening";
-}
-
-function formatKickoff(date: Date): string {
-  return date.toLocaleString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }
 
 /**
@@ -397,7 +388,7 @@ export function WhatsHappening({
             <p className="mt-1 text-sm font-medium text-foreground">
               {nextGame.status === "LIVE"
                 ? "In progress right now"
-                : formatKickoff(nextGame.kickoffAt)}
+                : formatCampusDateTime(nextGame.kickoffAt)}
             </p>
           </>
         ) : (
@@ -437,7 +428,7 @@ export function WhatsHappening({
         ) : nextAirAt ? (
           <>
             <p className="mt-3 text-lg font-semibold text-[#0A2342] dark:text-white">
-              {formatKickoff(nextAirAt)}
+              {formatCampusDateTime(nextAirAt)}
             </p>
             <p className="mt-0.5 text-sm text-muted-foreground">
               Blue Don Live. The player appears on the Broadcast page when the

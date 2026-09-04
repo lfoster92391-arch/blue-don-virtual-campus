@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { parseCampusFormDateTime } from "@/lib/datetime/campus-local";
 import {
   canManageClubCalendar,
   createClubCalendarEvent,
@@ -69,9 +70,9 @@ export async function createClubCalendarEventAction(
       }
     }
 
-    const startDate = new Date(parsed.data.startDate);
-    const endDate = new Date(parsed.data.endDate);
-    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    const startDate = parseCampusFormDateTime(parsed.data.startDate);
+    const endDate = parseCampusFormDateTime(parsed.data.endDate);
+    if (!startDate || !endDate) {
       return { error: "Enter valid start and end dates." };
     }
     if (endDate < startDate) {

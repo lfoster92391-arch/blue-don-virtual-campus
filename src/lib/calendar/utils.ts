@@ -1,3 +1,5 @@
+import { CAMPUS_TIME_ZONE } from "@/lib/datetime/campus-local";
+
 export type CalendarView = "month" | "week" | "day" | "agenda" | "academy";
 
 export type CalendarEntry = {
@@ -87,6 +89,7 @@ export function formatTimeRange(start: Date, end: Date): string {
   const time = new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
+    timeZone: CAMPUS_TIME_ZONE,
   });
   return `${time.format(start)} – ${time.format(end)}`;
 }

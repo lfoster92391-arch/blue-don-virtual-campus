@@ -29,6 +29,7 @@ import {
   upsertCrewCreditAction,
   type BroadcastActionState,
 } from "@/features/broadcast-production/actions";
+import { formatCampusDate, formatCampusDateTime } from "@/lib/datetime/campus-local";
 import type {
   BroadcastAnnouncementSubmissionView,
   BroadcastBookingView,
@@ -112,12 +113,7 @@ export function BookingReviewList({
               <p className="font-medium">{booking.eventName}</p>
               <p className="text-xs text-muted-foreground">
                 {booking.clubOrTeam} ·{" "}
-                {booking.eventAt.toLocaleString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                })}
+                {formatCampusDateTime(booking.eventAt)}
                 {booking.location ? ` · ${booking.location}` : ""}
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -220,7 +216,7 @@ export function AnnouncementSubmissionReviewList({
                 {item.submitterName}
                 {item.submitterRole ? ` · ${item.submitterRole}` : ""}
                 {item.preferredAirDate
-                  ? ` · prefer ${item.preferredAirDate.toLocaleDateString()}`
+                  ? ` · prefer ${formatCampusDate(item.preferredAirDate)}`
                   : ""}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">{item.body}</p>

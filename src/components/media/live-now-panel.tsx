@@ -3,6 +3,7 @@ import { ArrowRight, Radio } from "lucide-react";
 
 import { PublicLivePlayer } from "@/components/media/public-live-player";
 import { PUBLIC_WATCH_PATH } from "@/config/phone-live";
+import { formatCampusDateTime } from "@/lib/datetime/campus-local";
 import { isHostedPlayerUrl } from "@/lib/media-embed";
 import type { CampusMediaItemView } from "@/services/media-service";
 
@@ -15,16 +16,6 @@ type LiveNowPanelProps = {
   /** Copy shown when nothing is on air. Keep it honest — never fake LIVE. */
   offlineLabel?: string;
 };
-
-function formatAirTime(date: Date): string {
-  return date.toLocaleString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
 
 /**
  * The unmistakable "LIVE now" entry. Renders the current broadcast inline when
@@ -51,7 +42,7 @@ export function LiveNowPanel({
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
           {nextAirAt
-            ? `Next scheduled broadcast: ${formatAirTime(nextAirAt)}. The player appears here automatically when Broadcasting goes on air.`
+            ? `Next scheduled broadcast: ${formatCampusDateTime(nextAirAt)}. The player appears here automatically when Broadcasting goes on air.`
             : "When Broadcasting goes on air, the stream appears here automatically. Until then, browse the recent and archive tabs below."}
         </p>
       </div>

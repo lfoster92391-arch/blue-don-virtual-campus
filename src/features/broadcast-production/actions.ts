@@ -10,6 +10,7 @@ import type {
   CampusMediaCategoryKey,
 } from "@/config/broadcast-production";
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { parseCampusFormDateTime } from "@/lib/datetime/campus-local";
 import {
   addBroadcastEquipmentItem,
   createAnnouncementSubmission,
@@ -107,8 +108,8 @@ export async function setNextAirTimeAction(
       if (!nextAirRaw) {
         return { error: "Pick a date and time for the next live." };
       }
-      nextAirAt = new Date(nextAirRaw);
-      if (Number.isNaN(nextAirAt.getTime())) {
+      nextAirAt = parseCampusFormDateTime(nextAirRaw);
+      if (!nextAirAt) {
         return { error: "Invalid air date/time." };
       }
     }
@@ -172,8 +173,8 @@ export async function submitBookingRequestAction(
       return { error: parsed.error.issues[0]?.message ?? "Invalid booking." };
     }
 
-    const eventAt = new Date(parsed.data.eventAt);
-    if (Number.isNaN(eventAt.getTime())) {
+    const eventAt = parseCampusFormDateTime(parsed.data.eventAt);
+    if (!eventAt) {
       return { error: "Invalid event date/time." };
     }
 
@@ -261,8 +262,8 @@ export async function submitAnnouncementRequestAction(
 
     let preferredAirDate: Date | null = null;
     if (parsed.data.preferredAirDate) {
-      preferredAirDate = new Date(parsed.data.preferredAirDate);
-      if (Number.isNaN(preferredAirDate.getTime())) {
+      preferredAirDate = parseCampusFormDateTime(parsed.data.preferredAirDate);
+      if (!preferredAirDate) {
         return { error: "Invalid preferred air date." };
       }
     }

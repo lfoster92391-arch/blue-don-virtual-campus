@@ -14,6 +14,7 @@ import type {
 } from "@/config/sports-highlights";
 import { statFieldsForSport } from "@/config/sports-highlights";
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { parseCampusFormDateTime } from "@/lib/datetime/campus-local";
 import {
   createHighlight,
   removeGame,
@@ -395,8 +396,8 @@ export async function saveGameAction(
       return { error: "Pick a date and time." };
     }
 
-    const kickoffAt = new Date(kickoffRaw);
-    if (Number.isNaN(kickoffAt.getTime())) {
+    const kickoffAt = parseCampusFormDateTime(kickoffRaw);
+    if (!kickoffAt) {
       return { error: "Invalid game date/time." };
     }
 

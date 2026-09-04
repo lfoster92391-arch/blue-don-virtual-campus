@@ -24,6 +24,7 @@ import {
   type ReportStatusKey,
   type SportSeasonKey,
 } from "@/config/sports-highlights";
+import { CAMPUS_TIME_ZONE } from "@/lib/datetime/campus-local";
 import { listActiveClubMemberIds } from "@/lib/command-center-permissions";
 import { isPrismaReady, withDatabase } from "@/lib/prisma";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -209,6 +210,7 @@ function gameLabel(game: {
   const date = game.kickoffAt.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
+    timeZone: CAMPUS_TIME_ZONE,
   });
   return game.sport ? `${game.sport.name} vs ${opponent} · ${date}` : `vs ${opponent} · ${date}`;
 }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { parseCampusFormDateTime } from "@/lib/datetime/campus-local";
 import {
   assignClubTasks,
   deleteClubTask,
@@ -58,8 +59,8 @@ export async function assignClubTaskAction(
       );
     }
 
-    const dueAt = dueAtRaw ? new Date(dueAtRaw) : null;
-    if (dueAtRaw && dueAt && Number.isNaN(dueAt.getTime())) {
+    const dueAt = dueAtRaw ? parseCampusFormDateTime(dueAtRaw) : null;
+    if (dueAtRaw && !dueAt) {
       return { error: "Enter a valid due date." };
     }
 

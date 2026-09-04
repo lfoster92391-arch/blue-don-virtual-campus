@@ -7,6 +7,7 @@
  */
 
 import { IMAGE_UPLOAD_MAX_BYTES } from "@/config/uploads";
+import { CAMPUS_TIME_ZONE } from "@/lib/datetime/campus-local";
 
 export const SPORTS_STORAGE_PREFIX = "sports-schools";
 
@@ -236,14 +237,12 @@ export const STUDENT_REPORT_INSTRUCTIONS = [
 ] as const;
 
 /** Madonna is in Weirton, WV — pin formatting so server and client agree. */
-const GAME_TIME_ZONE = "America/New_York";
-
 export function formatGameDate(value: Date): string {
   return new Intl.DateTimeFormat("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
-    timeZone: GAME_TIME_ZONE,
+    timeZone: CAMPUS_TIME_ZONE,
   }).format(value);
 }
 
@@ -254,7 +253,7 @@ export function formatGameDateTime(value: Date): string {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: GAME_TIME_ZONE,
+    timeZone: CAMPUS_TIME_ZONE,
   }).format(value);
 }
 

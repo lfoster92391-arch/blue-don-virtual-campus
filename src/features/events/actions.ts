@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { canManageEvents } from "@/config/roles";
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { parseCampusFormDateTime } from "@/lib/datetime/campus-local";
 import {
   createEvent,
   createEventAssignment,
@@ -24,7 +25,11 @@ const createEventSchema = z
     impactPoints: z.coerce.number().int().min(0).optional(),
   })
   .refine(
-    (data) => new Date(data.endDate) >= new Date(data.startDate),
+    (data) => {
+      const start = parseCampusFormDateTime(data.startDate);
+      const end = parseCampusFormDateTime(data.endDate);
+      return Boolean(start && end && end >= start);
+    },
     { message: "End date must be after start date", path: ["endDate"] },
   );
 
@@ -75,11 +80,17 @@ export async function createEventAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid event data." };
   }
 
+  const startDate = parseCampusFormDateTime(parsed.data.startDate);
+  const endDate = parseCampusFormDateTime(parsed.data.endDate);
+  if (!startDate || !endDate) {
+    return { error: "Invalid event date/time." };
+  }
+
   const event = await createEvent({
     title: parsed.data.title,
     academyId: parsed.data.academyId,
-    startDate: new Date(parsed.data.startDate),
-    endDate: new Date(parsed.data.endDate),
+    startDate,
+    endDate,
     location: parsed.data.location,
     description: parsed.data.description,
     impactPoints: parsed.data.impactPoints,
@@ -152,10 +163,15 @@ export async function createAssignmentAction(
     return { error: "Event not found." };
   }
 
+  const dueDate = parseCampusFormDateTime(parsed.data.dueDate);
+  if (!dueDate) {
+    return { error: "Invalid assignment due date." };
+  }
+
   const assignment = await createEventAssignment({
     title: parsed.data.title,
     description: parsed.data.description,
-    dueDate: new Date(parsed.data.dueDate),
+    dueDate,
     eventId: parsed.data.eventId,
     academyId: event.academy.id,
     userId: parsed.data.userId,

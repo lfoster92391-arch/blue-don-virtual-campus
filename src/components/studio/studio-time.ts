@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 
-import { CAMPUS_WEATHER_LOCATION } from "@/config/campus-weather";
+import { CAMPUS_TIME_ZONE } from "@/lib/datetime/campus-local";
 
 let tickValue = 0;
 const tickListeners = new Set<() => void>();
@@ -126,7 +126,7 @@ export function formatCampusTime(
   }
 
   return new Date(iso).toLocaleString("en-US", {
-    timeZone: CAMPUS_WEATHER_LOCATION.timezone,
+    timeZone: CAMPUS_TIME_ZONE,
     month: "short",
     day: "numeric",
     hour: "numeric",

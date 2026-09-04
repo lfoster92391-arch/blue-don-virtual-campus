@@ -12,6 +12,7 @@ import {
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { Button } from "@/components/ui/button";
 import type { ClubCalendarEventView } from "@/lib/club-calendar";
+import { formatCampusDateTime } from "@/lib/datetime/campus-local";
 
 const initialState: ClubCalendarActionState = {};
 
@@ -66,13 +67,7 @@ export function ClubCalendarPanel({
                     ) : null}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {new Intl.DateTimeFormat("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    }).format(new Date(event.startDate))}
+                    {formatCampusDateTime(new Date(event.startDate))}
                     {event.location ? ` · ${event.location}` : ""}
                   </p>
                   {event.description ? (

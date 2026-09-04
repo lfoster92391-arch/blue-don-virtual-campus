@@ -9,6 +9,10 @@ import {
   setNextAirTimeAction,
   type BroadcastActionState,
 } from "@/features/broadcast-production/actions";
+import {
+  formatCampusDateTime,
+  utcToCampusDateTimeLocal,
+} from "@/lib/datetime/campus-local";
 import type { BroadcastScheduleView } from "@/services/broadcast-production-service";
 
 type BroadcastCountdownProps = {
@@ -56,13 +60,7 @@ export function BroadcastCountdown({
   }, [schedule.nextAirAt, now]);
 
   const airLabel = schedule.nextAirAt
-    ? schedule.nextAirAt.toLocaleString(undefined, {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      })
+    ? formatCampusDateTime(schedule.nextAirAt)
     : null;
 
   return (
@@ -111,12 +109,7 @@ export function BroadcastCountdown({
                 type="datetime-local"
                 defaultValue={
                   schedule.nextAirAt
-                    ? new Date(
-                        schedule.nextAirAt.getTime() -
-                          schedule.nextAirAt.getTimezoneOffset() * 60_000,
-                      )
-                        .toISOString()
-                        .slice(0, 16)
+                    ? utcToCampusDateTimeLocal(schedule.nextAirAt)
                     : ""
                 }
               />

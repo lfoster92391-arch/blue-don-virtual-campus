@@ -31,6 +31,7 @@ import dotenv from "dotenv";
 import { Pool } from "pg";
 
 import { PrismaClient } from "../src/generated/prisma/client";
+import { campusDateKey, campusTimeToUtc } from "../src/lib/datetime/campus-local";
 import { SCHEDULE_SCHOOLS, SCHEDULES, type ScheduleRow } from "./madonna-2026-schedule-data";
 
 dotenv.config({ path: ".env", quiet: true });
@@ -40,15 +41,20 @@ const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const force = args.includes("--force");
 
-/** Madonna is in Weirton, WV — the same zone `formatGameDateTime` renders in. */
-const CAMPUS_TIME_ZONE = "America/New_York";
-
 /**
  * `kickoffAt` is NOT NULL, so a sheet that says "TBD" still needs a timestamp.
  * Midnight reads as an obvious placeholder rather than a plausible tip-off, and
  * the row's venue tag says "time TBD" out loud on the public schedule.
  */
 const TBD_PLACEHOLDER_TIME = "00:00";
+
+function easternInstant(date: string, time: string): Date {
+  const instant = campusTimeToUtc(date, time);
+  if (!instant) {
+    throw new Error(`Invalid campus date/time: ${date} ${time}`);
+  }
+  return instant;
+}
 
 const NEW_SCHOOL_NOTE =
   "Added from Lisa's 2026 schedule import. Logo, mascot, city, and state still need filling in from the Sports desk.";
@@ -74,65 +80,6 @@ function buildPool() {
     connectionTimeoutMillis: 20_000,
     ...(needsSsl ? { ssl: { rejectUnauthorized: false } } : {}),
   });
-}
-
-const zonedFormatter = new Intl.DateTimeFormat("en-US", {
-  timeZone: CAMPUS_TIME_ZONE,
-  hour12: false,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-});
-
-function zonedParts(instant: Date) {
-  const parts = zonedFormatter.formatToParts(instant);
-  const value = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? 0);
-  return {
-    year: value("year"),
-    month: value("month"),
-    day: value("day"),
-    // Some ICU builds render midnight as hour 24.
-    hour: value("hour") % 24,
-    minute: value("minute"),
-    second: value("second"),
-  };
-}
-
-/** Milliseconds Eastern is ahead of UTC at that instant (negative, here). */
-function zoneOffsetMs(instant: Date): number {
-  const parts = zonedParts(instant);
-  return (
-    Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second) -
-    instant.getTime()
-  );
-}
-
-/**
- * "2026-08-28" + "19:00" Eastern → the UTC instant to store. Two passes because
- * the offset looked up from the naive guess can be on the wrong side of a DST
- * boundary; the second pass uses the offset at the corrected instant.
- */
-function campusTimeToUtc(date: string, time: string): Date {
-  const [year, month, day] = date.split("-").map(Number);
-  const [hour, minute] = time.split(":").map(Number);
-  const naive = Date.UTC(year, month - 1, day, hour, minute);
-
-  let instant = new Date(naive - zoneOffsetMs(new Date(naive)));
-  instant = new Date(naive - zoneOffsetMs(instant));
-  return instant;
-}
-
-/** Eastern calendar date of a stored kickoff — the upsert key. */
-function campusDateKey(instant: Date): string {
-  const parts = zonedParts(instant);
-  return [
-    parts.year,
-    String(parts.month).padStart(2, "0"),
-    String(parts.day).padStart(2, "0"),
-  ].join("-");
 }
 
 function describeRow(row: ScheduleRow): string {
@@ -314,8 +261,8 @@ async function main() {
       const teamBySchoolId = new Map(teams.map((team) => [team.schoolId, team.id]));
 
       const dates = schedule.rows.map((row) => row.date).sort();
-      const windowStart = campusTimeToUtc(dates[0], "00:00");
-      const windowEnd = campusTimeToUtc(dates[dates.length - 1], "23:59");
+      const windowStart = easternInstant(dates[0], "00:00");
+      const windowEnd = easternInstant(dates[dates.length - 1], "23:59");
 
       const existingGames = await prisma.sportsGame.findMany({
         where: { sportId: sport.id, kickoffAt: { gte: windowStart, lte: windowEnd } },
@@ -342,7 +289,7 @@ async function main() {
 
       for (const row of schedule.rows) {
         const school = row.opponentSlug ? schoolBySlug.get(row.opponentSlug) : undefined;
-        const kickoffAt = campusTimeToUtc(row.date, row.time ?? TBD_PLACEHOLDER_TIME);
+        const kickoffAt = easternInstant(row.date, row.time ?? TBD_PLACEHOLDER_TIME);
         const opponentTeamId =
           school && !row.useSchoolOnly ? (teamBySchoolId.get(school.id) ?? null) : null;
         const opponentLabel = row.opponentLabel ?? null;

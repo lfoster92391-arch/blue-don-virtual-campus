@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { IMAGE_UPLOAD_MAX_LABEL } from "@/config/uploads";
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { parseCampusFormDateTime } from "@/lib/datetime/campus-local";
 import {
   approveClubInvoice,
   canReviewClubInvoice,
@@ -57,8 +58,8 @@ export async function submitClubInvoiceAction(
       return { error: "Vendor / payee is required." };
     }
 
-    const invoiceDate = new Date(invoiceDateRaw);
-    if (Number.isNaN(invoiceDate.getTime())) {
+    const invoiceDate = parseCampusFormDateTime(invoiceDateRaw);
+    if (!invoiceDate) {
       return { error: "Enter a valid invoice date." };
     }
 

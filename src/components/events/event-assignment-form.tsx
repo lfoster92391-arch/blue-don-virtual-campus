@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { utcToCampusDateTimeLocal } from "@/lib/datetime/campus-local";
 import {
   createAssignmentAction,
   type EventActionState,
@@ -47,7 +48,7 @@ export function EventAssignmentForm({ eventId }: EventAssignmentFormProps) {
           name="dueDate"
           type="datetime-local"
           required
-          defaultValue={toDateTimeLocal(defaultDue)}
+          defaultValue={utcToCampusDateTimeLocal(defaultDue)}
         />
       </div>
       <div className="space-y-2">
@@ -74,9 +75,4 @@ export function EventAssignmentForm({ eventId }: EventAssignmentFormProps) {
       </Button>
     </form>
   );
-}
-
-function toDateTimeLocal(date: Date): string {
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }

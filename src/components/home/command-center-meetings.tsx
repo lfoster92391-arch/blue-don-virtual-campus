@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, CalendarDays, MapPin } from "lucide-react";
 
 import type { CommandCenterMeetingView } from "@/lib/command-center";
+import { CAMPUS_TIME_ZONE, campusDateKey, formatCampusDate, formatCampusDateTime } from "@/lib/datetime/campus-local";
 import { cn } from "@/lib/utils";
 
 type CommandCenterMeetingsProps = {
@@ -9,26 +10,17 @@ type CommandCenterMeetingsProps = {
 };
 
 function formatWhen(start: Date, end: Date) {
-  const sameDay =
-    start.toDateString() === end.toDateString();
-  const day = new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  }).format(start);
+  const sameDay = campusDateKey(start) === campusDateKey(end);
+  const day = formatCampusDate(start);
   const time = new Intl.DateTimeFormat("en-US", {
+    timeZone: CAMPUS_TIME_ZONE,
     hour: "numeric",
     minute: "2-digit",
   });
   if (sameDay) {
     return `${day} · ${time.format(start)} – ${time.format(end)}`;
   }
-  return `${day} ${time.format(start)} → ${new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(end)}`;
+  return `${day} ${time.format(start)} → ${formatCampusDateTime(end)}`;
 }
 
 export function CommandCenterMeetings({

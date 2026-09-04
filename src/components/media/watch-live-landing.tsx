@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PublicLivePlayer } from "@/components/media/public-live-player";
 import { PHONE_LIVE_POLL_MS } from "@/config/phone-live";
 import { brandAssets, siteConfig } from "@/config/site";
+import { formatCampusDateTime } from "@/lib/datetime/campus-local";
 import type { PublicLiveWatchPayload } from "@/services/phone-live-service";
 
 type WatchLiveLandingProps = {
@@ -22,20 +23,6 @@ async function fetchLivePayload(): Promise<PublicLiveWatchPayload> {
     return { live: null };
   }
   return (await response.json()) as PublicLiveWatchPayload;
-}
-
-function formatAirTime(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-  return date.toLocaleString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }
 
 /**
@@ -85,9 +72,12 @@ export function WatchLiveLanding({
     });
   }, [live]);
 
+  const nextAirDate = nextAirAt ? new Date(nextAirAt) : null;
   const nextAirLabel =
-    nextAirAt && new Date(nextAirAt).getTime() > Date.now()
-      ? formatAirTime(nextAirAt)
+    nextAirDate &&
+    !Number.isNaN(nextAirDate.getTime()) &&
+    nextAirDate.getTime() > Date.now()
+      ? formatCampusDateTime(nextAirDate)
       : "";
 
   return (

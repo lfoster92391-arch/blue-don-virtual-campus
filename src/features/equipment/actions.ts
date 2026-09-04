@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import type { EquipmentCategory, EquipmentStatus } from "@/generated/prisma/client";
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { parseCampusFormDateTime } from "@/lib/datetime/campus-local";
 import {
   canManageEquipment,
   checkoutEquipment,
@@ -175,12 +176,17 @@ export async function checkoutEquipmentAction(
     return { error: check.error };
   }
 
-  const dueAt = parsed.data.dueAt ? new Date(parsed.data.dueAt) : undefined;
+  const dueAt = parsed.data.dueAt
+    ? parseCampusFormDateTime(parsed.data.dueAt)
+    : undefined;
+  if (parsed.data.dueAt && !dueAt) {
+    return { error: "Enter a valid due date." };
+  }
 
   const success = await checkoutEquipment({
     equipmentId: parsed.data.equipmentId,
     userId: parsed.data.userId,
-    dueAt,
+    dueAt: dueAt ?? undefined,
     notes: parsed.data.notes,
   });
 

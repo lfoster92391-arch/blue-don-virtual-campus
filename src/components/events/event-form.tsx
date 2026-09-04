@@ -5,6 +5,10 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  campusDateTimeLocalToUtc,
+  utcToCampusDateTimeLocal,
+} from "@/lib/datetime/campus-local";
+import {
   createEventAction,
   type EventActionState,
 } from "@/features/events/actions";
@@ -67,7 +71,7 @@ export function EventForm({ academies, defaultStart }: EventFormProps) {
             name="startDate"
             type="datetime-local"
             required
-            defaultValue={toDateTimeLocal(start)}
+            defaultValue={utcToCampusDateTimeLocal(start)}
           />
         </div>
         <div className="space-y-2">
@@ -79,7 +83,7 @@ export function EventForm({ academies, defaultStart }: EventFormProps) {
             name="endDate"
             type="datetime-local"
             required
-            defaultValue={toDateTimeLocal(end)}
+            defaultValue={utcToCampusDateTimeLocal(end)}
           />
         </div>
       </div>
@@ -127,12 +131,6 @@ export function EventForm({ academies, defaultStart }: EventFormProps) {
 }
 
 function getDefaultStart(): Date {
-  const date = new Date();
-  date.setHours(9, 0, 0, 0);
-  return date;
-}
-
-function toDateTimeLocal(date: Date): string {
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const today = utcToCampusDateTimeLocal(new Date()).slice(0, 10);
+  return campusDateTimeLocalToUtc(`${today}T09:00`) ?? new Date();
 }
