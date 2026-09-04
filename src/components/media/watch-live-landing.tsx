@@ -1,7 +1,6 @@
 "use client";
 
 import { MessageCircle, Play, Smartphone, Video } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -86,12 +85,13 @@ export function WatchLiveLanding({
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-3xl flex-col px-4 pb-8 pt-5 sm:px-6 sm:pt-7">
         <header className="flex items-start justify-between gap-3">
-          <Image
+          <img
             src={brandAssets.logo}
             alt="MHS Broadcasting"
             width={148}
             height={148}
-            priority
+            fetchPriority="high"
+            decoding="async"
             className="size-20 shrink-0 object-contain drop-shadow-lg sm:size-32"
           />
           <p className="max-w-[11rem] shrink-0 pt-0.5 text-right text-[0.62rem] font-semibold uppercase leading-[1.35] tracking-[0.12em] text-white sm:max-w-none sm:pt-2 sm:text-sm sm:tracking-[0.18em]">
