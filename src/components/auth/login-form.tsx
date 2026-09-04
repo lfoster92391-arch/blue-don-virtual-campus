@@ -8,9 +8,14 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { AuthShell } from "@/components/auth/auth-shell";
+import {
+  AUTH_CURRENT_PASSWORD_INPUT_PROPS,
+  AUTH_EMAIL_INPUT_PROPS,
+} from "@/components/auth/auth-input-props";
 import { SupabaseSetupNotice } from "@/components/auth/supabase-setup-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { normalizeAuthEmail } from "@/lib/auth/email-domain";
 import { createClient } from "@/lib/supabase/client";
 
 const loginSchema = z.object({
@@ -20,13 +25,20 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
-function formatSignInError(message: string): string {
+function isInvalidCredentialsError(message: string): boolean {
   const lower = message.toLowerCase();
-  if (lower.includes("invalid login credentials")) {
-    return "Invalid email or password. On phones, check that the email was not auto-capitalized. If this keeps failing, reset the password (see docs/TEST_ACCOUNTS.md) or use Forgot password.";
+  return (
+    lower.includes("invalid login credentials") ||
+    lower.includes("invalid email or password")
+  );
+}
+
+function formatSignInError(message: string): string {
+  if (isInvalidCredentialsError(message)) {
+    return "That email or password did not match. On a phone, check Caps Lock and that the keyboard did not auto-capitalize the first letter.";
   }
-  if (lower.includes("email not confirmed")) {
-    return "This email is not confirmed yet. Ask an admin to confirm the account in Supabase, or re-run the provision script which sets email_confirm.";
+  if (message.toLowerCase().includes("email not confirmed")) {
+    return "This email is not confirmed yet. Ask an admin to confirm the account, or use Reset password.";
   }
   return message;
 }
@@ -50,6 +62,7 @@ export function LoginForm({
     }
     return null;
   });
+  const [credentialsFailed, setCredentialsFailed] = useState(false);
   const [loading, setLoading] = useState(false);
   const setupRequired =
     !supabaseConfigured || searchParams.get("setup") === "required";
@@ -65,6 +78,7 @@ export function LoginForm({
   async function onSubmit(values: LoginValues) {
     setLoading(true);
     setError(null);
+    setCredentialsFailed(false);
 
     const supabase = createClient();
     if (!supabase) {
@@ -73,16 +87,13 @@ export function LoginForm({
       return;
     }
 
-    // Phones often capitalize the first letter or add trailing spaces.
-    const email = values.email.trim().toLowerCase();
-    const password = values.password;
-
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+      email: normalizeAuthEmail(values.email),
+      password: values.password,
     });
 
     if (signInError) {
+      setCredentialsFailed(isInvalidCredentialsError(signInError.message));
       setError(formatSignInError(signInError.message));
       setLoading(false);
       return;
@@ -96,6 +107,7 @@ export function LoginForm({
   async function signInWithGoogle() {
     setLoading(true);
     setError(null);
+    setCredentialsFailed(false);
 
     const supabase = createClient();
     if (!supabase) {
@@ -132,21 +144,20 @@ export function LoginForm({
       title="Sign in"
       description="Enter your campus credentials to access Blue Don Virtual Campus."
     >
-      <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+      <form
+        className="space-y-4"
+        autoCapitalize="none"
+        onSubmit={form.handleSubmit(onSubmit)}
+      >
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium">
             Email
           </label>
           <Input
             id="email"
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
             enterKeyHint="next"
             {...form.register("email")}
+            {...AUTH_EMAIL_INPUT_PROPS}
           />
           {form.formState.errors.email ? (
             <p className="text-sm text-destructive">
@@ -161,9 +172,9 @@ export function LoginForm({
           </label>
           <Input
             id="password"
-            type="password"
-            autoComplete="current-password"
+            enterKeyHint="go"
             {...form.register("password")}
+            {...AUTH_CURRENT_PASSWORD_INPUT_PROPS}
           />
           {form.formState.errors.password ? (
             <p className="text-sm text-destructive">
@@ -180,7 +191,19 @@ export function LoginForm({
           </div>
         </div>
 
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        {error ? (
+          <div className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+            <p className="text-sm text-destructive">{error}</p>
+            {credentialsFailed ? (
+              <Button
+                nativeButton={false}
+                className="w-full"
+                size="lg"
+                render={<Link href="/forgot-password">Reset password</Link>}
+              />
+            ) : null}
+          </div>
+        ) : null}
 
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Signing in..." : "Sign in"}

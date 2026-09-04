@@ -2,6 +2,10 @@
 
 import { useActionState, useMemo, useState } from "react";
 
+import {
+  AUTH_EMAIL_INPUT_PROPS,
+  AUTH_NEW_PASSWORD_INPUT_PROPS,
+} from "@/components/auth/auth-input-props";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -87,10 +91,10 @@ export function CreateStudentForm() {
         <Input
           id="student-email"
           name="email"
-          type="email"
           required
           placeholder={`firstname.lastname@${SCHOOL_EMAIL_DOMAIN}`}
           disabled={pending}
+          {...AUTH_EMAIL_INPUT_PROPS}
         />
       </div>
 
@@ -102,11 +106,10 @@ export function CreateStudentForm() {
           <Input
             id="student-password"
             name="password"
-            type="password"
             required
             minLength={8}
-            autoComplete="new-password"
             disabled={pending}
+            {...AUTH_NEW_PASSWORD_INPUT_PROPS}
           />
         </div>
         <div className="space-y-2">
@@ -119,11 +122,10 @@ export function CreateStudentForm() {
           <Input
             id="student-confirmPassword"
             name="confirmPassword"
-            type="password"
             required
             minLength={8}
-            autoComplete="new-password"
             disabled={pending}
+            {...AUTH_NEW_PASSWORD_INPUT_PROPS}
           />
         </div>
       </div>

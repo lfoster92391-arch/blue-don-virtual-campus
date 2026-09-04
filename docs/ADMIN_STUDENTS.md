@@ -57,7 +57,9 @@ Inactive students cannot be previewed; a stale cookie is cleared automatically.
 
 ## Reset password / activate / disable
 
-- Per-student **Reset password** (Supabase admin API).
+- Per-student **Reset password** (Supabase admin API) on `/admin/students` — set a temporary password on the student row and tell them the new one.
+- Students and parents can also recover themselves: **Forgot password** / **Reset password** at `/forgot-password` (open the email link on the same phone).
+- If a phone login says “invalid email or password,” check Caps Lock / auto-capitalization first; emails are lowercased on sign-in, but a capitalized password will still fail.
 - **Activate** / **Disable** toggles `User.status` (ACTIVE / INACTIVE).
 
 ## Analytics

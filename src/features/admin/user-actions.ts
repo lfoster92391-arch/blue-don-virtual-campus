@@ -10,6 +10,7 @@ import {
 } from "@/config/roles";
 import { isSupabaseAdminConfigured } from "@/config/env";
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { normalizeAuthEmail } from "@/lib/auth/email-domain";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   approveUserAccount,
@@ -33,7 +34,11 @@ function revalidateUserPaths() {
 
 const createUserSchema = z
   .object({
-    email: z.string().trim().email("Enter a valid email address."),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email("Enter a valid email address."),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters.")
@@ -167,6 +172,7 @@ export async function createCampusUserAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid account data." };
   }
 
+  const email = normalizeAuthEmail(parsed.data.email);
   const client = createAdminClient();
   if (!client) {
     return { error: "Unable to connect to the authentication service." };
@@ -175,10 +181,10 @@ export async function createCampusUserAction(
   const displayName =
     parsed.data.firstName && parsed.data.lastName
       ? `${parsed.data.firstName} ${parsed.data.lastName}`
-      : parsed.data.email;
+      : email;
 
   const { data, error } = await client.auth.admin.createUser({
-    email: parsed.data.email,
+    email,
     password: parsed.data.password,
     email_confirm: true,
     user_metadata: {
@@ -200,7 +206,7 @@ export async function createCampusUserAction(
 
   const profile = await createCampusUser({
     id: data.user.id,
-    email: parsed.data.email,
+    email,
     role: parsed.data.role,
     firstName: parsed.data.firstName,
     lastName: parsed.data.lastName,

@@ -8,6 +8,10 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { AuthShell } from "@/components/auth/auth-shell";
+import {
+  AUTH_EMAIL_INPUT_PROPS,
+  AUTH_NEW_PASSWORD_INPUT_PROPS,
+} from "@/components/auth/auth-input-props";
 import { SupabaseSetupNotice } from "@/components/auth/supabase-setup-notice";
 import {
   CAMPUS_ROLES,
@@ -18,6 +22,7 @@ import {
 import {
   IT_CONTACT_EMAIL,
   SCHOOL_EMAIL_DOMAIN,
+  normalizeAuthEmail,
   validateEmailForRole,
 } from "@/lib/auth/email-domain";
 import { Button } from "@/components/ui/button";
@@ -68,7 +73,8 @@ export function RegisterForm({
     setError(null);
     setMessage(null);
 
-    const emailCheck = validateEmailForRole(values.email, role);
+    const email = normalizeAuthEmail(values.email);
+    const emailCheck = validateEmailForRole(email, role);
     if (!emailCheck.valid) {
       setError(emailCheck.message);
       setLoading(false);
@@ -82,7 +88,7 @@ export function RegisterForm({
       return;
     }
     const { data, error: signUpError } = await supabase.auth.signUp({
-      email: values.email,
+      email,
       password: values.password,
       options: {
         data: {
@@ -178,12 +184,20 @@ export function RegisterForm({
         </p>
       )}
 
-      <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+      <form
+        className="space-y-4"
+        autoCapitalize="none"
+        onSubmit={form.handleSubmit(onSubmit)}
+      >
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium">
             Email
           </label>
-          <Input id="email" type="email" autoComplete="email" {...form.register("email")} />
+          <Input
+            id="email"
+            {...form.register("email")}
+            {...AUTH_EMAIL_INPUT_PROPS}
+          />
           {form.formState.errors.email ? (
             <p className="text-sm text-destructive">
               {form.formState.errors.email.message}
@@ -210,9 +224,8 @@ export function RegisterForm({
           </label>
           <Input
             id="password"
-            type="password"
-            autoComplete="new-password"
             {...form.register("password")}
+            {...AUTH_NEW_PASSWORD_INPUT_PROPS}
           />
           {form.formState.errors.password ? (
             <p className="text-sm text-destructive">
@@ -227,9 +240,8 @@ export function RegisterForm({
           </label>
           <Input
             id="confirmPassword"
-            type="password"
-            autoComplete="new-password"
             {...form.register("confirmPassword")}
+            {...AUTH_NEW_PASSWORD_INPUT_PROPS}
           />
           {form.formState.errors.confirmPassword ? (
             <p className="text-sm text-destructive">

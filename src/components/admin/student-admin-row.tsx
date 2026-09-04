@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { Eye } from "lucide-react";
 
 import { AssignClubForm } from "@/components/admin/assign-club-form";
+import { AUTH_NEW_PASSWORD_INPUT_PROPS } from "@/components/auth/auth-input-props";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { focusClubRoleLabel } from "@/config/focus-club-access";
@@ -111,20 +112,18 @@ export function StudentAdminRow({
           <Input
             id={`pw-${userId}`}
             name="password"
-            type="password"
             required
             minLength={8}
-            autoComplete="new-password"
+            {...AUTH_NEW_PASSWORD_INPUT_PROPS}
             disabled={!passwordManagementEnabled || passwordPending}
             placeholder="New temporary password"
           />
           <div className="flex gap-2">
             <Input
               name="confirmPassword"
-              type="password"
               required
               minLength={8}
-              autoComplete="new-password"
+              {...AUTH_NEW_PASSWORD_INPUT_PROPS}
               disabled={!passwordManagementEnabled || passwordPending}
               placeholder="Confirm"
             />

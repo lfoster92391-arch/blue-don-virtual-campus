@@ -3,7 +3,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 
 import { isDatabaseConfigured, isSupabaseConfigured } from "@/config/env";
 import { normalizeRole } from "@/config/roles";
-import { validateEmailForRole } from "@/lib/auth/email-domain";
+import { validateEmailForRole, normalizeAuthEmail } from "@/lib/auth/email-domain";
 import { createClient } from "@/lib/supabase/server";
 import { ensureUserProfile } from "@/services/user-service";
 
@@ -37,6 +37,7 @@ export async function GET(request: Request) {
       } = await supabase.auth.getUser();
 
       if (user?.email) {
+        const email = normalizeAuthEmail(user.email);
         const resolvedRole =
           role ?? normalizeRole(user.user_metadata?.role as string | undefined) ?? "student";
 
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
         // below decides that authoritatively by looking for an existing profile;
         // this branch only covers the case where it is a no-op.
         if (!isDatabaseConfigured()) {
-          const emailCheck = validateEmailForRole(user.email, resolvedRole);
+          const emailCheck = validateEmailForRole(email, resolvedRole);
 
           if (!emailCheck.valid) {
             await supabase.auth.signOut();
@@ -59,7 +60,7 @@ export async function GET(request: Request) {
         try {
           await ensureUserProfile({
             id: user.id,
-            email: user.email,
+            email,
             displayName: user.user_metadata?.display_name as string | undefined,
             profileImage: user.user_metadata?.avatar_url as string | undefined,
             role: resolvedRole,

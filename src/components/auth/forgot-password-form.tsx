@@ -7,9 +7,11 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { AuthShell } from "@/components/auth/auth-shell";
+import { AUTH_EMAIL_INPUT_PROPS } from "@/components/auth/auth-input-props";
 import { SupabaseSetupNotice } from "@/components/auth/supabase-setup-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { normalizeAuthEmail } from "@/lib/auth/email-domain";
 import { createClient } from "@/lib/supabase/client";
 
 const forgotPasswordSchema = z.object({
@@ -49,7 +51,7 @@ export function ForgotPasswordForm({
     )}`;
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-      values.email,
+      normalizeAuthEmail(values.email),
       { redirectTo },
     );
 
@@ -81,16 +83,19 @@ export function ForgotPasswordForm({
       title="Reset password"
       description="Enter your email and we'll send you a link to set a new password."
     >
-      <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+      <form
+        className="space-y-4"
+        autoCapitalize="none"
+        onSubmit={form.handleSubmit(onSubmit)}
+      >
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium">
             Email
           </label>
           <Input
             id="email"
-            type="email"
-            autoComplete="email"
             {...form.register("email")}
+            {...AUTH_EMAIL_INPUT_PROPS}
           />
           {form.formState.errors.email ? (
             <p className="text-sm text-destructive">

@@ -21,6 +21,11 @@ export const DEFAULT_AUTH_TEST_BYPASS_EMAILS = [
   DEMO_TEACHER_EMAIL,
 ] as const;
 
+/** Trim + lowercase before any Supabase auth call. Phones often capitalize the first letter. */
+export function normalizeAuthEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 /** Roles that must use a @weirtonmadonna.org email to register or sign in. */
 export const SCHOOL_EMAIL_ROLES: CampusRole[] = [
   "student",
@@ -72,8 +77,7 @@ export function isAuthTestBypassEmail(email: string): boolean {
     return false;
   }
 
-  const normalized = email.trim().toLowerCase();
-  return parseBypassEmailList().includes(normalized);
+  return parseBypassEmailList().includes(normalizeAuthEmail(email));
 }
 
 export function getEmailDomain(email: string): string | null {

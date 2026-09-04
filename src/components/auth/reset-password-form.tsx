@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { AuthShell } from "@/components/auth/auth-shell";
+import { AUTH_NEW_PASSWORD_INPUT_PROPS } from "@/components/auth/auth-input-props";
 import { SupabaseSetupNotice } from "@/components/auth/supabase-setup-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,16 +142,19 @@ export function ResetPasswordForm({
           />
         </div>
       ) : (
-        <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+        <form
+          className="space-y-4"
+          autoCapitalize="none"
+          onSubmit={form.handleSubmit(onSubmit)}
+        >
           <div className="space-y-2">
             <label htmlFor="password" className="text-sm font-medium">
               New password
             </label>
             <Input
               id="password"
-              type="password"
-              autoComplete="new-password"
               {...form.register("password")}
+              {...AUTH_NEW_PASSWORD_INPUT_PROPS}
             />
             {form.formState.errors.password ? (
               <p className="text-sm text-destructive">
@@ -165,9 +169,8 @@ export function ResetPasswordForm({
             </label>
             <Input
               id="confirmPassword"
-              type="password"
-              autoComplete="new-password"
               {...form.register("confirmPassword")}
+              {...AUTH_NEW_PASSWORD_INPUT_PROPS}
             />
             {form.formState.errors.confirmPassword ? (
               <p className="text-sm text-destructive">

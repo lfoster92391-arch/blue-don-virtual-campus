@@ -9,7 +9,7 @@ import {
   focusClubRoleLabel,
 } from "@/config/focus-club-access";
 import { isSupabaseAdminConfigured } from "@/config/env";
-import { isSchoolEmail, SCHOOL_EMAIL_DOMAIN } from "@/lib/auth/email-domain";
+import { isSchoolEmail, normalizeAuthEmail, SCHOOL_EMAIL_DOMAIN } from "@/lib/auth/email-domain";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -38,7 +38,11 @@ function revalidateStudentPaths() {
 
 const createStudentSchema = z
   .object({
-    email: z.string().trim().email("Enter a valid email address."),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email("Enter a valid email address."),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters.")
@@ -99,7 +103,8 @@ export async function createStudentWithClubAction(
   // the authorization, and some students have no school mailbox yet. We only
   // flag it back to the administrator. Self-service registration still enforces
   // the school domain.
-  const isOutsideEmail = !isSchoolEmail(parsed.data.email);
+  const email = normalizeAuthEmail(parsed.data.email);
+  const isOutsideEmail = !isSchoolEmail(email);
 
   const client = createAdminClient();
   if (!client) {
@@ -109,7 +114,7 @@ export async function createStudentWithClubAction(
   const displayName = `${parsed.data.firstName} ${parsed.data.lastName}`;
 
   const { data, error } = await client.auth.admin.createUser({
-    email: parsed.data.email,
+    email,
     password: parsed.data.password,
     email_confirm: true,
     user_metadata: {
@@ -131,7 +136,7 @@ export async function createStudentWithClubAction(
 
   const profile = await createCampusUser({
     id: data.user.id,
-    email: parsed.data.email,
+    email,
     role: "student",
     firstName: parsed.data.firstName,
     lastName: parsed.data.lastName,
@@ -164,7 +169,7 @@ export async function createStudentWithClubAction(
     ? ` Heads up: this is an outside address, not @${SCHOOL_EMAIL_DOMAIN}. The account works, but they cannot reset it through school mail.`
     : "";
   return {
-    success: `Created ${profile.displayName} (${parsed.data.email}). They can sign in with the temporary password.${clubNote}${emailNote}`,
+    success: `Created ${profile.displayName} (${email}). They can sign in with the temporary password.${clubNote}${emailNote}`,
   };
 }
 

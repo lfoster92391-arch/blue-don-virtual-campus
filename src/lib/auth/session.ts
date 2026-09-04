@@ -9,7 +9,7 @@ import {
 } from "@/services/user-service";
 import type { CampusUser } from "@/types/auth";
 import { normalizeRole } from "@/config/roles";
-import { validateEmailForRole } from "@/lib/auth/email-domain";
+import { validateEmailForRole, normalizeAuthEmail } from "@/lib/auth/email-domain";
 import {
   parentHasLinkedStudents,
   parentNeedsStudentLink,
@@ -45,7 +45,7 @@ export async function getCurrentUser(): Promise<CampusUser | null> {
     try {
       profile = await ensureUserProfile({
         id: authUser.id,
-        email: authUser.email,
+        email: normalizeAuthEmail(authUser.email),
         displayName: authUser.user_metadata?.display_name as string | undefined,
         profileImage: authUser.user_metadata?.avatar_url as string | undefined,
         role: normalizeRole(authUser.user_metadata?.role as string | undefined),

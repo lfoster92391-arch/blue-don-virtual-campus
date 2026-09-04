@@ -7,6 +7,7 @@ import { z } from "zod";
 import { canAccessAdmin, CAMPUS_ROLES, normalizeRole } from "@/config/roles";
 import { isSupabaseConfigured } from "@/config/env";
 import { requireUser } from "@/lib/auth/session";
+import { normalizeAuthEmail } from "@/lib/auth/email-domain";
 import { createClient } from "@/lib/supabase/server";
 import {
   assignUserRole,
@@ -159,7 +160,7 @@ export async function syncAuthProfileAction(role?: string | null) {
 
   return ensureUserProfile({
     id: user.id,
-    email: user.email,
+    email: normalizeAuthEmail(user.email),
     displayName: user.user_metadata?.display_name as string | undefined,
     profileImage: user.user_metadata?.avatar_url as string | undefined,
     role: normalizeRole(role ?? (user.user_metadata?.role as string | undefined)),

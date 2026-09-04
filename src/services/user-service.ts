@@ -14,7 +14,7 @@ import {
   toCampusStatus,
   toUserRole,
 } from "@/lib/auth/mappers";
-import { validateEmailForRole } from "@/lib/auth/email-domain";
+import { validateEmailForRole, normalizeAuthEmail } from "@/lib/auth/email-domain";
 import type { CampusUser } from "@/types/auth";
 
 type EnsureUserInput = {
@@ -110,12 +110,13 @@ export async function ensureUserProfile(input: EnsureUserInput): Promise<CampusU
   }
 
   const role = input.role ?? "student";
+  const email = normalizeAuthEmail(input.email);
 
   // The school-email rule keeps the open internet from self-registering as a
   // student. It must not lock out an account an administrator already created
   // with an outside address, so it only applies to brand-new profiles.
   if (!(await campusAccountExists(input.id))) {
-    const emailCheck = validateEmailForRole(input.email, role);
+    const emailCheck = validateEmailForRole(email, role);
     if (!emailCheck.valid) {
       throw new Error(emailCheck.message);
     }
@@ -127,13 +128,13 @@ export async function ensureUserProfile(input: EnsureUserInput): Promise<CampusU
     prisma.user.upsert({
       where: { id: input.id },
       update: {
-        email: input.email,
+        email,
         displayName: input.displayName ?? undefined,
         profileImage: input.profileImage ?? undefined,
       },
       create: {
         id: input.id,
-        email: input.email,
+        email,
         displayName: input.displayName,
         profileImage: input.profileImage,
         role: toUserRole(role),
@@ -227,14 +228,15 @@ export async function createCampusUser(input: {
   const hasName = Boolean(input.firstName?.trim() && input.lastName?.trim());
   const firstName = input.firstName?.trim() || null;
   const lastName = input.lastName?.trim() || null;
-  const displayName = hasName ? `${firstName} ${lastName}` : input.email;
+  const email = normalizeAuthEmail(input.email);
+  const displayName = hasName ? `${firstName} ${lastName}` : email;
   const isParent = input.role === "parent";
 
   const user = await withDatabase((prisma) =>
     prisma.user.create({
       data: {
         id: input.id,
-        email: input.email,
+        email,
         firstName,
         lastName,
         displayName,
