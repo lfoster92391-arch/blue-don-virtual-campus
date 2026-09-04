@@ -12,8 +12,8 @@ Anything technical belongs under **Advanced · Advisor setup**.
 
 | Surface | Route | Who |
 | --- | --- | --- |
-| **Phone studio (preferred)** | `/broadcast/phone` | Broadcasting crew (`canManageCampusMedia`). Turns this device's camera on. |
-| Control Room | `/organizations/broadcasting?tab=media` | Same crew check — five-step panel |
+| **Camera studio (preferred)** | `/broadcast/phone` | Broadcasting crew. Turns this device's camera on — phone or laptop. |
+| Control Room | `/organizations/broadcasting?tab=media` | Same crew — **Open camera & Go Live** |
 | Watch Broadcasting hub | `/media` | Signed-in campus; Go live card is crew-only |
 | Madonna Broadcast | `/madonna/broadcast` | Same crew check |
 | Broadcast Control Studio | `/broadcast/studio` | Advisor / game-caller console (OBS) |
@@ -22,62 +22,34 @@ Anything technical belongs under **Advanced · Advisor setup**.
 The Control Room, `/media`, and `/madonna/broadcast` still render
 `LiveBroadcastPanel`. The phone studio is a full-screen camera page.
 
-## From your phone
+## Tonight's path (no OBS)
 
-This is the path Lisa's crew should use at a game, in a hallway, or anywhere
-Studio B is not.
+Students go live from a **phone or laptop browser**. OBS is not required.
 
-1. Sign in on the phone (Safari on iPhone, Chrome on Android). Production is
-   already HTTPS, which the camera API requires.
-2. Open **Go Live from this phone** from Control Room, or go straight to
+1. Sign in on the device (Safari on iPhone, Chrome on Android or a laptop).
+   Production is HTTPS, which the camera needs.
+2. Open **Open camera & Go Live** from Control Room, or go straight to
    `https://campus.assetpilotedu.com/broadcast/phone`.
-3. Tap **Turn camera on**. Allow **Camera** and **Microphone** when the browser
-   asks. Use the flip button for front vs rear.
-4. Name today's show.
-5. Tap the red **Go Live**. The camera stays on, the badge flips to **LIVE**,
-   and short clips upload to campus storage.
-6. Keep this page in the foreground until the show is over. Tap **End
-   broadcast** when you are done.
+3. Tap **Turn camera on**. Allow **Camera** and **Microphone**.
+4. Name today's show. Tap the red **Go Live**.
+5. Keep this page in the foreground. Tap **End broadcast** when done.
 
-Viewers (families, students, anyone with the link) watch at
-`https://campus.assetpilotedu.com/watch` — **no campus login**.
+Viewers watch at `https://campus.assetpilotedu.com/watch` — **no login**.
 
-### What the phone actually does
+Expect about **4–8 seconds of delay** (short clips uploading, not a TV-smooth
+stream). That is enough for a game or announcements tonight.
 
-Browsers cannot speak RTMP. The phone records a few seconds at a time
-(MediaRecorder), uploads each complete clip, and the public watch page plays
-those clips in order. Studio B / OBS is unchanged and is not required for this
-path.
+### If it fails
 
-### iPhone / Android caveats
+- Camera black / permission denied → Settings → Safari/Chrome → Camera + Mic on
+  for campus.assetpilotedu.com, then tap **Turn camera on** again.
+- "Storage is not connected" → campus video uploads are not configured; tell an
+  advisor. Do not use OBS as the student fallback tonight.
+- Viewer page says Offline → the crew page is not LIVE, or clips have not
+  uploaded yet. Wait ~10 seconds, then refresh `/watch`.
+- Viewer must tap **Tap to play LIVE** once on iPhone.
 
-- **HTTPS only** (production already is). `localhost` works for development.
-- **iOS Safari** prefers MP4. Allow Camera + Microphone; if the preview is
-  black, reload and tap **Turn camera on** again (getUserMedia needs a tap).
-- **Autoplay:** viewers may need to tap **Tap to play LIVE** once. iOS often
-  starts muted.
-- **Keep the page open.** Switching apps or locking the phone pauses capture.
-  iOS may still throttle a background tab.
-- **Clips, not a TV-smooth stream.** There is a short join between each clip.
-  For a polished Studio B show, use OBS on the desk machine.
-- **Storage must be configured** (same Supabase bucket as video uploads). If it
-  is not, the phone studio says so instead of faking LIVE.
-
-## The five steps (Control Room)
-
-The panel is a numbered list. Phone and Studio B are both offered.
-
-1. **Open the camera** — **Go Live from this phone** (camera page) or **Open
-   Broadcast Studio** (OBS console).
-2. **Pick today's show** — text field plus presets (Morning Announcements, Blue
-   Don News, Pep Rally, Game Night, Mass).
-3. **Check your preview** — you should see the desk or the field, and the mic
-   should not be muted. On a phone, Camera and Microphone are allowed.
-4. **Go live** — phone path starts this device's camera; **Go Live with Studio
-   B** queues OBS `StartStream` when the bridge is online, and errors clearly
-   when it is not (it will not flip LIVE with no picture).
-5. **End broadcast** — greyed out until the show is live. Ends the campus row
-   and stops OBS when the bridge is up.
+OBS / Studio Bridge remains under **Advanced · Advisor setup** only.
 
 While a show is on air, steps 1–4 collapse so the only live control is **End
 broadcast**.

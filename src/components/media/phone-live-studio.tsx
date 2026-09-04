@@ -368,10 +368,10 @@ export function PhoneLiveStudio({
       <header className="flex items-center justify-between gap-3 px-4 py-3">
         <div className="min-w-0">
           <p className="text-[0.65rem] font-semibold tracking-[0.18em] text-white/50 uppercase">
-            Phone studio
+            Blue Don Live
           </p>
           <p className="truncate text-sm font-semibold">
-            {isLive ? activeLiveTitle || title || "On air" : "Go live from this phone"}
+            {isLive ? activeLiveTitle || title || "On air" : "Go live from this device"}
           </p>
         </div>
         <span
@@ -399,7 +399,7 @@ export function PhoneLiveStudio({
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
             <Video className="size-12 text-white/50" aria-hidden="true" />
             <p className="max-w-sm text-sm text-white/70">
-              Tap below to turn on this phone&apos;s camera. Safari or Chrome will
+              Tap below to turn on this device&apos;s camera. Safari or Chrome will
               ask for Camera and Microphone — allow both.
             </p>
           </div>

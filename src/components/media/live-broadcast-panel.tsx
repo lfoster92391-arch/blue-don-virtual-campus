@@ -3,14 +3,12 @@
 import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
 import {
-  Check,
   ChevronDown,
   Mic,
   Monitor,
   MonitorPlay,
   Radio,
   SlidersHorizontal,
-  Smartphone,
   Video,
 } from "lucide-react";
 
@@ -53,12 +51,12 @@ export function LiveBroadcastPanel({
   previewWindow = false,
   scheduledTitle = null,
 }: LiveBroadcastPanelProps) {
-  const [state, formAction, pending] = useActionState(
+  const [ending, startEnd] = useTransition();
+  const [title, setTitle] = useState(() => scheduledTitle?.trim() ?? "");
+  const [obsState, obsFormAction, obsPending] = useActionState(
     startStudentBroadcastAction,
     initialState,
   );
-  const [ending, startEnd] = useTransition();
-  const [title, setTitle] = useState(() => scheduledTitle?.trim() ?? "");
   const isLive = Boolean(activeLive);
   const airState: AirState = isLive
     ? "live"
@@ -86,100 +84,62 @@ export function LiveBroadcastPanel({
     );
   }
 
-  const steps = rtmp.goLiveSteps;
-
-  const phoneHref = title.trim()
+  const cameraHref = title.trim()
     ? `${PHONE_LIVE_ROUTE}?title=${encodeURIComponent(title.trim())}`
     : PHONE_LIVE_ROUTE;
-
-  const openStudioStep = (
-    <Step
-      index={1}
-      state={isLive ? "done" : "now"}
-      title={steps[0]?.title ?? "Open the camera"}
-      detail={steps[0]?.detail ?? ""}
-    >
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Button
-          size="lg"
-          className="h-12 bg-[#E11D48] text-white hover:bg-[#BE123C]"
-          nativeButton={false}
-          render={
-            <Link href={phoneHref}>
-              <Smartphone className="size-4" />
-              Go Live from this phone
-            </Link>
-          }
-        />
-        <Button
-          size="lg"
-          variant="outline"
-          nativeButton={false}
-          render={
-            <Link href="/broadcast/studio">
-              <MonitorPlay className="size-4" />
-              Open Broadcast Studio
-            </Link>
-          }
-        />
-      </div>
-    </Step>
-  );
 
   if (activeLive) {
     return (
       <div className="space-y-6">
         <PanelHeading state={airState} />
-        <ol className="space-y-3">
-          {openStudioStep}
-          <Step
-            index={2}
-            state="done"
-            title={steps[1]?.title ?? "Pick today's show"}
-            detail={`On air as “${activeLive.title}”.`}
-          />
-          <Step
-            index={3}
-            state="done"
-            title={steps[2]?.title ?? "Check your preview"}
-            detail="This is exactly what campus sees right now."
+        <p className="text-sm text-muted-foreground">
+          On air as “{activeLive.title}”
+          {activeLive.uploadedById === currentUserId
+            ? " (you started this)."
+            : ` · started by ${activeLive.uploaderName}.`}{" "}
+          Keep the camera page open on the device that is recording.
+        </p>
+        <ViewerLivePreview item={activeLive} producer />
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            className="h-12"
+            disabled={ending}
+            onClick={() => {
+              startEnd(async () => {
+                if (activeLive.isPhoneLive) {
+                  await endLiveBroadcastAction(activeLive.id);
+                  return;
+                }
+                await endStudioBroadcastAction(activeLive.id);
+              });
+            }}
           >
-            <ViewerLivePreview item={activeLive} producer />
-          </Step>
-          <Step
-            index={4}
-            state="done"
-            title={steps[3]?.title ?? "Go live"}
-            detail={`Started by ${activeLive.uploaderName}${
-              activeLive.uploadedById === currentUserId ? " (you)" : ""
-            }.`}
-          />
-          <Step
-            index={5}
-            state="now"
-            title={steps[4]?.title ?? "End broadcast"}
-            detail={steps[4]?.detail ?? ""}
-          >
+            {ending ? "Ending…" : "End broadcast"}
+          </Button>
+          {activeLive.isPhoneLive ? (
             <Button
-              type="button"
               size="lg"
-              variant="outline"
-              disabled={ending}
-              onClick={() => {
-                startEnd(async () => {
-                  if (activeLive.isPhoneLive) {
-                    await endLiveBroadcastAction(activeLive.id);
-                    return;
-                  }
-                  await endStudioBroadcastAction(activeLive.id);
-                });
-              }}
-            >
-              {ending ? "Ending…" : "End broadcast"}
-            </Button>
-          </Step>
-        </ol>
-        <AdvancedSetup rtmp={rtmp} />
+              className="h-12"
+              nativeButton={false}
+              render={
+                <Link href={cameraHref}>
+                  <Video className="size-4" />
+                  Back to camera
+                </Link>
+              }
+            />
+          ) : null}
+        </div>
+        <AdvancedSetup
+          rtmp={rtmp}
+          showName={title}
+          obsAction={obsFormAction}
+          obsPending={obsPending}
+          obsState={obsState}
+        />
       </div>
     );
   }
@@ -187,122 +147,56 @@ export function LiveBroadcastPanel({
   return (
     <div className="space-y-6">
       <PanelHeading state={airState} />
-      <form action={formAction} className="space-y-6">
-        <ol className="space-y-3">
-          {openStudioStep}
-
-          <Step
-            index={2}
-            state="now"
-            title={steps[1]?.title ?? "Pick today's show"}
-            detail={steps[1]?.detail ?? ""}
-          >
-            <div className="space-y-3">
-              <Input
-                id="live-title"
-                name="title"
-                required
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="Morning Announcements"
-                aria-label="Show name"
-              />
-              <div className="flex flex-wrap gap-2">
-                {rtmp.showPresets.map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setTitle(preset)}
-                    className="rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-[#E11D48]/40 hover:text-foreground"
-                  >
-                    {preset}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </Step>
-
-          <Step
-            index={3}
-            state="now"
-            title={steps[2]?.title ?? "Check your preview"}
-            detail={steps[2]?.detail ?? ""}
-          >
-            <ul className="space-y-1.5">
-              {rtmp.previewChecks.map((check) => (
-                <li
-                  key={check}
-                  className="flex gap-2.5 text-sm text-muted-foreground"
-                >
-                  <span
-                    className="mt-1.5 size-2 shrink-0 rounded-full border border-muted-foreground/50"
-                    aria-hidden="true"
-                  />
-                  <span>{check}</span>
-                </li>
-              ))}
-            </ul>
-          </Step>
-
-          <Step
-            index={4}
-            state="now"
-            title={steps[3]?.title ?? "Go live"}
-            detail={steps[3]?.detail ?? ""}
-          >
-            {state.error ? (
-              <p className="mb-3 text-sm text-destructive" role="alert">
-                {state.error}
-              </p>
-            ) : null}
-            {state.obs && !state.obs.queued ? (
-              <p className="mb-3 text-sm text-[#8a6a0f]" role="status">
-                OBS was not started — {state.obs.note}
-              </p>
-            ) : null}
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                size="lg"
-                className="h-12 bg-[#E11D48] text-white hover:bg-[#BE123C]"
-                nativeButton={false}
-                render={
-                  <Link href={phoneHref}>
-                    <Smartphone className="size-4" />
-                    Go Live from this phone
-                  </Link>
-                }
-              />
-              <Button
-                type="submit"
-                size="lg"
-                variant="outline"
-                disabled={pending}
-                className="h-12"
-              >
-                <Radio className="size-4" />
-                {pending ? "Starting Studio B…" : "Go Live with Studio B"}
-              </Button>
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Phone starts this device&apos;s camera. Studio B starts OBS when
-              the bridge is online. Viewers watch at{" "}
-              <Link href={PUBLIC_WATCH_PATH} className="text-[#2F80ED] underline">
-                Watch Broadcasting LIVE
-              </Link>
-              .
-            </p>
-          </Step>
-
-          <Step
-            index={5}
-            state="later"
-            title={steps[4]?.title ?? "End broadcast"}
-            detail={steps[4]?.detail ?? ""}
-          />
-        </ol>
-
-        <AdvancedSetup rtmp={rtmp} showBroadcastDetails />
-      </form>
+      <div className="space-y-3">
+        <Input
+          id="live-title"
+          name="title"
+          required
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="Morning Announcements"
+          aria-label="Show name"
+          className="h-12"
+        />
+        <div className="flex flex-wrap gap-2">
+          {rtmp.showPresets.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => setTitle(preset)}
+              className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-[#E11D48]/40 hover:text-foreground"
+            >
+              {preset}
+            </button>
+          ))}
+        </div>
+      </div>
+      <Button
+        size="lg"
+        className="h-14 w-full bg-[#E11D48] text-base text-white hover:bg-[#BE123C]"
+        nativeButton={false}
+        render={
+          <Link href={cameraHref}>
+            <Video className="size-5" />
+            Open camera &amp; Go Live
+          </Link>
+        }
+      />
+      <p className="text-sm text-muted-foreground">
+        Works on this phone or laptop. Viewers watch at{" "}
+        <Link href={PUBLIC_WATCH_PATH} className="text-[#2F80ED] underline">
+          Watch Broadcasting LIVE
+        </Link>{" "}
+        — no login. You do not need OBS.
+      </p>
+      <AdvancedSetup
+        rtmp={rtmp}
+        showBroadcastDetails
+        showName={title}
+        obsAction={obsFormAction}
+        obsPending={obsPending}
+        obsState={obsState}
+      />
     </div>
   );
 }
@@ -311,13 +205,10 @@ function PanelHeading({ state }: { state: AirState }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <p className="text-sm font-semibold text-foreground">
-          Go live in five steps
-        </p>
+        <p className="text-sm font-semibold text-foreground">Go live</p>
         <p className="text-xs text-muted-foreground">
-          Work down the list. From a phone, open the camera and press Go Live.
-          Stream keys and OBS settings live under Advanced — you should not need
-          them.
+          Open this device&apos;s camera, press Go Live, keep the page open.
+          Families watch at Watch Broadcasting LIVE — no login, no OBS.
         </p>
       </div>
       <AirStatusBadge state={state} />
@@ -353,73 +244,23 @@ function AirStatusBadge({ state }: { state: AirState }) {
   );
 }
 
-type StepState = "done" | "now" | "later";
-
-function Step({
-  index,
-  state,
-  title,
-  detail,
-  children,
-}: {
-  index: number;
-  state: StepState;
-  title: string;
-  detail: string;
-  children?: React.ReactNode;
-}) {
-  const later = state === "later";
-
-  return (
-    <li
-      className={`rounded-lg border p-4 ${
-        state === "now"
-          ? "border-border bg-card"
-          : "border-border/60 bg-muted/20"
-      }`}
-    >
-      <div className="flex gap-3">
-        <span
-          className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-            state === "done"
-              ? "bg-[#2E8B57]/15 text-[#2E8B57]"
-              : later
-                ? "bg-muted text-muted-foreground"
-                : "bg-[#0A2342] text-white dark:bg-white dark:text-[#0A2342]"
-          }`}
-        >
-          {state === "done" ? (
-            <Check className="size-4" aria-hidden="true" />
-          ) : (
-            index
-          )}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p
-            className={`text-sm font-semibold ${later ? "text-muted-foreground" : "text-foreground"}`}
-          >
-            {title}
-          </p>
-          {detail ? (
-            <p className="mt-0.5 text-sm text-muted-foreground">{detail}</p>
-          ) : null}
-          {children ? <div className="mt-3">{children}</div> : null}
-        </div>
-      </div>
-    </li>
-  );
-}
-
 /**
- * Everything a student should never have to touch: credentials, the raw OBS
- * checklist, and the optional fields that only matter when we simulcast.
+ * Advisor-only: OBS, RTMP, and the Studio B console. Students leave this closed.
  */
 function AdvancedSetup({
   rtmp,
   showBroadcastDetails = false,
+  showName = "",
+  obsAction,
+  obsPending = false,
+  obsState,
 }: {
   rtmp: BlueDonLiveRtmpPublicConfig;
   showBroadcastDetails?: boolean;
+  showName?: string;
+  obsAction?: (formData: FormData) => void;
+  obsPending?: boolean;
+  obsState?: StudioTransportState;
 }) {
   return (
     <details className="group rounded-lg border border-border bg-muted/20">
@@ -436,12 +277,25 @@ function AdvancedSetup({
 
       <div className="space-y-6 border-t border-border px-4 py-4">
         <p className="text-xs text-muted-foreground">
-          Advisors configure this once per machine. Students running a normal
-          show can leave this closed.
+          Students going live from a phone or laptop do not need this. OBS and
+          stream keys stay here for Studio B advisors.
         </p>
 
-        {showBroadcastDetails ? (
-          <div className="space-y-4">
+        <Button
+          size="sm"
+          variant="outline"
+          nativeButton={false}
+          render={
+            <Link href="/broadcast/studio">
+              <MonitorPlay className="size-4" />
+              Open Broadcast Studio
+            </Link>
+          }
+        />
+
+        {showBroadcastDetails && obsAction ? (
+          <form action={obsAction} className="space-y-4">
+            <input type="hidden" name="title" value={showName || "Blue Don Live"} />
             <div className="space-y-2">
               <label htmlFor="live-description" className="text-sm font-medium">
                 Description (optional)
@@ -462,25 +316,26 @@ function AdvancedSetup({
                 type="url"
                 placeholder="https://www.youtube.com/embed/… or watch URL"
               />
-              <p className="text-xs text-muted-foreground">
-                Only needed when we also simulcast. Leave blank for a
-                campus-only show.
-              </p>
             </div>
-          </div>
+            {obsState?.error ? (
+              <p className="text-sm text-destructive" role="alert">
+                {obsState.error}
+              </p>
+            ) : null}
+            <Button type="submit" size="sm" variant="outline" disabled={obsPending}>
+              <Radio className="size-4" />
+              {obsPending ? "Starting Studio B…" : "Go Live with Studio B (OBS)"}
+            </Button>
+          </form>
         ) : null}
 
         <div>
-          <p className="text-sm font-medium text-foreground">
-            OBS stream target
-          </p>
+          <p className="text-sm font-medium text-foreground">OBS stream target</p>
           <StreamTargetReveal hint={rtmp.streamKeyHint} />
         </div>
 
         <div>
-          <p className="text-sm font-medium text-foreground">
-            First-time OBS setup
-          </p>
+          <p className="text-sm font-medium text-foreground">First-time OBS setup</p>
           <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
             {rtmp.obsChecklist.map((step) => (
               <li key={step}>{step}</li>
@@ -495,9 +350,7 @@ function AdvancedSetup({
               <li key={tip.label} className="flex gap-2 text-sm text-muted-foreground">
                 <SceneIcon label={tip.label} />
                 <span>
-                  <span className="font-medium text-foreground">
-                    {tip.label}:
-                  </span>{" "}
+                  <span className="font-medium text-foreground">{tip.label}:</span>{" "}
                   {tip.tip}
                 </span>
               </li>

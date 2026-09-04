@@ -51,26 +51,26 @@ const STUDENT_GO_LIVE_STEPS = [
   {
     title: "Open the camera",
     detail:
-      "From your phone, open the phone studio — it turns this device's camera on. In Studio B, open OBS (already set up) and Broadcast Studio for scenes and graphics.",
+      "On this phone or laptop, open the camera page. Allow Camera and Microphone when the browser asks.",
   },
   {
     title: "Pick today's show",
-    detail: "Name what campus should see on the player.",
+    detail: "Name what people should see on the player.",
   },
   {
     title: "Check your preview",
     detail:
-      "You should see yourself (or the desk) on this screen, and the mic should pick up your voice. On a phone, allow Camera and Microphone when Safari or Chrome asks.",
+      "You should see yourself (or the field) on this screen. Flip to the rear camera for a game.",
   },
   {
     title: "Go live",
     detail:
-      "This starts the camera and puts you on air at Watch Broadcasting LIVE. Nothing goes out before you press it.",
+      "This starts recording from this device and puts you on air at Watch Broadcasting LIVE. Nothing goes out before you press it.",
   },
   {
     title: "End broadcast",
     detail:
-      "When the show is over, end it here. The phone stops recording; in Studio B, OBS stops if the bridge is up. The show saves to Past Broadcasts.",
+      "When the show is over, end it here. Keep this page open until you end. The show saves to Past Broadcasts.",
   },
 ];
 
@@ -102,9 +102,9 @@ export function isWithinAirPreviewWindow(
 
 /** Plain checks a student can confirm by looking at the desk and the screen. */
 const PREVIEW_CHECKS = [
-  "The camera shows the desk (or the field), not the ceiling.",
-  "You can hear yourself / the mic is not muted.",
-  "On a phone: Camera and Microphone are allowed for this site.",
+  "The camera shows the desk or the field, not the ceiling.",
+  "The mic is not muted.",
+  "Camera and Microphone are allowed for this site.",
 ];
 
 /**
@@ -114,7 +114,7 @@ const PREVIEW_CHECKS = [
 export const MADONNA_GO_LIVE_NOTES = [
   {
     label: "Who runs the show",
-    text: "Two students at minimum — one on camera and mic in Studio B, one on this page. Your advisor is the backup, not the operator.",
+    text: "One student with a phone or laptop is enough. Open the camera, go live, keep the page open. Your advisor is the backup.",
   },
   {
     label: "When we air",
@@ -126,7 +126,7 @@ export const MADONNA_GO_LIVE_NOTES = [
   },
   {
     label: "If something breaks",
-    text: "End the broadcast, fix it, and go live again — the archive keeps whatever already aired. Ask your advisor before touching OBS settings.",
+    text: "End the broadcast, fix it, and go live again. Do not touch OBS — you do not need it for a normal show.",
   },
 ];
 

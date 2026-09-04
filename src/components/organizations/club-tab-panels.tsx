@@ -952,12 +952,12 @@ function MediaPanel(props: ClubTabPanelsProps) {
           <>
             <DashboardCard
               title="Go live"
-              description="Five steps from an empty studio to on air. Nothing here needs a stream key."
+              description="Open this phone or laptop’s camera and go live. No OBS."
               icon={<Radio className="size-5" />}
               status={
                 props.activeLive
                   ? { label: "On air", variant: "warning" }
-                  : { label: "Studio B", variant: "info" }
+                  : { label: "This device", variant: "info" }
               }
             >
               <LiveBroadcastPanel
