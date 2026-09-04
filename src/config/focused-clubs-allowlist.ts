@@ -55,6 +55,8 @@ export const FOCUSED_MODE_ALLOWED_PREFIXES = [
   "/manifest.webmanifest",
   "/sw.js",
   "/icons",
+  "/watch",
+  "/live",
 ] as const;
 
 /**

@@ -972,7 +972,7 @@ function buildBroadcastCard(
     links: [
       { label: "Daily Rundown", href: "/organizations/broadcasting?tab=script" },
       { label: "Control Room", href: "/organizations/broadcasting?tab=media" },
-      { label: "Watch live", href: "/media" },
+      { label: "Watch live", href: "/watch" },
     ],
   };
 }

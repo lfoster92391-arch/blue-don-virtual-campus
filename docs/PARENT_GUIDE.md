@@ -60,7 +60,8 @@ Inventory of shipped, parent-reachable surfaces (focused-clubs mode on):
 | Parent Portal | `/parent` | Linked students, agreements, child club approvals |
 | Parent Guide | `/parent/guide` | This document, in app |
 | Today at Madonna | `/home` | Command Center — messages sent to the parent, agreements |
-| Watch Broadcasting | `/media` | Live and recorded student video |
+| Watch Broadcasting LIVE | `/watch` | Public live player — **no login**. `/live` redirects here. |
+| Watch Broadcasting hub | `/media` | Signed-in live card plus recorded student video |
 | Blue Don Sports | `/sports` | The full athletics hub |
 | Profile / Settings | `/profile`, `/settings` | Name, password, display |
 

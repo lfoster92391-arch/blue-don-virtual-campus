@@ -232,6 +232,15 @@ export function VideoLibrary({
 }
 
 function ArchivePlayback({ item }: { item: CampusMediaItemView }) {
+  if (item.isPhoneLive) {
+    return (
+      <p className="mt-3 text-sm text-muted-foreground">
+        This show was live from a phone. Clips played on Watch Broadcasting LIVE
+        and are not stored as a single archive file.
+      </p>
+    );
+  }
+
   const mediaUrl = item.publicUrl ?? item.embedUrl;
   if (!mediaUrl) {
     return (

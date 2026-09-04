@@ -21,6 +21,8 @@ const PUBLIC_ROUTES = [
   // OBS Browser Sources cannot log in. The long session key in the path is the
   // gate, and the page only shows graphics that are already on air.
   "/broadcast/overlay/",
+  "/watch",
+  "/live",
 ];
 const AUTH_ROUTES = ["/login", "/register", "/forgot-password"];
 

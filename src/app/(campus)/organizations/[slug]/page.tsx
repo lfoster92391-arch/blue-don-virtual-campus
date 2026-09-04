@@ -580,7 +580,7 @@ export default async function OrganizationPage({
               size="sm"
               variant="outline"
               nativeButton={false}
-              render={<Link href="/media">Watch live &amp; archive</Link>}
+              render={<Link href="/watch">Watch Broadcasting LIVE</Link>}
             />
             <Button
               size="sm"

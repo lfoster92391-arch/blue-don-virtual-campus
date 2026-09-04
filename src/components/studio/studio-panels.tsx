@@ -21,7 +21,7 @@ import {
   STUDIO_SCENES,
   STUDIO_SOURCES,
 } from "@/config/broadcast-studio";
-import { toMediaEmbedUrl } from "@/lib/media-embed";
+import { isHostedPlayerUrl, toMediaEmbedUrl } from "@/lib/media-embed";
 import { cn } from "@/lib/utils";
 import type {
   StudioCrewMember,
@@ -288,10 +288,10 @@ export function ProgramPanel({ program }: { program: StudioProgramState }) {
   return (
     <StudioPanel title="Program" meta={meta} bodyClassName="p-3">
       <div className="relative aspect-video w-full overflow-hidden rounded-sm border border-white/10 bg-black">
-        {program.embedUrl ? (
+        {isHostedPlayerUrl(program.embedUrl) ? (
           <iframe
             title={program.title ?? "Program feed"}
-            src={toMediaEmbedUrl(program.embedUrl)}
+            src={toMediaEmbedUrl(program.embedUrl!)}
             className="h-full w-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen

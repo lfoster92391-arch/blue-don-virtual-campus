@@ -49,9 +49,9 @@ const OBS_SCENE_TIPS = [
  */
 const STUDENT_GO_LIVE_STEPS = [
   {
-    title: "Open the studio",
+    title: "Open the camera",
     detail:
-      "On the Studio B computer, open OBS — it is already set up, so do not change its settings. Then open Broadcast Studio here for scenes, graphics, and the score.",
+      "From your phone, open the phone studio — it turns this device's camera on. In Studio B, open OBS (already set up) and Broadcast Studio for scenes and graphics.",
   },
   {
     title: "Pick today's show",
@@ -60,17 +60,17 @@ const STUDENT_GO_LIVE_STEPS = [
   {
     title: "Check your preview",
     detail:
-      "Camera is pointed at the desk, the mic meter moves when you talk, and OBS says Streaming in the bottom bar.",
+      "You should see yourself (or the desk) on this screen, and the mic should pick up your voice. On a phone, allow Camera and Microphone when Safari or Chrome asks.",
   },
   {
     title: "Go live",
     detail:
-      "This puts you on air for everyone signed in to campus. Nothing goes out before you press it.",
+      "This starts the camera and puts you on air at Watch Broadcasting LIVE. Nothing goes out before you press it.",
   },
   {
     title: "End broadcast",
     detail:
-      "When the show is over, end it here and press Stop Streaming in OBS. The show saves to Past Broadcasts.",
+      "When the show is over, end it here. The phone stops recording; in Studio B, OBS stops if the bridge is up. The show saves to Past Broadcasts.",
   },
 ];
 
@@ -102,9 +102,9 @@ export function isWithinAirPreviewWindow(
 
 /** Plain checks a student can confirm by looking at the desk and the screen. */
 const PREVIEW_CHECKS = [
-  "The camera shows the desk, not the ceiling.",
-  "The mic meter moves when you talk — green, never red.",
-  "OBS says Streaming in its bottom bar.",
+  "The camera shows the desk (or the field), not the ceiling.",
+  "You can hear yourself / the mic is not muted.",
+  "On a phone: Camera and Microphone are allowed for this site.",
 ];
 
 /**
@@ -122,7 +122,7 @@ export const MADONNA_GO_LIVE_NOTES = [
   },
   {
     label: "Who is watching",
-    text: "Everyone signed in to campus can watch at Watch Broadcasting. Families see the archive after the show ends.",
+    text: "Anyone can watch at Watch Broadcasting LIVE — no login. Share the public watch link. Families also see the archive after the show ends.",
   },
   {
     label: "If something breaks",

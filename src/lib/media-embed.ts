@@ -1,5 +1,11 @@
+import { isPhoneLiveEmbed } from "@/config/phone-live";
+
 /** Normalize YouTube watch / short URLs into embeddable iframe src. */
 export function toMediaEmbedUrl(url: string): string {
+  if (isPhoneLiveEmbed(url)) {
+    return "";
+  }
+
   try {
     const parsed = new URL(url);
     if (parsed.hostname.includes("youtube.com") && parsed.searchParams.get("v")) {
@@ -19,6 +25,13 @@ export function toMediaEmbedUrl(url: string): string {
   }
 
   return url;
+}
+
+export function isHostedPlayerUrl(url: string | null | undefined): boolean {
+  if (!url || isPhoneLiveEmbed(url)) {
+    return false;
+  }
+  return /^https?:\/\//i.test(url.trim());
 }
 
 export function isDirectVideoUrl(url: string): boolean {

@@ -32,8 +32,8 @@ export function HowWeGoLiveCard() {
       <p className="mt-5 text-sm text-muted-foreground">
         Stuck mid-show? End the broadcast and tell your advisor. Campus watches
         at{" "}
-        <Link href="/media" className="text-[#2F80ED] underline">
-          Watch Broadcasting
+        <Link href="/watch" className="text-[#2F80ED] underline">
+          Watch Broadcasting LIVE
         </Link>
         .
       </p>

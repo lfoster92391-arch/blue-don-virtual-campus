@@ -214,6 +214,10 @@ export function LoginForm({
         >
           Parent registration
         </Link>
+        {" · "}
+        <Link href="/watch" className="font-medium text-[#0A2342] hover:underline dark:text-white">
+          Watch Broadcasting LIVE
+        </Link>
       </p>
     </AuthShell>
   );

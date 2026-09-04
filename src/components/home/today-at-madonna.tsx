@@ -214,10 +214,10 @@ function AnnouncementsBriefing({
             })}
           </p>
           <Link
-            href="/media"
+            href="/watch"
             className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[#2F80ED] hover:underline"
           >
-            Watch Broadcasting
+            Watch Broadcasting LIVE
             <ArrowRight className="size-3.5" aria-hidden="true" />
           </Link>
         </article>

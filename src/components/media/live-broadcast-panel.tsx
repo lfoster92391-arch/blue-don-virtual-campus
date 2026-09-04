@@ -10,23 +10,27 @@ import {
   MonitorPlay,
   Radio,
   SlidersHorizontal,
+  Smartphone,
   Video,
 } from "lucide-react";
 
 import type { BlueDonLiveRtmpPublicConfig } from "@/config/broadcast-media";
+import { PHONE_LIVE_ROUTE, PUBLIC_WATCH_PATH } from "@/config/phone-live";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  endLiveBroadcastAction,
-  startLiveBroadcastAction,
-  type MediaActionState,
-} from "@/features/media/actions";
-import { toMediaEmbedUrl } from "@/lib/media-embed";
+  endStudioBroadcastAction,
+  startStudentBroadcastAction,
+  type StudioTransportState,
+} from "@/features/broadcast-studio/actions";
+import { endLiveBroadcastAction } from "@/features/media/actions";
+import { isHostedPlayerUrl, toMediaEmbedUrl } from "@/lib/media-embed";
 import type { CampusMediaItemView } from "@/services/media-service";
 
+import { PublicLivePlayer } from "./public-live-player";
 import { StreamTargetReveal } from "./stream-target-reveal";
 
-const initialState: MediaActionState = {};
+const initialState: StudioTransportState = {};
 
 type AirState = "live" | "preview" | "offline";
 
@@ -50,7 +54,7 @@ export function LiveBroadcastPanel({
   scheduledTitle = null,
 }: LiveBroadcastPanelProps) {
   const [state, formAction, pending] = useActionState(
-    startLiveBroadcastAction,
+    startStudentBroadcastAction,
     initialState,
   );
   const [ending, startEnd] = useTransition();
@@ -71,7 +75,11 @@ export function LiveBroadcastPanel({
         ) : (
           <p className="text-sm text-muted-foreground">
             Nothing on air right now. When Broadcasting goes live, the stream
-            appears here for everyone on campus.
+            appears here and on the public{" "}
+            <Link href={PUBLIC_WATCH_PATH} className="text-[#2F80ED] underline">
+              Watch Broadcasting LIVE
+            </Link>{" "}
+            page.
           </p>
         )}
       </div>
@@ -80,23 +88,41 @@ export function LiveBroadcastPanel({
 
   const steps = rtmp.goLiveSteps;
 
+  const phoneHref = title.trim()
+    ? `${PHONE_LIVE_ROUTE}?title=${encodeURIComponent(title.trim())}`
+    : PHONE_LIVE_ROUTE;
+
   const openStudioStep = (
     <Step
       index={1}
       state={isLive ? "done" : "now"}
-      title={steps[0]?.title ?? "Open the studio"}
+      title={steps[0]?.title ?? "Open the camera"}
       detail={steps[0]?.detail ?? ""}
     >
-      <Button
-        size="lg"
-        nativeButton={false}
-        render={
-          <Link href="/broadcast/studio">
-            <MonitorPlay className="size-4" />
-            Open Broadcast Studio
-          </Link>
-        }
-      />
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button
+          size="lg"
+          className="h-12 bg-[#E11D48] text-white hover:bg-[#BE123C]"
+          nativeButton={false}
+          render={
+            <Link href={phoneHref}>
+              <Smartphone className="size-4" />
+              Go Live from this phone
+            </Link>
+          }
+        />
+        <Button
+          size="lg"
+          variant="outline"
+          nativeButton={false}
+          render={
+            <Link href="/broadcast/studio">
+              <MonitorPlay className="size-4" />
+              Open Broadcast Studio
+            </Link>
+          }
+        />
+      </div>
     </Step>
   );
 
@@ -141,7 +167,11 @@ export function LiveBroadcastPanel({
               disabled={ending}
               onClick={() => {
                 startEnd(async () => {
-                  await endLiveBroadcastAction(activeLive.id);
+                  if (activeLive.isPhoneLive) {
+                    await endLiveBroadcastAction(activeLive.id);
+                    return;
+                  }
+                  await endStudioBroadcastAction(activeLive.id);
                 });
               }}
             >
@@ -225,15 +255,42 @@ export function LiveBroadcastPanel({
                 {state.error}
               </p>
             ) : null}
-            <Button
-              type="submit"
-              size="lg"
-              disabled={pending}
-              className="bg-[#E11D48] text-white hover:bg-[#BE123C]"
-            >
-              <Radio className="size-4" />
-              {pending ? "Going live…" : "Go Live"}
-            </Button>
+            {state.obs && !state.obs.queued ? (
+              <p className="mb-3 text-sm text-[#8a6a0f]" role="status">
+                OBS was not started — {state.obs.note}
+              </p>
+            ) : null}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                size="lg"
+                className="h-12 bg-[#E11D48] text-white hover:bg-[#BE123C]"
+                nativeButton={false}
+                render={
+                  <Link href={phoneHref}>
+                    <Smartphone className="size-4" />
+                    Go Live from this phone
+                  </Link>
+                }
+              />
+              <Button
+                type="submit"
+                size="lg"
+                variant="outline"
+                disabled={pending}
+                className="h-12"
+              >
+                <Radio className="size-4" />
+                {pending ? "Starting Studio B…" : "Go Live with Studio B"}
+              </Button>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Phone starts this device&apos;s camera. Studio B starts OBS when
+              the bridge is online. Viewers watch at{" "}
+              <Link href={PUBLIC_WATCH_PATH} className="text-[#2F80ED] underline">
+                Watch Broadcasting LIVE
+              </Link>
+              .
+            </p>
           </Step>
 
           <Step
@@ -258,8 +315,9 @@ function PanelHeading({ state }: { state: AirState }) {
           Go live in five steps
         </p>
         <p className="text-xs text-muted-foreground">
-          Work down the list. Stream keys and OBS settings live under Advanced —
-          you should not need them.
+          Work down the list. From a phone, open the camera and press Go Live.
+          Stream keys and OBS settings live under Advanced — you should not need
+          them.
         </p>
       </div>
       <AirStatusBadge state={state} />
@@ -458,12 +516,40 @@ function ViewerLivePreview({
   item: CampusMediaItemView;
   producer?: boolean;
 }) {
-  if (!item.embedUrl) {
+  if (item.isPhoneLive) {
+    return (
+      <div className="overflow-hidden rounded-lg border border-border">
+        <PublicLivePlayer
+          initial={{
+            live: {
+              id: item.id,
+              title: item.title,
+              uploaderName: item.uploaderName,
+              publishedAt: item.publishedAt?.toISOString() ?? null,
+              source: "phone",
+              embedUrl: null,
+              mimeType: null,
+              segments: [],
+            },
+          }}
+        />
+        <p className="border-t border-border px-3 py-2 text-xs text-muted-foreground">
+          Phone live — the public player fills in as clips upload. Share{" "}
+          <Link href={PUBLIC_WATCH_PATH} className="text-[#2F80ED] underline">
+            Watch Broadcasting LIVE
+          </Link>
+          .
+        </p>
+      </div>
+    );
+  }
+
+  if (!isHostedPlayerUrl(item.embedUrl)) {
     return (
       <p className="text-sm text-muted-foreground">
         {producer
-          ? "You are on air. Campus sees the show in Studio B — add a YouTube Live or Vimeo link under Advanced to show a player here too."
-          : "Broadcasting is on air — a player appears here once the crew adds a viewer link."}
+          ? "You are on air. Campus and the public watch page see this show. Add a YouTube Live or Vimeo link under Advanced to embed a player here too — or go live from a phone so clips play automatically."
+          : "Broadcasting is on air. Watch on the public Watch Broadcasting LIVE page, or wait for the crew to add a viewer link."}
       </p>
     );
   }
@@ -472,7 +558,7 @@ function ViewerLivePreview({
     <div className="aspect-video overflow-hidden rounded-lg border border-border">
       <iframe
         title={item.title}
-        src={toMediaEmbedUrl(item.embedUrl)}
+        src={toMediaEmbedUrl(item.embedUrl!)}
         className="h-full w-full"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen

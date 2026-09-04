@@ -140,7 +140,9 @@ links were removed from **My Campus**.
   `isSportsTaggedMedia`) plays on Sports; anything else plays on Broadcast, and
   the other page links across rather than duplicating it.
 
-Going live is unchanged: Control Room / `/broadcast/studio` → **Go Live**.
+Going live: phone studio `/broadcast/phone` (camera on this device) or
+Control Room / `/broadcast/studio` → **Go Live**. Anyone can watch without
+logging in at `/watch`.
 
 ## Watch later / review
 

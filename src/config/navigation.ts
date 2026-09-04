@@ -256,8 +256,8 @@ export const focusedClubsNavigation: NavEntry[] = [
     requiresClubMessaging: true,
   },
   {
-    label: "Watch Broadcasting",
-    href: "/media",
+    label: "Watch Broadcasting LIVE",
+    href: "/watch",
     icon: Headphones,
     enabled: true,
     mobile: true,

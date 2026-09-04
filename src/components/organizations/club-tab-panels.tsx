@@ -369,8 +369,8 @@ function OverviewPanel(props: ClubTabPanelsProps) {
             <p className="text-sm text-muted-foreground">
               Use Daily Rundown for the morning script and Control Room to
               upload videos or go live. The whole school watches on{" "}
-              <Link href="/media" className="text-[#2F80ED] underline">
-                Watch Broadcasting
+              <Link href="/watch" className="text-[#2F80ED] underline">
+                Watch Broadcasting LIVE
               </Link>
               .
             </p>
@@ -386,8 +386,8 @@ function OverviewPanel(props: ClubTabPanelsProps) {
                   size="sm"
                   nativeButton={false}
                   render={
-                    <Link href="/media">
-                      Watch live &amp; archive
+                    <Link href="/watch">
+                      Watch Broadcasting LIVE
                       <ArrowRight className="size-3.5" />
                     </Link>
                   }
@@ -1093,8 +1093,8 @@ function MediaPanel(props: ClubTabPanelsProps) {
         {!isCrew ? (
           <p className="text-sm text-muted-foreground">
             Prefer the full audience hub?{" "}
-            <Link href="/media" className="text-[#2F80ED] underline">
-              Open Watch Broadcasting
+            <Link href="/watch" className="text-[#2F80ED] underline">
+              Open Watch Broadcasting LIVE
             </Link>
             .
           </p>

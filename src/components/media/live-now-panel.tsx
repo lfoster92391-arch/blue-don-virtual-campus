@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { ArrowRight, Radio } from "lucide-react";
 
-import { toMediaEmbedUrl } from "@/lib/media-embed";
+import { PublicLivePlayer } from "@/components/media/public-live-player";
+import { PUBLIC_WATCH_PATH } from "@/config/phone-live";
+import { isHostedPlayerUrl } from "@/lib/media-embed";
 import type { CampusMediaItemView } from "@/services/media-service";
 
 type LiveNowPanelProps = {
@@ -80,28 +82,38 @@ export function LiveNowPanel({
             Watch live
             <ArrowRight className="size-4" aria-hidden="true" />
           </Link>
-        ) : null}
+        ) : (
+          <Link
+            href={PUBLIC_WATCH_PATH}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-[#0A2342] transition-transform hover:translate-x-0.5"
+          >
+            <Radio className="size-4" aria-hidden="true" />
+            Watch Broadcasting LIVE
+            <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
+        )}
       </div>
 
-      {!watchHref ? (
-        activeLive.embedUrl ? (
-          <div className="aspect-video w-full border-t border-white/10">
-            <iframe
-              title={`${activeLive.title} — live`}
-              src={toMediaEmbedUrl(activeLive.embedUrl)}
-              className="size-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-        ) : (
-          <p className="border-t border-white/10 px-5 py-4 text-sm text-white/70">
-            The stream is on air, but the crew has not posted a public player URL
-            yet. Add a YouTube Live or Vimeo embed URL in the control room and it
-            will play right here.
-          </p>
-        )
-      ) : null}
+      <PublicLivePlayer
+        initial={{
+          live: {
+            id: activeLive.id,
+            title: activeLive.title,
+            uploaderName: activeLive.uploaderName,
+            publishedAt: activeLive.publishedAt?.toISOString() ?? null,
+            source: activeLive.isPhoneLive
+              ? "phone"
+              : isHostedPlayerUrl(activeLive.embedUrl)
+                ? "embed"
+                : "studio",
+            embedUrl: isHostedPlayerUrl(activeLive.embedUrl)
+              ? activeLive.embedUrl
+              : null,
+            mimeType: null,
+            segments: [],
+          },
+        }}
+      />
     </div>
   );
 }

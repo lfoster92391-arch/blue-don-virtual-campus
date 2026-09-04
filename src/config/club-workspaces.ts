@@ -647,9 +647,9 @@ const WORKSPACES: Record<ClubType, Omit<ClubWorkspace, "clubType" | "theme">> = 
       {
         id: "bc-live",
         title: "Go Live",
-        description: "Start a Blue Don Live stream from the Media Hub.",
+        description: "Start a Blue Don Live stream from your phone or Studio B.",
         icon: "📡",
-        href: "/media",
+        href: "/broadcast/phone",
         items: ["OBS / YouTube Live", "Morning announcements", "Game day"],
       },
       {

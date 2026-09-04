@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { STUDIO_ROUTE } from "@/config/broadcast-studio";
+import { STUDIO_ROUTE, pickCameraProgramScene } from "@/config/broadcast-studio";
 import type { GameStatusKey } from "@/config/sports-highlights";
 import {
   endLiveBroadcastAction,
@@ -21,6 +21,8 @@ import {
 import { canManageCampusMedia } from "@/services/media-service";
 import { setGameScore } from "@/services/sports-highlights-service";
 import {
+  describeStudioEncoderBlocker,
+  getStudioBridgeSnapshot,
   queueStudioCommand,
   type StudioCommandView,
 } from "@/services/studio-bridge-service";
@@ -217,6 +219,59 @@ export async function startStudioBroadcastAction(
   revalidatePath(STUDIO_ROUTE);
 
   return { ...started, obs };
+}
+
+/**
+ * Student / Control Room Go Live with Studio B.
+ *
+ * Unlike the advisor console, this refuses to flip campus LIVE if the bridge
+ * or OBS is down — the student should use the phone camera path instead of
+ * seeing a LIVE badge with no picture.
+ */
+export async function startStudentBroadcastAction(
+  prev: StudioTransportState,
+  formData: FormData,
+): Promise<StudioTransportState> {
+  const snapshot = await getStudioBridgeSnapshot();
+  const blocker = describeStudioEncoderBlocker(snapshot);
+  if (blocker) {
+    return { error: blocker };
+  }
+
+  const cameraScene = pickCameraProgramScene(snapshot.device?.scenes ?? []);
+  const alreadyStreaming = Boolean(snapshot.device?.streaming);
+  if (
+    cameraScene &&
+    !alreadyStreaming &&
+    cameraScene !== snapshot.device?.programScene
+  ) {
+    const scene = await queueStudioCommandAction({
+      kind: "SET_PROGRAM_SCENE",
+      sceneName: cameraScene,
+    });
+    if (scene.error) {
+      return {
+        error: `Could not switch OBS to the camera scene (${cameraScene}): ${scene.error}`,
+      };
+    }
+  }
+
+  const obs = await queueTransport("OBS_START_STREAM");
+  if (!obs.queued) {
+    return { error: obs.note };
+  }
+
+  const started = await startLiveBroadcastAction(prev, formData);
+  if (started.error) {
+    return { ...started, obs };
+  }
+
+  revalidatePath(STUDIO_ROUTE);
+  return {
+    ...started,
+    obs,
+    success: "You are live. OBS is starting the Studio B stream.",
+  };
 }
 
 /* --------------------------------------------------------------- graphics */

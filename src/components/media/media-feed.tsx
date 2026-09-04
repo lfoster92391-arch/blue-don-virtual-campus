@@ -1,6 +1,6 @@
 import { Radio, Video } from "lucide-react";
 
-import { isDirectVideoUrl, toMediaEmbedUrl } from "@/lib/media-embed";
+import { isDirectVideoUrl, isHostedPlayerUrl, toMediaEmbedUrl } from "@/lib/media-embed";
 import type { CampusMediaItemView } from "@/services/media-service";
 
 type MediaFeedProps = {
@@ -94,7 +94,7 @@ function MediaFeedItem({ item }: { item: CampusMediaItemView }) {
         )
       ) : null}
 
-      {mediaUrl && item.type === "LIVE_STREAM" ? (
+      {mediaUrl && item.type === "LIVE_STREAM" && isHostedPlayerUrl(mediaUrl) ? (
         isDirectVideoUrl(mediaUrl) ? (
           <video
             src={mediaUrl}

@@ -92,7 +92,7 @@ export default async function MadonnaHubPage() {
         <LiveNowPanel
           activeLive={activeLive}
           nextAirAt={schedule?.nextAirAt ?? null}
-          watchHref="/madonna/broadcast"
+          watchHref="/watch"
         />
       ) : null}
 

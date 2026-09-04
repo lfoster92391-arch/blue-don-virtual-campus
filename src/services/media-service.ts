@@ -12,6 +12,7 @@ import {
   resolveCampusVideoContentType,
 } from "@/config/broadcast-media";
 import { isDatabaseConfigured, isSupabaseAdminConfigured } from "@/config/env";
+import { isPhoneLiveEmbed } from "@/config/phone-live";
 import type { CampusRole } from "@/config/roles";
 import { canManageAcademy } from "@/config/roles";
 import type {
@@ -39,6 +40,8 @@ export type CampusMediaItemView = {
   publicUrl: string | null;
   embedUrl: string | null;
   thumbnailUrl: string | null;
+  /** True when this live was encoded from a phone browser, not OBS/YouTube. */
+  isPhoneLive: boolean;
   organizationId: string | null;
   uploadedById: string;
   uploaderName: string;
@@ -95,6 +98,7 @@ function mapMediaRow(row: {
     publicUrl: row.publicUrl,
     embedUrl: row.embedUrl,
     thumbnailUrl: row.thumbnailUrl,
+    isPhoneLive: isPhoneLiveEmbed(row.embedUrl),
     organizationId: row.organizationId,
     uploadedById: row.uploadedById,
     uploaderName,
@@ -222,6 +226,7 @@ function demoBroadcastViews(): CampusMediaItemView[] {
     publicUrl: item.publicUrl,
     embedUrl: item.embedUrl,
     thumbnailUrl: null,
+    isPhoneLive: false,
     organizationId: null,
     uploadedById: "demo",
     uploaderName: item.uploaderName,
@@ -666,6 +671,7 @@ export async function startCampusLiveStream(input: {
   description?: string;
   embedUrl?: string;
   organizationId?: string;
+  storagePath?: string;
 }): Promise<{ id: string; streamKey: string } | null> {
   if (!isDatabaseConfigured() || !isPrismaReady()) {
     return null;
@@ -686,6 +692,7 @@ export async function startCampusLiveStream(input: {
         type: "LIVE_STREAM",
         status: "LIVE",
         embedUrl: input.embedUrl,
+        storagePath: input.storagePath,
         streamKey,
         organizationId: input.organizationId,
         uploadedById: input.userId,

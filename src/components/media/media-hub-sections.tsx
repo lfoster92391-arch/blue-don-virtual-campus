@@ -76,9 +76,13 @@ export function MediaHubSections({
         }
       >
         <p className="text-sm text-muted-foreground">
-          Signed-in Madonna students and staff can watch Blue Don Live here and
-          browse the video library below. Production tools (upload, go live,
-          Daily Rundown) are for Broadcasting club members.
+          Anyone can watch Blue Don Live at{" "}
+          <Link href="/watch" className="text-[#2F80ED] underline">
+            Watch Broadcasting LIVE
+          </Link>{" "}
+          — no login. Signed-in students can also browse the archive below.
+          Production tools (upload, go live, Daily Rundown) are for Broadcasting
+          club members.
         </p>
         {!canManageMedia ? (
           <Button

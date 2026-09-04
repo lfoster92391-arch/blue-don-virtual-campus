@@ -70,6 +70,20 @@ export const STUDIO_COMMAND_LABELS = {
   OBS_STOP_RECORD: "Stop recording",
 } as const;
 
+/**
+ * Best-effort camera scene for student Go Live. Only used when OBS reports a
+ * matching name — we never invent a scene the machine does not have.
+ */
+export function pickCameraProgramScene(scenes: string[]): string | null {
+  const names = scenes.map((name) => name.trim()).filter(Boolean);
+  const exact = names.find((name) => /^cam(era)?\b/i.test(name));
+  if (exact) {
+    return exact;
+  }
+  const contains = names.find((name) => /camera|\bcam\b/i.test(name));
+  return contains ?? null;
+}
+
 /* ----------------------------------------------------------- game control */
 
 /**

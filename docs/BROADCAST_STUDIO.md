@@ -512,7 +512,9 @@ server action rather than a browser fetch.
 - Broadcasting org page header → **Broadcast Studio** (crew only)
 - Control Room tab (`/organizations/broadcasting?tab=media`) → **Go live** panel, step 1 → **Open Broadcast Studio**
 - Control Room tab → **Advanced · Advisor setup** card (collapsed) → **Open Broadcast Studio**
-- Watch Broadcasting (`/media`) and `/madonna/broadcast` → **Go live** panel, step 1
+- Watch Broadcasting LIVE (`/watch`, public, no login)
+- Watch Broadcasting hub (`/media`) and `/madonna/broadcast` → **Go live** panel, step 1
+- Phone studio (`/broadcast/phone`) — in-app camera, no OBS required
 
 ## Students do not start here
 

@@ -125,6 +125,28 @@ export function isStudioBridgeConfigured(): boolean {
   return bridgeTokenFromEnv() !== null;
 }
 
+/**
+ * Student-facing reason the Studio B encoder cannot start. Null means OBS is
+ * reachable and Go Live may queue StartStream.
+ */
+export function describeStudioEncoderBlocker(
+  snapshot: StudioBridgeSnapshot,
+): string | null {
+  if (!snapshot.configured) {
+    return "Studio B is not linked yet. Use Go Live from your phone, or ask an advisor to start the Studio Bridge.";
+  }
+  if (!snapshot.device) {
+    return "The Studio Bridge has never paired. Start it on the Studio B PC, or go live from your phone.";
+  }
+  if (!snapshot.device.online) {
+    return "The Studio Bridge is offline. Start it on the Studio B PC, or go live from your phone.";
+  }
+  if (!snapshot.device.obsConnected) {
+    return "OBS is not connected. Open OBS on the Studio B PC, or go live from your phone.";
+  }
+  return null;
+}
+
 function sha256(value: string): string {
   return createHash("sha256").update(value, "utf8").digest("hex");
 }

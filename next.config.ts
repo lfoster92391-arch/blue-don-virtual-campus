@@ -39,6 +39,7 @@ const nextConfig: NextConfig = {
     return [
       { source: "/dashboard", destination: "/home", permanent: false },
       { source: "/future", destination: "/pathways", permanent: false },
+      { source: "/live", destination: "/watch", permanent: false },
     ];
   },
   async headers() {
