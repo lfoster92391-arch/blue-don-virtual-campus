@@ -1,11 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import type { CampusMediaCategoryKey } from "@/config/broadcast-production";
-import { PHONE_LIVE_ROUTE, PUBLIC_WATCH_PATH } from "@/config/phone-live";
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { revalidateMediaPaths } from "@/lib/media/revalidate";
 import { upsertTodaysBroadcastAnnouncement } from "@/services/broadcast-announcement-service";
 import {
   canManageCampusMedia,
@@ -68,20 +67,6 @@ const announcementSchema = z.object({
   body: z.string().trim().min(1, "Announcement body is required").max(2000),
   mediaItemId: z.string().trim().optional().or(z.literal("")),
 });
-
-export function revalidateMediaPaths() {
-  revalidatePath("/media");
-  revalidatePath("/organizations/broadcasting");
-  revalidatePath("/broadcast/studio");
-  revalidatePath("/home");
-  revalidatePath("/madonna");
-  revalidatePath("/madonna/today");
-  revalidatePath("/madonna/broadcast");
-  revalidatePath("/madonna/sports");
-  revalidatePath("/madonna/sports/reel");
-  revalidatePath(PUBLIC_WATCH_PATH);
-  revalidatePath(PHONE_LIVE_ROUTE);
-}
 
 export async function requireMediaProducer() {
   const user = await requireCompleteProfile();

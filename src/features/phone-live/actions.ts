@@ -4,10 +4,10 @@ import { z } from "zod";
 
 import {
   endLiveBroadcastAction,
-  revalidateMediaPaths,
   requireMediaProducer,
   type MediaActionState,
 } from "@/features/media/actions";
+import { revalidateMediaPaths } from "@/lib/media/revalidate";
 import {
   createPhoneLiveSegmentTicket,
   markPhoneLiveStorageFolder,
