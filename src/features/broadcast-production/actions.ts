@@ -25,6 +25,7 @@ import {
   updateMediaCategory,
   upsertCrewCredit,
 } from "@/services/broadcast-production-service";
+import { uploadSportsImage } from "@/services/sports-highlights-service";
 
 export type BroadcastActionState = {
   error?: string;
@@ -40,6 +41,7 @@ function revalidateBroadcastPaths() {
   revalidatePath("/madonna/broadcast");
   revalidatePath("/madonna/sports");
   revalidatePath("/madonna/sports/reel");
+  revalidatePath("/madonna/participate");
 }
 
 const bookingServices = z.enum([
@@ -244,12 +246,16 @@ export async function submitAnnouncementRequestAction(
       .object({
         title: z.string().trim().min(1).max(160),
         body: z.string().trim().min(1).max(2000),
+        airNotes: z.string().trim().max(1000).optional().or(z.literal("")),
+        flyerUrl: z.string().trim().max(500).optional().or(z.literal("")),
         preferredAirDate: z.string().trim().optional().or(z.literal("")),
         submitterRole: z.string().trim().max(80).optional(),
       })
       .safeParse({
         title: formData.get("title"),
         body: formData.get("body"),
+        airNotes: formData.get("airNotes") || "",
+        flyerUrl: formData.get("flyerUrl") || "",
         preferredAirDate: formData.get("preferredAirDate") || "",
         submitterRole: formData.get("submitterRole") || undefined,
       });
@@ -268,12 +274,31 @@ export async function submitAnnouncementRequestAction(
       }
     }
 
+    let flyerUrl = parsed.data.flyerUrl || null;
+    if (flyerUrl && !/^https?:\/\//i.test(flyerUrl)) {
+      return { error: "Image URL must start with http:// or https://." };
+    }
+
+    const flyer = formData.get("flyer");
+    if (flyer instanceof File && flyer.size > 0) {
+      const uploaded = await uploadSportsImage(flyer, user.id, "announcements");
+      if (!uploaded) {
+        return {
+          error:
+            "Image upload failed. Use a PNG, JPG, or WEBP under 4 MB, or paste an image URL instead.",
+        };
+      }
+      flyerUrl = uploaded.publicUrl;
+    }
+
     const result = await createAnnouncementSubmission({
       submitterId: user.id,
       submitterName: personName(user),
       submitterRole: parsed.data.submitterRole,
       title: parsed.data.title,
       body: parsed.data.body,
+      airNotes: parsed.data.airNotes || null,
+      flyerUrl,
       preferredAirDate,
     });
 

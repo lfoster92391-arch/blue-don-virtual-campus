@@ -88,7 +88,7 @@ export default async function KnowledgePage({ searchParams }: KnowledgePageProps
               id="knowledge-q"
               name="q"
               defaultValue={query}
-              placeholder="Bell schedule, IT help, service hours…"
+              placeholder="IT help, service hours, campus calendar…"
               className="flex h-9 w-full rounded-md border border-input bg-transparent py-1 pr-3 pl-9 text-sm"
             />
           </div>

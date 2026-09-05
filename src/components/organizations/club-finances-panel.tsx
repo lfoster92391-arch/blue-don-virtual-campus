@@ -6,14 +6,15 @@ import { CalendarRange, Download, PiggyBank } from "lucide-react";
 
 import {
   addClubLedgerEntryAction,
-  createClubFundraiserAction,
   updateClubFundraiserStatusAction,
   type ClubFinanceActionState,
 } from "@/features/club-finance/actions";
+import { CampusCampaignForm } from "@/components/fundraisers/campus-campaign-form";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { Button } from "@/components/ui/button";
 import {
   ALL_TIME_PERIOD_KEY,
+  campusCampaignHeadline,
   formatCents,
   type ClubFinanceSnapshot,
 } from "@/lib/club-finance";
@@ -23,6 +24,9 @@ const initialState: ClubFinanceActionState = {};
 type ClubFinancesPanelProps = {
   snapshot: ClubFinanceSnapshot;
   canManage: boolean;
+  canPostCampaign?: boolean;
+  organizationType?: string;
+  storageConfigured?: boolean;
 };
 
 function formatDate(value: Date): string {
@@ -41,7 +45,14 @@ function todayInputValue(): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
-export function ClubFinancesPanel({ snapshot, canManage }: ClubFinancesPanelProps) {
+export function ClubFinancesPanel({
+  snapshot,
+  canManage,
+  canPostCampaign,
+  organizationType,
+  storageConfigured = false,
+}: ClubFinancesPanelProps) {
+  const canPost = canPostCampaign ?? canManage;
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -49,11 +60,6 @@ export function ClubFinancesPanel({ snapshot, canManage }: ClubFinancesPanelProp
     addClubLedgerEntryAction,
     initialState,
   );
-  const [fundraiserState, fundraiserAction, fundraiserPending] = useActionState(
-    createClubFundraiserAction,
-    initialState,
-  );
-
   const activeFundraisers = snapshot.fundraisers.filter((f) => f.status === "ACTIVE");
   const isAllTime = snapshot.period.key === ALL_TIME_PERIOD_KEY;
   const periodLabel = snapshot.period.label;
@@ -379,9 +385,12 @@ export function ClubFinancesPanel({ snapshot, canManage }: ClubFinancesPanelProp
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="font-semibold">{f.title}</p>
+                      <p className="font-semibold">
+                        {campusCampaignHeadline(f.kind, f.title)}
+                      </p>
                       <p className="text-xs uppercase tracking-wide text-muted-foreground">
                         {f.status.toLowerCase()}
+                        {f.isPublic ? " · campus headline" : " · club only"}
                       </p>
                     </div>
                     <p className="text-sm font-medium">
@@ -411,7 +420,7 @@ export function ClubFinancesPanel({ snapshot, canManage }: ClubFinancesPanelProp
                       reads $0.00. Tag a deposit above to start tracking it.
                     </p>
                   ) : null}
-                  {canManage && f.status === "ACTIVE" ? (
+                  {canPost && f.status === "ACTIVE" ? (
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Button
                         type="button"
@@ -451,51 +460,17 @@ export function ClubFinancesPanel({ snapshot, canManage }: ClubFinancesPanelProp
           </ul>
         )}
 
-        {canManage ? (
-          <form action={fundraiserAction} className="mt-6 grid gap-3 border-t border-border pt-6 sm:grid-cols-2">
-            <input type="hidden" name="organizationId" value={snapshot.organizationId} />
-            <input type="hidden" name="organizationSlug" value={snapshot.organizationSlug} />
-            <label className="grid gap-1 text-sm sm:col-span-2">
-              <span className="font-medium">New fundraiser title</span>
-              <input
-                name="title"
-                required
-                className="rounded-md border border-border bg-background px-3 py-2"
-                placeholder="Spring merch sale"
-              />
-            </label>
-            <label className="grid gap-1 text-sm sm:col-span-2">
-              <span className="font-medium">Description</span>
-              <input
-                name="description"
-                className="rounded-md border border-border bg-background px-3 py-2"
-                placeholder="Optional details"
-              />
-            </label>
-            <label className="grid gap-1 text-sm">
-              <span className="font-medium">Goal (USD)</span>
-              <input
-                name="goalAmount"
-                type="number"
-                min="1"
-                step="0.01"
-                required
-                className="rounded-md border border-border bg-background px-3 py-2"
-                placeholder="500"
-              />
-            </label>
-            <div className="flex items-end">
-              <Button type="submit" size="sm" disabled={fundraiserPending}>
-                {fundraiserPending ? "Creating…" : "Create fundraiser"}
-              </Button>
-            </div>
-            {fundraiserState.error ? (
-              <p className="text-sm text-destructive sm:col-span-2">{fundraiserState.error}</p>
-            ) : null}
-            {fundraiserState.success ? (
-              <p className="text-sm text-[#2E8B57] sm:col-span-2">{fundraiserState.success}</p>
-            ) : null}
-          </form>
+        {canPost ? (
+          <div className="mt-6 border-t border-border pt-6">
+            <p className="mb-3 text-sm font-medium">Post a campus campaign</p>
+            <CampusCampaignForm
+              organizationId={snapshot.organizationId}
+              organizationSlug={snapshot.organizationSlug}
+              organizationType={organizationType}
+              returnTo="finances"
+              storageConfigured={storageConfigured}
+            />
+          </div>
         ) : null}
       </DashboardCard>
     </div>

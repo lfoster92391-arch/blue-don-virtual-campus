@@ -1,4 +1,5 @@
 import { GuestHome } from "@/components/guest/guest-home";
+import { listPublicCampusCampaigns } from "@/services/club-finance-service";
 import { SCHOOL_HOME_PATH } from "@/config/login-audience";
 import { canManageUsers } from "@/config/roles";
 import { resolveAccessIdentity } from "@/lib/auth/preview";
@@ -34,7 +35,7 @@ async function safe<T>(work: Promise<T>, fallback: T): Promise<T> {
 }
 
 export default async function GuestHomePage() {
-  const [user, hub, announcement, banner, highlights, reports, activeLive, schedule] =
+  const [user, hub, announcement, banner, highlights, reports, activeLive, schedule, campaigns] =
     await Promise.all([
       getCurrentUser(),
       safe(getTodayHubDigest(null), buildEmptyHubDigest()),
@@ -44,6 +45,7 @@ export default async function GuestHomePage() {
       safe(listGameReports({ publishedOnly: true, take: 4 }), []),
       safe(getActiveLiveStream(), null),
       safe(getBroadcastSchedule(), null),
+      safe(listPublicCampusCampaigns({ take: 3 }), []),
     ]);
 
   return (
@@ -60,6 +62,7 @@ export default async function GuestHomePage() {
         activeLive,
         nextAirAt: schedule?.nextAirAt ?? null,
       }}
+      campaigns={campaigns}
       signedInHomeHref={user ? SCHOOL_HOME_PATH : null}
       previewPersona={
         user && canManageUsers(user.role)

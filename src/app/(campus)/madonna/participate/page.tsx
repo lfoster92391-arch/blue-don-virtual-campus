@@ -3,7 +3,6 @@ import {
   ArrowRight,
   Headphones,
   Mail,
-  Megaphone,
   Trophy,
   Users,
 } from "lucide-react";
@@ -12,6 +11,8 @@ import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { MadonnaSectionNav } from "@/components/madonna/madonna-hub-panels";
 import { ShellPage } from "@/components/layout/shell-page";
 import { AnnouncementSubmitForm } from "@/components/media/broadcast-suite-panels";
+import { Button } from "@/components/ui/button";
+import { PageDropdown } from "@/components/ui/page-dropdown";
 import { FOCUS_CLUBS } from "@/config/focused-clubs";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { listClubAudiencesForSender } from "@/services/club-audience-message-service";
@@ -41,17 +42,18 @@ export default async function MadonnaParticipatePage() {
     >
       <MadonnaSectionNav active="participate" />
 
-      <DashboardCard
+      <PageDropdown
+        id="announce"
         title="Submit an announcement"
         description="Ask Broadcasting to read something on the daily show — a club meeting, a fundraiser, a result."
-        icon={<Megaphone className="size-5" />}
+        defaultOpen
       >
         <AnnouncementSubmitForm />
         <p className="mt-3 text-xs text-muted-foreground">
           Submissions land in the Broadcasting control room. The crew decides
           what makes the rundown — nothing goes on air automatically.
         </p>
-      </DashboardCard>
+      </PageDropdown>
 
       <DashboardCard
         title="Cover a game"
@@ -72,19 +74,17 @@ export default async function MadonnaParticipatePage() {
           game, write your report or attach a highlight, and the sports desk
           reviews it before it publishes.
         </p>
-        <div className="mt-4 flex flex-wrap gap-2 text-sm">
-          <Link
-            href="/madonna/sports"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 font-medium text-[#0A2342] transition-colors hover:bg-muted dark:text-white"
-          >
-            Write a game report
-          </Link>
-          <Link
-            href="/madonna/sports/reel"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 font-medium text-[#0A2342] transition-colors hover:bg-muted dark:text-white"
-          >
-            Highlight reel
-          </Link>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button
+            variant="action"
+            nativeButton={false}
+            render={<Link href="/madonna/sports">Write a game report</Link>}
+          />
+          <Button
+            variant="action"
+            nativeButton={false}
+            render={<Link href="/madonna/sports/reel">Highlight reel</Link>}
+          />
         </div>
       </DashboardCard>
 
@@ -158,21 +158,27 @@ export default async function MadonnaParticipatePage() {
         description="A broken laptop, a login problem, or a question nobody has answered."
         icon={<Headphones className="size-5" />}
       >
-        <div className="flex flex-wrap gap-2 text-sm">
-          <Link
-            href="/service-desk"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 font-medium text-[#0A2342] transition-colors hover:bg-muted dark:text-white"
-          >
-            IT Help Desk
-            <ArrowRight className="size-3.5" aria-hidden="true" />
-          </Link>
-          <Link
-            href="/madonna/broadcast"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 font-medium text-[#0A2342] transition-colors hover:bg-muted dark:text-white"
-          >
-            Watch Blue Don Live
-            <ArrowRight className="size-3.5" aria-hidden="true" />
-          </Link>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="action"
+            nativeButton={false}
+            render={
+              <Link href="/service-desk">
+                IT Help Desk
+                <ArrowRight className="size-3.5" aria-hidden="true" />
+              </Link>
+            }
+          />
+          <Button
+            variant="action"
+            nativeButton={false}
+            render={
+              <Link href="/madonna/broadcast">
+                Watch Blue Don Live
+                <ArrowRight className="size-3.5" aria-hidden="true" />
+              </Link>
+            }
+          />
         </div>
       </DashboardCard>
     </ShellPage>

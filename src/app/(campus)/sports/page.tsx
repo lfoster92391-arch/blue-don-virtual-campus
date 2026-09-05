@@ -21,7 +21,7 @@ export default async function SportsPage({ searchParams }: SportsPageProps) {
   const { sport } = await searchParams;
 
   const [data, canManage] = await Promise.all([
-    getSportsHubData(sport ?? null),
+    getSportsHubData(sport ?? null, { viewerId: user.id }),
     canManageSportsDesk(user.id, user.role),
   ]);
 
@@ -54,6 +54,7 @@ export default async function SportsPage({ searchParams }: SportsPageProps) {
         basePath="/sports"
         storageConfigured={isSportsImageStorageConfigured()}
         canManage={canManage}
+        viewerId={user.id}
       />
     </ShellPage>
   );

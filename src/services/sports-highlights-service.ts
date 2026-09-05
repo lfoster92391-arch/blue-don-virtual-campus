@@ -116,6 +116,7 @@ export type SportsHighlightView = {
   credit: string | null;
   isFeatured: boolean;
   publishedAt: Date | null;
+  submittedById: string | null;
   submittedByName: string | null;
   createdAt: Date;
 };
@@ -1054,9 +1055,18 @@ export async function removeGame(input: {
 
 /* -------------------------------------------------------------- highlights */
 
+export function canMutateHighlight(input: {
+  actorId: string;
+  canManage: boolean;
+  submittedById: string | null;
+}): boolean {
+  return input.canManage || input.submittedById === input.actorId;
+}
+
 export async function listHighlights(options?: {
   sportId?: string;
   gameId?: string;
+  submittedById?: string;
   publishedOnly?: boolean;
   take?: number;
 }): Promise<SportsHighlightView[]> {
@@ -1069,6 +1079,7 @@ export async function listHighlights(options?: {
       where: {
         ...(options?.sportId ? { sportId: options.sportId } : {}),
         ...(options?.gameId ? { gameId: options.gameId } : {}),
+        ...(options?.submittedById ? { submittedById: options.submittedById } : {}),
         ...(options?.publishedOnly ? { status: "PUBLISHED" } : {}),
       },
       orderBy: [
@@ -1108,6 +1119,7 @@ export async function listHighlights(options?: {
     credit: row.credit,
     isFeatured: row.isFeatured,
     publishedAt: row.publishedAt,
+    submittedById: row.submittedById,
     submittedByName: row.submittedByName,
     createdAt: row.createdAt,
   }));
@@ -1127,7 +1139,7 @@ export async function createHighlight(input: {
   imagePath?: string | null;
   credit?: string | null;
   isFeatured?: boolean;
-}): Promise<ServiceResult> {
+}): Promise<ServiceResult<{ status: HighlightStatusKey }>> {
   if (!ready()) {
     return { error: "Database unavailable." };
   }
@@ -1169,7 +1181,110 @@ export async function createHighlight(input: {
     });
   }
 
-  return { ok: true };
+  return { ok: true, status: canManage ? "PUBLISHED" : "PENDING" };
+}
+
+export async function updateHighlight(input: {
+  actorId: string;
+  actorName: string;
+  role: CampusRole;
+  highlightId: string;
+  sportId: string;
+  gameId?: string | null;
+  title: string;
+  description?: string | null;
+  kind: HighlightKindKey;
+  videoUrl?: string | null;
+  imageUrl?: string | null;
+  imagePath?: string | null;
+  replaceImage?: boolean;
+  credit?: string | null;
+  isFeatured?: boolean;
+}): Promise<ServiceResult<{ status: HighlightStatusKey; resubmitted: boolean }>> {
+  if (!ready()) {
+    return { error: "Database unavailable." };
+  }
+
+  const existing = await withDatabase((prisma) =>
+    prisma.sportsHighlight.findUnique({
+      where: { id: input.highlightId },
+      select: {
+        id: true,
+        status: true,
+        submittedById: true,
+        isFeatured: true,
+      },
+    }),
+  );
+
+  if (!existing) {
+    return { error: "Highlight not found." };
+  }
+
+  const canManage = await canManageSportsDesk(input.actorId, input.role);
+  if (
+    !canMutateHighlight({
+      actorId: input.actorId,
+      canManage,
+      submittedById: existing.submittedById,
+    })
+  ) {
+    return { error: "You can only edit a highlight you submitted." };
+  }
+
+  const currentStatus = existing.status as HighlightStatusKey;
+  const willResubmit =
+    !canManage &&
+    (currentStatus === "PUBLISHED" || currentStatus === "ARCHIVED");
+  const nextStatus: HighlightStatusKey = willResubmit
+    ? "PENDING"
+    : currentStatus;
+
+  const updated = await withDatabase((prisma) =>
+    prisma.sportsHighlight.update({
+      where: { id: input.highlightId },
+      data: {
+        sportId: input.sportId,
+        gameId: input.gameId || null,
+        title: input.title.trim(),
+        description: input.description?.trim() || null,
+        kind: input.kind,
+        status: nextStatus,
+        publishedAt: nextStatus === "PUBLISHED" ? undefined : null,
+        videoUrl: input.videoUrl?.trim() || null,
+        ...(input.replaceImage
+          ? {
+              imageUrl: input.imageUrl?.trim() || null,
+              imagePath: input.imagePath || null,
+            }
+          : {}),
+        credit: input.credit?.trim() || null,
+        isFeatured: canManage
+          ? (input.isFeatured ?? existing.isFeatured)
+          : willResubmit
+            ? false
+            : existing.isFeatured,
+        reviewedById: willResubmit ? null : undefined,
+        reviewNote: willResubmit ? null : undefined,
+      },
+      select: { id: true },
+    }),
+  );
+
+  if (!updated) {
+    return { error: "Unable to update the highlight." };
+  }
+
+  if (willResubmit) {
+    await notifySportsCrew({
+      fromUserId: input.actorId,
+      title: `Highlight resubmitted: ${input.title.trim()}`,
+      body: `${input.actorName} edited a published highlight. It is back in the review queue.`,
+      href: "/organizations/broadcasting?tab=sports-desk",
+    });
+  }
+
+  return { ok: true, status: nextStatus, resubmitted: willResubmit };
 }
 
 export async function updateHighlightStatus(input: {
@@ -1220,9 +1335,28 @@ export async function removeHighlight(input: {
   role: CampusRole;
   highlightId: string;
 }): Promise<ServiceResult> {
-  if (!(await canManageSportsDesk(input.actorId, input.role))) {
-    return { error: "Only Broadcasting crew can remove highlights." };
+  const existing = await withDatabase((prisma) =>
+    prisma.sportsHighlight.findUnique({
+      where: { id: input.highlightId },
+      select: { id: true, submittedById: true },
+    }),
+  );
+
+  if (!existing) {
+    return { error: "Highlight not found." };
   }
+
+  const canManage = await canManageSportsDesk(input.actorId, input.role);
+  if (
+    !canMutateHighlight({
+      actorId: input.actorId,
+      canManage,
+      submittedById: existing.submittedById,
+    })
+  ) {
+    return { error: "You can only delete a highlight you submitted." };
+  }
+
   await withDatabase((prisma) =>
     prisma.sportsHighlight.deleteMany({ where: { id: input.highlightId } }),
   );
@@ -1591,6 +1725,7 @@ export type SportsHubData = {
   lastGame: SportsGameView | null;
   upcoming: SportsGameView[];
   highlights: SportsHighlightView[];
+  myHighlights: SportsHighlightView[];
   recentGames: SportsGameView[];
   publishedReports: SportsReportView[];
   players: SportsPlayerView[];
@@ -1600,6 +1735,7 @@ export type SportsHubData = {
 /** One round-trip bundle for the Sports hub and the Broadcasting Sports tab. */
 export async function getSportsHubData(
   sportSlug?: string | null,
+  options?: { viewerId?: string },
 ): Promise<SportsHubData> {
   const sports = await listSports();
   const activeSport = sportSlug
@@ -1607,10 +1743,13 @@ export async function getSportsHubData(
     : null;
   const sportId = activeSport?.id;
 
-  const [banner, highlights, recentGames, upcomingAll, publishedReports, players] =
+  const [banner, highlights, myHighlights, recentGames, upcomingAll, publishedReports, players] =
     await Promise.all([
       getSportsBanner(sportId),
       listHighlights({ sportId, publishedOnly: true, take: 24 }),
+      options?.viewerId
+        ? listHighlights({ submittedById: options.viewerId, take: 20 })
+        : Promise.resolve([]),
       listGames({ sportId, pastOnly: true, take: 12 }),
       listGames({ sportId, upcomingOnly: true, take: 12 }),
       listGameReports({ sportId, publishedOnly: true, take: 12 }),
@@ -1623,6 +1762,7 @@ export async function getSportsHubData(
     lastGame: banner.lastGame,
     upcoming: banner.upcoming,
     highlights,
+    myHighlights,
     recentGames,
     publishedReports,
     players,

@@ -60,7 +60,7 @@ const FORM_TEMPLATES = [
     status: "PUBLISHED" as const,
     description: "Parent/guardian acknowledgment of program expectations.",
     content:
-      "As parent or guardian, I support my student's participation in Blue Don Virtual Campus and agree to communicate with advisors regarding attendance and conduct.",
+      "As parent or guardian, I support my student's participation in Madonna High School campus programs and agree to communicate with advisors regarding attendance and conduct.",
     approvalRequired: false,
   },
   {
@@ -92,7 +92,7 @@ const FORM_TEMPLATES = [
     status: "PUBLISHED" as const,
     description: "Permission to use photos, video, and student work in campus media.",
     content:
-      "I grant Madonna High School and Blue Don Virtual Campus permission to use my name, image, likeness, and project work for educational and promotional purposes.",
+      "I grant Madonna High School permission to use my name, image, likeness, and project work for educational and promotional purposes.",
     approvalRequired: false,
   },
   {
@@ -111,9 +111,9 @@ const FORM_TEMPLATES = [
     type: "CUSTOM" as const,
     status: "PUBLISHED" as const,
     description:
-      "Parent controls which of a student's profile fields are visible on Blue Don.",
+      "Parent controls which of a student's profile fields are visible on the Madonna campus site.",
     content:
-      "As parent or guardian, I choose which profile fields may be displayed for my student on Blue Don Virtual Campus. Fields are private by default until I opt in below.",
+      "As parent or guardian, I choose which profile fields may be displayed for my student on the Madonna campus site. Fields are private by default until I opt in below.",
     approvalRequired: false,
   },
   {

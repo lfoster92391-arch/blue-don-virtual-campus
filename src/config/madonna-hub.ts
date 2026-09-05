@@ -43,9 +43,9 @@ export const MADONNA_HUB_SECTIONS: readonly MadonnaHubSection[] = [
     icon: CalendarDays,
     eyebrow: "Right now",
     description:
-      "Your day in one page — the bell schedule, campus weather, and today's announcement from Broadcasting.",
+      "Your day in one page — campus weather and today's announcement from Broadcasting.",
     parentDescription:
-      "What your student's day looks like — bell schedule, campus weather, and today's announcement.",
+      "What your student's day looks like — campus weather and today's announcement.",
   },
   {
     key: "sports",
@@ -76,9 +76,9 @@ export const MADONNA_HUB_SECTIONS: readonly MadonnaHubSection[] = [
     icon: Landmark,
     eyebrow: "School info",
     description:
-      "Bell schedule, calendar, weather station, lunch, and the Madonna archive.",
+      "Calendar, weather station, lunch, and the Madonna archive.",
     parentDescription:
-      "Bell schedule, calendar, lunch on FuelTheDons, agreements, and the parent guide.",
+      "Calendar, lunch on FuelTheDons, agreements, and the parent guide.",
   },
   {
     key: "participate",

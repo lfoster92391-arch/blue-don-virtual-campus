@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Menu } from "lucide-react";
+import { HandHeart, Menu } from "lucide-react";
 
 import { siteConfig } from "@/config/site";
 import { BrandLogo } from "@/components/brand/brand-logo";
@@ -16,11 +16,18 @@ import {
   QuickActionsMenu,
 } from "@/components/shell/profile-menu";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
+import { ViewAsHeaderControl } from "@/components/admin/view-as-header";
 import { Button } from "@/components/ui/button";
 import { useShellStore } from "@/stores/shell-store";
 import type { CampusUser } from "@/types/auth";
 
-export function Header({ user }: { user: CampusUser }) {
+export function Header({
+  user,
+  showViewAs = false,
+}: {
+  user: CampusUser;
+  showViewAs?: boolean;
+}) {
   const { setMobileSidebarOpen } = useShellStore();
 
   return (
@@ -40,10 +47,10 @@ export function Header({ user }: { user: CampusUser }) {
           <BrandLogo variant="emblem" size="xs" href={null} />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-[#0A2342] dark:text-white">
-              {siteConfig.shortName}
+              {siteConfig.institution}
             </p>
             <p className="truncate text-xs text-muted-foreground">
-              {siteConfig.institution}
+              {siteConfig.shortName}
             </p>
           </div>
         </Link>
@@ -51,7 +58,20 @@ export function Header({ user }: { user: CampusUser }) {
         <div className="ml-auto flex flex-1 items-center justify-end gap-2 lg:ml-0 lg:justify-between">
           <CampusClock />
           <div className="flex flex-1 items-center justify-end gap-1 sm:gap-2">
+            <Button
+              variant="action"
+              size="sm"
+              className="h-9 px-3"
+              nativeButton={false}
+              render={
+                <Link href="/madonna/participate">
+                  <HandHeart className="size-4" aria-hidden="true" />
+                  Participate
+                </Link>
+              }
+            />
             <HeaderQuickLinks />
+            {showViewAs ? <ViewAsHeaderControl /> : null}
             <CampusSearch />
             <NotificationsMenu />
             <ThemeToggle />

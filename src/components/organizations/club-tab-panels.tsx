@@ -74,7 +74,12 @@ import type { OrganizationProfile } from "@/config/organization-profiles";
 import { getOrganizationHref } from "@/config/madonna-organizations";
 import { getClubProgress } from "@/services/club-xp-service";
 import type { ClubCalendarEventView } from "@/lib/club-calendar";
-import { formatCents, type ClubFinanceSnapshot } from "@/lib/club-finance";
+import { CampusCampaignForm } from "@/components/fundraisers/campus-campaign-form";
+import {
+  campusCampaignHeadline,
+  formatCents,
+  type ClubFinanceSnapshot,
+} from "@/lib/club-finance";
 import type { ClubInvoiceView } from "@/services/club-invoice-service";
 import type { AcademyMembershipStatus } from "@/generated/prisma/client";
 import type {
@@ -100,6 +105,7 @@ import {
 
 import { AcademyJoinButton } from "@/components/academies/academy-join-button";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
+import { PageDropdown } from "@/components/ui/page-dropdown";
 
 type MemberPreview = {
   user: {
@@ -138,6 +144,8 @@ export type ClubTabPanelsProps = {
   rtmpConfig?: BlueDonLiveRtmpPublicConfig | null;
   financeSnapshot?: ClubFinanceSnapshot | null;
   canManageFinances?: boolean;
+  canPostCampaign?: boolean;
+  flyerStorageConfigured?: boolean;
   clubInvoices?: ClubInvoiceView[];
   canSubmitInvoices?: boolean;
   canReviewInvoices?: boolean;
@@ -291,7 +299,7 @@ function JoinSection({
           ) : workspaceHref !== `/organizations/${card.slug}` ? (
             <Button
               size="sm"
-              variant="secondary"
+              variant="action"
               nativeButton={false}
               render={
                 <Link href={workspaceHref}>
@@ -324,18 +332,21 @@ function OverviewPanel(props: ClubTabPanelsProps) {
     <div className="space-y-8">
       <ClubHero card={card} profile={profile} match={props.match} />
 
-      {isCricut ? <CricutOverviewExtras /> : null}
+      {isCricut ? (
+        <PageDropdown
+          id="cricut-shop"
+          title="Cricut shop"
+          description="Orders, projects, and the club store."
+        >
+          <CricutOverviewExtras />
+        </PageDropdown>
+      ) : null}
 
       {isBroadcasting ? (
-        <DashboardCard
+        <PageDropdown
+          id="next-live"
           title="Next live"
           description="Countdown to the next Blue Don Live."
-          icon={<Megaphone className="size-5" />}
-          status={
-            props.broadcastSchedule?.nextAirAt
-              ? { label: "Scheduled", variant: "info" }
-              : { label: "TBD", variant: "info" }
-          }
         >
           <BroadcastCountdown
             schedule={
@@ -351,22 +362,18 @@ function OverviewPanel(props: ClubTabPanelsProps) {
             canSet={Boolean(props.canManageMedia)}
             compact
           />
-        </DashboardCard>
+        </PageDropdown>
       ) : null}
 
       {isBroadcasting ? (
-        <DashboardCard
+        <PageDropdown
+          id="broadcast-workspace"
           title={isBroadcastCrew ? "Crew workspace" : "Watch Broadcasting"}
           description={
             isBroadcastCrew
               ? "Record, Go Live, Daily Rundown, and the Control Room."
               : "Anyone on campus can watch live and browse past broadcasts."
           }
-          icon={<Megaphone className="size-5" />}
-          status={{
-            label: isBroadcastCrew ? "Crew" : "Audience",
-            variant: "info",
-          }}
         >
           {isBroadcastCrew ? (
             <div className="space-y-3">
@@ -384,7 +391,7 @@ function OverviewPanel(props: ClubTabPanelsProps) {
               />
               <Button
                 size="lg"
-                variant="outline"
+                variant="action"
                 className="h-12 w-full sm:w-auto"
                 nativeButton={false}
                 render={
@@ -435,28 +442,28 @@ function OverviewPanel(props: ClubTabPanelsProps) {
               </div>
             </div>
           )}
-        </DashboardCard>
+        </PageDropdown>
       ) : null}
 
       {isBroadcasting ? (
-        <DashboardCard
-          title="Daily Announcement"
+        <PageDropdown
+          id="daily-announcement"
+          title="Daily announcement"
           description="Today’s message from Broadcasting."
-          icon={<Megaphone className="size-5" />}
         >
           <DailyAnnouncement
             announcement={props.dailyAnnouncement ?? null}
             canManage={Boolean(props.canManageMedia)}
             compact
           />
-        </DashboardCard>
+        </PageDropdown>
       ) : null}
 
       {isBroadcasting && isBroadcastCrew ? (
-        <DashboardCard
-          title="Daily Rundown"
+        <PageDropdown
+          id="daily-rundown"
+          title="Daily rundown"
           description="Shared show script for this morning’s broadcast."
-          icon={<Megaphone className="size-5" />}
         >
           <p className="text-sm text-muted-foreground">
             Fill hosts, discussion, events, and lunch — then copy or print the
@@ -464,8 +471,7 @@ function OverviewPanel(props: ClubTabPanelsProps) {
           </p>
           <Button
             className="mt-3"
-            size="sm"
-            variant="outline"
+            variant="action"
             nativeButton={false}
             render={
               <Link href={`/organizations/broadcasting?tab=script`}>
@@ -473,7 +479,7 @@ function OverviewPanel(props: ClubTabPanelsProps) {
               </Link>
             }
           />
-        </DashboardCard>
+        </PageDropdown>
       ) : null}
 
       {clubProgress ? (
@@ -484,57 +490,76 @@ function OverviewPanel(props: ClubTabPanelsProps) {
         />
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <DashboardCard title="Advisor" icon={<GraduationCap className="size-5" />}>
-          <p className="text-sm text-muted-foreground">
-            {profile.advisor ?? "Advisor information coming soon."}
-          </p>
-        </DashboardCard>
-
-        <DashboardCard title="Meeting times" icon={<Calendar className="size-5" />}>
-          <p className="text-sm text-muted-foreground">
-            {profile.meetingSchedule ?? "See club announcements for meeting times."}
-          </p>
-        </DashboardCard>
-
-        <DashboardCard title="Skills you'll learn">
-          <div className="flex flex-wrap gap-2">
-            {card.skills.map((skill) => (
-              <span
-                key={skill}
-                className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground"
-              >
-                {skill}
-              </span>
-            ))}
+      <PageDropdown
+        id="about-club"
+        title="About this club"
+        description="Advisor, meeting times, and what members learn."
+      >
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-semibold text-[#0A2342] dark:text-white">
+              <GraduationCap className="size-4" aria-hidden="true" />
+              Advisor
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {profile.advisor ?? "Advisor information coming soon."}
+            </p>
           </div>
-        </DashboardCard>
-
-        {!FOCUSED_CLUBS_MODE ? (
-          <DashboardCard title="XP opportunities">
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              {card.xpOpportunities.map((item) => (
-                <li key={item}>• {item}</li>
-              ))}
-            </ul>
-          </DashboardCard>
-        ) : null}
-
-        {profile.careerConnections && profile.careerConnections.length > 0 ? (
-          <DashboardCard title="Career connections" className="lg:col-span-2">
-            <div className="flex flex-wrap gap-2">
-              {profile.careerConnections.map((career) => (
+          <div>
+            <p className="flex items-center gap-2 text-sm font-semibold text-[#0A2342] dark:text-white">
+              <Calendar className="size-4" aria-hidden="true" />
+              Meeting times
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {profile.meetingSchedule ?? "See club announcements for meeting times."}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-[#0A2342] dark:text-white">
+              Skills you&apos;ll learn
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {card.skills.map((skill) => (
                 <span
-                  key={career}
-                  className="rounded-full border border-[#2F80ED]/20 bg-[#2F80ED]/5 px-3 py-1 text-sm"
+                  key={skill}
+                  className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground"
                 >
-                  {career}
+                  {skill}
                 </span>
               ))}
             </div>
-          </DashboardCard>
-        ) : null}
-      </div>
+          </div>
+          {!FOCUSED_CLUBS_MODE ? (
+            <div>
+              <p className="text-sm font-semibold text-[#0A2342] dark:text-white">
+                XP opportunities
+              </p>
+              <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
+                {card.xpOpportunities.map((item) => (
+                  <li key={item}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {profile.careerConnections && profile.careerConnections.length > 0 ? (
+            <div className="lg:col-span-2">
+              <p className="text-sm font-semibold text-[#0A2342] dark:text-white">
+                Career connections
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {profile.careerConnections.map((career) => (
+                  <span
+                    key={career}
+                    className="rounded-full border border-[#2F80ED]/20 bg-[#2F80ED]/5 px-3 py-1 text-sm"
+                  >
+                    {career}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </PageDropdown>
 
       {showJoinSection ? <JoinSection {...props} /> : null}
     </div>
@@ -890,6 +915,9 @@ function FinancesPanel(props: ClubTabPanelsProps) {
       <ClubFinancesPanel
         snapshot={props.financeSnapshot}
         canManage={props.canManageFinances ?? false}
+        canPostCampaign={props.canPostCampaign}
+        organizationType={props.organizationType}
+        storageConfigured={props.flyerStorageConfigured}
       />
     </div>
   );
@@ -1145,20 +1173,19 @@ function MediaPanel(props: ClubTabPanelsProps) {
 
 function FundraisersPanel(props: ClubTabPanelsProps) {
   const fundraisers = props.financeSnapshot?.fundraisers ?? [];
+  const canPost = props.canPostCampaign ?? props.canManageFinances ?? false;
 
   return (
     <div className="space-y-6">
       <DashboardCard
         title="Fundraiser goals"
-        description="Cash raised from tagged ledger deposits"
+        description="Posted campus-wide when public. Cash raised from tagged ledger deposits."
         icon={<Megaphone className="size-5" />}
       >
         {fundraisers.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No fundraisers yet.
-            {props.canManageFinances
-              ? " Create one on the Finances tab."
-              : ""}
+            {canPost ? " Post one below — it titles across school home." : ""}
           </p>
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2">
@@ -1170,14 +1197,21 @@ function FundraisersPanel(props: ClubTabPanelsProps) {
               return (
                 <li key={f.id} className="rounded-xl border border-border p-4">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="font-semibold">{f.title}</p>
+                    <p className="font-semibold">
+                      {campusCampaignHeadline(f.kind, f.title)}
+                    </p>
                     <span className="text-xs uppercase text-muted-foreground">
                       {f.status.toLowerCase()}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm">
-                    ${(f.raisedCents / 100).toFixed(2)} / ${(f.goalCents / 100).toFixed(2)}
-                  </p>
+                  {f.pricesText ? (
+                    <p className="mt-1 text-sm">{f.pricesText}</p>
+                  ) : (
+                    <p className="mt-1 text-sm">
+                      ${(f.raisedCents / 100).toFixed(2)} / $
+                      {(f.goalCents / 100).toFixed(2)}
+                    </p>
+                  )}
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full rounded-full bg-[#2F80ED]"
@@ -1189,6 +1223,13 @@ function FundraisersPanel(props: ClubTabPanelsProps) {
                       Nothing tagged to this fundraiser yet.
                     </p>
                   ) : null}
+                  <Button
+                    className="mt-3"
+                    size="sm"
+                    variant="outline"
+                    nativeButton={false}
+                    render={<Link href={`/fundraisers/${f.id}`}>Open post</Link>}
+                  />
                 </li>
               );
             })}
@@ -1201,6 +1242,21 @@ function FundraisersPanel(props: ClubTabPanelsProps) {
           </Link>
         } />
       </DashboardCard>
+
+      {canPost ? (
+        <DashboardCard
+          title="Post a fundraiser or event"
+          description="Headline goes on school home and Fan & Family."
+        >
+          <CampusCampaignForm
+            organizationId={props.organizationId}
+            organizationSlug={props.organizationSlug}
+            organizationType={props.organizationType}
+            returnTo="fundraisers"
+            storageConfigured={props.flyerStorageConfigured ?? false}
+          />
+        </DashboardCard>
+      ) : null}
 
       <WishlistSection
         title="Club wishlist"
@@ -1330,6 +1386,7 @@ function SportsPanel(props: ClubTabPanelsProps) {
       extraParams={{ tab: "sports" }}
       storageConfigured={Boolean(props.sportsStorageConfigured)}
       canManage={Boolean(props.canManageMedia)}
+      viewerId={props.currentUserId}
     />
   );
 }

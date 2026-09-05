@@ -51,7 +51,7 @@ export default async function AdminStudentsPage() {
   return (
     <ShellPage
       title="Students control center"
-      description="Create accounts, assign club roles, message students, preview what they see, and reset passwords."
+      description="Create student, coach, faculty, parent, or staff accounts, assign club roles, message students, preview what they see, and reset passwords."
       actions={
         <div className="flex flex-wrap gap-2">
           <Button
@@ -198,7 +198,7 @@ export default async function AdminStudentsPage() {
           <div className="rounded-xl border border-dashed border-border px-6 py-12 text-center">
             <p className="font-medium text-foreground">No students yet</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Create the first student account above.
+              Create the first account above.
             </p>
           </div>
         )}

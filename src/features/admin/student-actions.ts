@@ -13,8 +13,10 @@ import { isSchoolEmail, normalizeAuthEmail, SCHOOL_EMAIL_DOMAIN } from "@/lib/au
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  ADMIN_CREATABLE_ROLES,
   hasPermission,
   ORG_MEMBERSHIP_ROLES,
+  ROLE_LABELS,
   type OrgMembershipRole,
 } from "@/config/roles";
 import { assignFocusClubMembership } from "@/services/org-membership-service";
@@ -50,6 +52,7 @@ const createStudentSchema = z
     confirmPassword: z.string(),
     firstName: z.string().trim().min(1, "First name is required."),
     lastName: z.string().trim().min(1, "Last name is required."),
+    role: z.enum(ADMIN_CREATABLE_ROLES).default("student"),
     clubSlug: z.enum(FOCUS_CLUB_SLUGS).optional(),
     orgRole: z
       .enum(ORG_MEMBERSHIP_ROLES as [OrgMembershipRole, ...OrgMembershipRole[]])
@@ -72,7 +75,7 @@ export async function createStudentWithClubAction(
   const admin = await requireCompleteProfile();
 
   if (!hasPermission(admin.role, "users:manage")) {
-    return { error: "You do not have permission to create student accounts." };
+    return { error: "You do not have permission to create user accounts." };
   }
 
   if (!isSupabaseAdminConfigured()) {
@@ -91,6 +94,7 @@ export async function createStudentWithClubAction(
     confirmPassword: formData.get("confirmPassword"),
     firstName: formData.get("firstName"),
     lastName: formData.get("lastName"),
+    role: formData.get("role") || "student",
     clubSlug: clubRaw || undefined,
     orgRole: roleRaw || undefined,
   });
@@ -118,7 +122,7 @@ export async function createStudentWithClubAction(
     password: parsed.data.password,
     email_confirm: true,
     user_metadata: {
-      role: "student",
+      role: parsed.data.role,
       first_name: parsed.data.firstName,
       last_name: parsed.data.lastName,
       display_name: displayName,
@@ -137,7 +141,7 @@ export async function createStudentWithClubAction(
   const profile = await createCampusUser({
     id: data.user.id,
     email,
-    role: "student",
+    role: parsed.data.role,
     firstName: parsed.data.firstName,
     lastName: parsed.data.lastName,
   });
@@ -169,7 +173,7 @@ export async function createStudentWithClubAction(
     ? ` Heads up: this is an outside address, not @${SCHOOL_EMAIL_DOMAIN}. The account works, but they cannot reset it through school mail.`
     : "";
   return {
-    success: `Created ${profile.displayName} (${email}). They can sign in with the temporary password.${clubNote}${emailNote}`,
+    success: `Created ${ROLE_LABELS[parsed.data.role].toLowerCase()} ${profile.displayName} (${email}). They can sign in with the temporary password.${clubNote}${emailNote}`,
   };
 }
 

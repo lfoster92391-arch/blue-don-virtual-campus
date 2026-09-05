@@ -16,7 +16,7 @@ export default async function ConstitutionPage() {
   return (
     <ShellPage
       title="Campus Constitution"
-      description="Governance charter for Blue Don Virtual Campus programs at Madonna High School."
+      description="Governance charter for Madonna High School campus programs."
     >
       <Button
         variant="ghost"
@@ -32,7 +32,7 @@ export default async function ConstitutionPage() {
             Article I — Mission
           </h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Blue Don Virtual Campus exists to help students choose their path and
+            Madonna High School exists to help students choose their path and
             build their future through academy programs, service, and accountable
             participation in campus life.
           </p>

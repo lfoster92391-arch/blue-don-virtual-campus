@@ -50,6 +50,8 @@ export type BroadcastAnnouncementSubmissionView = {
   submitterRole: string | null;
   title: string;
   body: string;
+  airNotes: string | null;
+  flyerUrl: string | null;
   preferredAirDate: Date | null;
   status: "PENDING" | "APPROVED" | "DECLINED" | "AIRED";
   reviewNote: string | null;
@@ -390,6 +392,8 @@ export async function createAnnouncementSubmission(input: {
   submitterRole?: string | null;
   title: string;
   body: string;
+  airNotes?: string | null;
+  flyerUrl?: string | null;
   preferredAirDate?: Date | null;
 }): Promise<{ id: string } | { error: string }> {
   if (!isDatabaseConfigured() || !isPrismaReady()) {
@@ -410,6 +414,8 @@ export async function createAnnouncementSubmission(input: {
         submitterRole: input.submitterRole?.trim() || null,
         title: input.title.trim(),
         body: input.body.trim(),
+        airNotes: input.airNotes?.trim() || null,
+        flyerUrl: input.flyerUrl?.trim() || null,
         preferredAirDate: input.preferredAirDate ?? null,
         status: "PENDING",
       },
@@ -470,6 +476,8 @@ export async function listAnnouncementSubmissions(options?: {
     submitterRole: row.submitterRole,
     title: row.title,
     body: row.body,
+    airNotes: row.airNotes,
+    flyerUrl: row.flyerUrl,
     preferredAirDate: row.preferredAirDate,
     status: row.status,
     reviewNote: row.reviewNote,

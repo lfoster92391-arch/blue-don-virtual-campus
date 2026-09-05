@@ -64,7 +64,7 @@ export default async function PublicCareerPortfolioPage({
       </main>
 
       <footer className="border-t border-border px-4 py-6 text-center text-xs text-muted-foreground">
-        Powered by {siteConfig.name} · {siteConfig.institution}
+        {siteConfig.institution} · {siteConfig.shortName}
       </footer>
     </div>
   );

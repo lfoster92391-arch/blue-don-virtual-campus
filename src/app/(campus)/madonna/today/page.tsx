@@ -1,14 +1,14 @@
 import Link from "next/link";
-import { CalendarDays, Clock, Cloud, Landmark, Megaphone } from "lucide-react";
+import { CalendarDays, Cloud, Landmark, Megaphone } from "lucide-react";
 
-import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { FuelTheDonsRow } from "@/components/lunch/fuel-the-dons-link";
 import {
   MadonnaHubHeader,
   MadonnaSectionNav,
   WhatsHappening,
 } from "@/components/madonna/madonna-hub-panels";
-import { BellScheduleWidget } from "@/components/school-hub/bell-schedule-widget";
+import { Button } from "@/components/ui/button";
+import { PageDropdown } from "@/components/ui/page-dropdown";
 import { CAMPUS_WEATHER_LOCATION } from "@/config/campus-weather";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { getTodaysBroadcastAnnouncement } from "@/services/broadcast-announcement-service";
@@ -24,7 +24,7 @@ import { getCurrentOrNextGame } from "@/services/sports-highlights-service";
 export const metadata = {
   title: "Today at Madonna",
   description:
-    "Today's bell schedule, campus weather, and the announcement from Broadcasting.",
+    "Campus weather and the announcement from Broadcasting.",
 };
 
 /** Soft-fail wrapper — a missing panel beats a 500 on a daily-use page. */
@@ -57,7 +57,7 @@ export default async function MadonnaTodayPage() {
   const history = getTodayInMadonnaHistory(hub.today);
 
   return (
-    <section className="flex flex-1 flex-col gap-6">
+    <section className="flex flex-1 flex-col gap-4">
       <MadonnaHubHeader
         firstName={firstName}
         dateLabel={hub.dateLabel}
@@ -66,21 +66,17 @@ export default async function MadonnaTodayPage() {
         subtitle={
           isParent
             ? "What your student's day looks like at Madonna today."
-            : "Your day at Madonna — where you are in the schedule, and what the campus is saying."
+            : "Your day at Madonna — weather, lunch, and what the campus is saying."
         }
       />
 
       <MadonnaSectionNav active="today" />
 
-      <DashboardCard
+      <PageDropdown
+        id="announcement"
         title="Today's announcement"
         description="The daily message from Broadcasting."
-        icon={<Megaphone className="size-5" />}
-        status={
-          announcement
-            ? { label: "Posted", variant: "success" }
-            : { label: "Not posted yet", variant: "info" }
-        }
+        eyebrow="Broadcasting"
         actions={
           <Link
             href="/madonna/broadcast"
@@ -92,7 +88,11 @@ export default async function MadonnaTodayPage() {
       >
         {announcement ? (
           <div>
-            <p className="font-semibold text-[#0A2342] dark:text-white">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#C9A227]">
+              <Megaphone className="size-3.5" aria-hidden="true" />
+              Posted
+            </p>
+            <p className="mt-2 font-semibold text-[#0A2342] dark:text-white">
               {announcement.title}
             </p>
             <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
@@ -114,32 +114,32 @@ export default async function MadonnaTodayPage() {
             appears here the moment they do — nothing is filled in for them.
           </p>
         )}
-      </DashboardCard>
+      </PageDropdown>
 
-      <DashboardCard
-        title="Bell schedule"
-        description={
-          hub.isSchoolDay
-            ? `${hub.schoolYear} · Regular bell schedule`
-            : "Weekend — no regular class periods"
-        }
-        icon={<Clock className="size-5" />}
+      <PageDropdown
+        id="happening"
+        title="What's happening"
+        description="The next game and the next broadcast."
       >
-        <BellScheduleWidget schedule={hub.bell} isSchoolDay={hub.isSchoolDay} />
-      </DashboardCard>
+        <WhatsHappening
+          nextGame={nextGame}
+          activeLiveTitle={activeLive?.title ?? null}
+          nextAirAt={schedule?.nextAirAt ?? null}
+        />
+      </PageDropdown>
 
-      <WhatsHappening
-        nextGame={nextGame}
-        activeLiveTitle={activeLive?.title ?? null}
-        nextAirAt={schedule?.nextAirAt ?? null}
-      />
+      <PageDropdown
+        id="lunch"
+        title="Lunch"
+        description="Menus and ordering on FuelTheDons."
+      >
+        <FuelTheDonsRow />
+      </PageDropdown>
 
-      <FuelTheDonsRow />
-
-      <DashboardCard
+      <PageDropdown
+        id="weather"
         title="Campus weather"
         description={`Live conditions for ${CAMPUS_WEATHER_LOCATION.city}, ${CAMPUS_WEATHER_LOCATION.state}.`}
-        icon={<Cloud className="size-5" />}
         actions={
           <Link
             href="/weather"
@@ -151,7 +151,8 @@ export default async function MadonnaTodayPage() {
       >
         {snapshot ? (
           <div>
-            <p className="text-2xl font-semibold tabular-nums text-[#0A2342] dark:text-white">
+            <p className="flex items-center gap-2 text-2xl font-semibold tabular-nums text-[#0A2342] dark:text-white">
+              <Cloud className="size-5 text-[#2F80ED]" aria-hidden="true" />
               {snapshot.temperatureF}°F
               <span className="ml-2 text-base font-medium text-muted-foreground">
                 {snapshot.conditionLabel}
@@ -173,12 +174,12 @@ export default async function MadonnaTodayPage() {
               : hub.weather.message}
           </p>
         )}
-      </DashboardCard>
+      </PageDropdown>
 
-      <DashboardCard
+      <PageDropdown
+        id="madonna-history"
         title="Today in Madonna history"
         description="Moments from the Blue Don story that share today's date."
-        icon={<Landmark className="size-5" />}
         actions={
           <Link
             href="/history"
@@ -196,7 +197,8 @@ export default async function MadonnaTodayPage() {
                 className="rounded-xl border border-border bg-card px-4 py-3.5"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-semibold text-[#0A2342] dark:text-white">
+                  <p className="flex items-center gap-2 font-semibold text-[#0A2342] dark:text-white">
+                    <Landmark className="size-4 shrink-0 text-[#C9A227]" aria-hidden="true" />
                     {entry.title}
                   </p>
                   {entry.year ? (
@@ -216,22 +218,24 @@ export default async function MadonnaTodayPage() {
             Nothing recorded for today&apos;s date yet.
           </p>
         )}
-      </DashboardCard>
+      </PageDropdown>
 
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link
-          href="/calendar"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 font-medium text-[#0A2342] transition-colors hover:bg-muted dark:text-white"
-        >
-          <CalendarDays className="size-3.5" aria-hidden="true" />
-          Campus calendar
-        </Link>
-        <Link
-          href="/home"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 font-medium text-[#0A2342] transition-colors hover:bg-muted dark:text-white"
-        >
-          Your Command Center
-        </Link>
+      <div className="flex flex-wrap gap-3">
+        <Button
+          variant="action"
+          nativeButton={false}
+          render={
+            <Link href="/calendar">
+              <CalendarDays className="size-3.5" aria-hidden="true" />
+              Campus calendar
+            </Link>
+          }
+        />
+        <Button
+          variant="action"
+          nativeButton={false}
+          render={<Link href="/home">Your Command Center</Link>}
+        />
       </div>
     </section>
   );

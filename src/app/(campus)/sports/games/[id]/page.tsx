@@ -27,6 +27,7 @@ import {
 } from "@/config/sports-highlights";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import {
+  canManageSportsDesk,
   canManageTeamRoster,
   getGame,
   isSportsImageStorageConfigured,
@@ -50,15 +51,27 @@ export default async function GameDetailPage({ params }: GamePageProps) {
     notFound();
   }
 
-  const [canManage, highlights, reports, players, stats, sports] =
+  const [canManage, canManageDesk, highlights, myHighlights, reports, players, stats, sports] =
     await Promise.all([
       canManageTeamRoster(user.id, user.role),
+      canManageSportsDesk(user.id, user.role),
       listHighlights({ gameId: game.id, publishedOnly: true }),
+      listHighlights({ gameId: game.id, submittedById: user.id }),
       listGameReports({ gameId: game.id, publishedOnly: true }),
       listPlayers({ sportId: game.sportId }),
       listPlayerStats({ gameId: game.id }),
       listSports(),
     ]);
+  const highlightManage = {
+    viewerId: user.id,
+    canManage: canManageDesk,
+    sports,
+    games: [game],
+    storageConfigured: isSportsImageStorageConfigured(),
+  };
+  const myOpenHighlights = myHighlights.filter(
+    (highlight) => highlight.status !== "PUBLISHED",
+  );
 
   // Status, not the clock — a postponed game still wants a preview form.
   const isUpcoming = game.status === "SCHEDULED" || game.status === "POSTPONED";
@@ -170,6 +183,7 @@ export default async function GameDetailPage({ params }: GamePageProps) {
         <HighlightGrid
           highlights={highlights}
           emptyLabel="No highlights published for this game yet."
+          manage={highlightManage}
         />
       </DashboardCard>
 
@@ -251,12 +265,27 @@ export default async function GameDetailPage({ params }: GamePageProps) {
             sports={sports}
             games={[game]}
             storageConfigured={isSportsImageStorageConfigured()}
-            canManage={canManage}
+            canManage={canManageDesk}
             defaultSportId={game.sportId}
             defaultGameId={game.id}
           />
         </DashboardCard>
       </div>
+
+      {myOpenHighlights.length > 0 ? (
+        <DashboardCard
+          title="Your highlight submissions"
+          description="Pending or archived items for this game — edit the text, replace or remove the photo, or delete."
+          icon={<Film className="size-5" />}
+        >
+          <HighlightGrid
+            highlights={myOpenHighlights}
+            emptyLabel="No open submissions."
+            showStatus
+            manage={highlightManage}
+          />
+        </DashboardCard>
+      ) : null}
     </ShellPage>
   );
 }

@@ -38,7 +38,7 @@ export default function CommunityImpactPage() {
       </main>
 
       <footer className="border-t border-border px-4 py-6 text-center text-xs text-muted-foreground">
-        Open House ready · Powered by {siteConfig.name}
+        Open House ready · {siteConfig.institution}
       </footer>
     </div>
   );

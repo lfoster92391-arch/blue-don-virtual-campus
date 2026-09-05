@@ -29,6 +29,15 @@ export const CAMPUS_ROLES: CampusRole[] = [
   "counselor",
 ];
 
+/** Roles Lisa can provision from Admin → Students. Faculty maps to `teacher`. */
+export const ADMIN_CREATABLE_ROLES = [
+  "student",
+  "coach",
+  "teacher",
+  "parent",
+  "staff",
+] as const satisfies readonly CampusRole[];
+
 export const ORG_MEMBERSHIP_ROLES: OrgMembershipRole[] = [
   "president",
   "vice_president",

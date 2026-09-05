@@ -8,6 +8,7 @@ import { LiveNowPanel } from "@/components/media/live-now-panel";
 import { VideoGrid } from "@/components/media/video-grid";
 import { VideoUploadForm } from "@/components/media/video-upload-form";
 import { SportsAudienceSections } from "@/components/sports/sports-sections";
+import { Button } from "@/components/ui/button";
 import { CAMPUS_MEDIA_MAX_LABEL } from "@/config/campus-video";
 import { CAMPUS_TEAM_NAME } from "@/config/sports-highlights";
 import { requireCompleteProfile } from "@/lib/auth/session";
@@ -39,6 +40,7 @@ const EMPTY_SPORTS_DATA: SportsHubData = {
   lastGame: null,
   upcoming: [],
   highlights: [],
+  myHighlights: [],
   recentGames: [],
   publishedReports: [],
   players: [],
@@ -65,7 +67,7 @@ export default async function MadonnaSportsPage({
 
   const [sportsData, videos, canManageMedia, canManageDesk, activeLive, schedule] =
     await Promise.all([
-      safe(getSportsHubData(sport ?? null), EMPTY_SPORTS_DATA),
+      safe(getSportsHubData(sport ?? null, { viewerId: user.id }), EMPTY_SPORTS_DATA),
       safe(listSportsRecapVideos({ take: 200 }), []),
       safe(canManageCampusMedia(user.id, user.role), false),
       safe(canManageSportsDesk(user.id, user.role), false),
@@ -114,6 +116,7 @@ export default async function MadonnaSportsPage({
         basePath="/madonna/sports"
         storageConfigured={isSportsImageStorageConfigured()}
         canManage={canManageDesk}
+        viewerId={user.id}
       />
 
       {canManageMedia ? (
@@ -165,21 +168,27 @@ export default async function MadonnaSportsPage({
         />
       </DashboardCard>
 
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link
-          href="/sports"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 font-medium text-[#0A2342] transition-colors hover:bg-muted dark:text-white"
-        >
-          Full Blue Don Sports hub
-          <ArrowRight className="size-3.5" aria-hidden="true" />
-        </Link>
-        <Link
-          href="/madonna/participate"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 font-medium text-[#0A2342] transition-colors hover:bg-muted dark:text-white"
-        >
-          Cover a game
-          <ArrowRight className="size-3.5" aria-hidden="true" />
-        </Link>
+      <div className="flex flex-wrap gap-3">
+        <Button
+          variant="action"
+          nativeButton={false}
+          render={
+            <Link href="/sports">
+              Full Blue Don Sports hub
+              <ArrowRight className="size-3.5" aria-hidden="true" />
+            </Link>
+          }
+        />
+        <Button
+          variant="action"
+          nativeButton={false}
+          render={
+            <Link href="/madonna/participate">
+              Cover a game
+              <ArrowRight className="size-3.5" aria-hidden="true" />
+            </Link>
+          }
+        />
       </div>
     </ShellPage>
   );

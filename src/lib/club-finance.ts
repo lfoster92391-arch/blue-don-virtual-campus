@@ -17,6 +17,55 @@ export type ClubLedgerEntryView = {
   createdAt: Date;
 };
 
+export const CAMPUS_CAMPAIGN_KINDS = [
+  "CLUB_FUNDRAISER",
+  "CLUB_EVENT",
+  "CLASS_FUNDRAISER",
+  "CLASS_EVENT",
+  "SCHOOL_FUNDRAISER",
+  "SCHOOL_EVENT",
+  "TEAM_FUNDRAISER",
+  "TEAM_EVENT",
+] as const;
+
+export type CampusCampaignKind = (typeof CAMPUS_CAMPAIGN_KINDS)[number];
+
+export const CAMPUS_CAMPAIGN_KIND_LABELS: Record<CampusCampaignKind, string> = {
+  CLUB_FUNDRAISER: "Club fundraiser",
+  CLUB_EVENT: "Club event",
+  CLASS_FUNDRAISER: "Class fundraiser",
+  CLASS_EVENT: "Class event",
+  SCHOOL_FUNDRAISER: "School fundraiser",
+  SCHOOL_EVENT: "School event",
+  TEAM_FUNDRAISER: "Team fundraiser",
+  TEAM_EVENT: "Team event",
+};
+
+export function isCampusCampaignKind(value: string): value is CampusCampaignKind {
+  return (CAMPUS_CAMPAIGN_KINDS as readonly string[]).includes(value);
+}
+
+export function defaultCampaignKind(orgType: string): CampusCampaignKind {
+  switch (orgType) {
+    case "CLASS":
+      return "CLASS_FUNDRAISER";
+    case "TEAM":
+      return "TEAM_FUNDRAISER";
+    case "ACADEMY":
+    case "DEPARTMENT":
+      return "SCHOOL_FUNDRAISER";
+    default:
+      return "CLUB_FUNDRAISER";
+  }
+}
+
+export function campusCampaignHeadline(
+  kind: CampusCampaignKind,
+  title: string,
+): string {
+  return `${CAMPUS_CAMPAIGN_KIND_LABELS[kind]}: ${title}`;
+}
+
 export type ClubFundraiserView = {
   id: string;
   title: string;
@@ -29,9 +78,45 @@ export type ClubFundraiserView = {
   /** Tagged ledger entries all-time. Zero means nothing was ever tagged. */
   taggedEntryCount: number;
   status: ClubFundraiserStatus;
+  kind: CampusCampaignKind;
+  flyerUrl: string | null;
+  linkUrl: string | null;
+  pricesText: string | null;
   startsAt: Date | null;
   endsAt: Date | null;
+  arrivesAt: Date | null;
+  pickupLocation: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  raisingFor: string | null;
+  isPublic: boolean;
+  organizationName?: string;
+  organizationSlug?: string;
   createdAt: Date;
+};
+
+/** Public landing headline — ISO dates so guest/home can stay server components. */
+export type CampusCampaignBannerView = {
+  id: string;
+  headline: string;
+  title: string;
+  kindLabel: string;
+  description: string | null;
+  flyerUrl: string | null;
+  linkUrl: string | null;
+  pricesText: string | null;
+  orderOpensAt: string | null;
+  orderClosesAt: string | null;
+  arrivesAt: string | null;
+  pickupLocation: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  raisingFor: string | null;
+  organizationName: string;
+  organizationSlug: string;
+  href: string;
 };
 
 /**

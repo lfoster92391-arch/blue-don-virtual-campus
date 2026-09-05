@@ -7,7 +7,7 @@ export function PageFooter() {
         <p className="font-medium text-foreground/80">
           {siteConfig.institution}
         </p>
-        <p>{siteConfig.shortName} Campus</p>
+        <p>Home of the Blue Dons</p>
       </div>
     </footer>
   );

@@ -27,7 +27,7 @@ export const MODULE_SHELLS: Record<string, ModuleShellConfig> = {
     slug: "hub",
     title: "School Hub",
     description:
-      "Announcements, bell schedule, lunch menu, directory, and school resources.",
+      "Announcements, lunch menu, directory, and school resources.",
     phase: "17.1",
     pillar: "School Operations",
     relatedLinks: [

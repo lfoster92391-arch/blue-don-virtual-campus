@@ -19,6 +19,8 @@ import type { BlueDonOSViewModel } from "@/services/campus-os-service";
 import type { ClubOpsPulse } from "@/services/club-ops-pulse-service";
 import type { HubDigest } from "@/services/school-hub-service";
 import type { StudentContext } from "@/services/student-context-service";
+import type { CampusRole } from "@/config/roles";
+import type { ViewAsPersona } from "@/config/view-as";
 import type { CampusUser } from "@/types/auth";
 import type { ReactNode } from "react";
 
@@ -33,6 +35,9 @@ type BlueDonOSProps = {
   tasks?: ClubStudentTaskView[];
   opsPulse?: ClubOpsPulse | null;
   children?: ReactNode;
+  viewRole?: CampusRole;
+  previewPersona?: ViewAsPersona | null;
+  previewName?: string | null;
 };
 
 export function BlueDonOS({
@@ -46,6 +51,9 @@ export function BlueDonOS({
   tasks = [],
   opsPulse = null,
   children,
+  viewRole,
+  previewPersona,
+  previewName,
 }: BlueDonOSProps) {
   if (FOCUSED_CLUBS_MODE) {
     return (
@@ -57,6 +65,9 @@ export function BlueDonOS({
         meetings={meetings}
         tasks={tasks}
         opsPulse={opsPulse}
+        viewRole={viewRole}
+        previewPersona={previewPersona}
+        previewName={previewName}
       >
         {children}
       </TodayAtMadonna>
@@ -78,7 +89,7 @@ export function BlueDonOS({
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="space-y-8 xl:col-span-2">
-          <QuickActions context={context} role={user.role} />
+          <QuickActions context={context} role={viewRole ?? user.role} />
           <TodayInMadonnaHistoryWidget date={digest.today} />
           <DailyDiscovery date={digest.today} />
           <CampusFeed />

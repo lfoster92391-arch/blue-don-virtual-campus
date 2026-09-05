@@ -136,6 +136,7 @@ export function ImageField({
   storageConfigured,
   currentUrl,
   hint,
+  idPrefix,
 }: {
   label: string;
   fileName?: string;
@@ -143,9 +144,11 @@ export function ImageField({
   storageConfigured: boolean;
   currentUrl?: string | null;
   hint?: string;
+  idPrefix?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const guard = useUploadGuard({ inputRef });
+  const fileId = `${idPrefix ?? "sports"}-${fileName}`;
 
   return (
     <div className="space-y-2 rounded-lg border border-dashed border-border p-3">
@@ -157,29 +160,29 @@ export function ImageField({
           <img
             src={currentUrl}
             alt=""
-            className="size-12 rounded-md bg-white object-contain p-0.5 ring-1 ring-border"
+            className="size-14 rounded-md bg-white object-contain p-0.5 ring-1 ring-border"
           />
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <input type="checkbox" name="clearImage" value="1" className="size-3.5" />
-            Remove current image
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <input type="checkbox" name="clearImage" value="1" className="size-4" />
+            Remove current photo
           </label>
         </div>
       ) : null}
 
       {storageConfigured ? (
         <div className="space-y-1.5">
-          <label htmlFor={`sports-${fileName}`} className="text-xs text-muted-foreground">
+          <label htmlFor={fileId} className="text-xs text-muted-foreground">
             Upload an image (PNG, JPG, WEBP, SVG, or a photo straight off your
             phone — big photos are resized automatically)
           </label>
           <input
             ref={inputRef}
-            id={`sports-${fileName}`}
+            id={fileId}
             name={fileName}
             type="file"
             accept={CAMPUS_IMAGE_ACCEPT_WITH_SVG}
             onChange={guard.onFileChange}
-            className="w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-[#0A2342] file:px-3 file:py-1.5 file:text-sm file:text-white"
+            className="w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-[#1e56c8] file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white"
           />
           <UploadGuardNotice guard={guard} />
         </div>
@@ -192,6 +195,7 @@ export function ImageField({
       <Field
         label="…or paste an image URL"
         name={urlName}
+        id={`${fileId}-url`}
         type="url"
         placeholder="https://…"
         hint={hint}
@@ -242,7 +246,11 @@ export function FormFeedback({
           {state.success}
         </p>
       ) : null}
-      <Button type="submit" size="sm" disabled={pending}>
+      <Button
+        type="submit"
+        disabled={pending}
+        className="min-h-10 w-full sm:w-auto"
+      >
         {pending ? "Saving…" : submitLabel}
       </Button>
     </div>

@@ -1,24 +1,44 @@
-import { isDatabaseConfigured } from "@/config/env";
+import { CAMPUS_MEDIA_BUCKET } from "@/config/broadcast-media";
+import { isDatabaseConfigured, isSupabaseAdminConfigured } from "@/config/env";
 import type { CampusRole } from "@/config/roles";
-import { canManageAcademy, hasPermission } from "@/config/roles";
+import {
+  canManageAcademy,
+  hasPermission,
+  orgRoleIsOfficer,
+} from "@/config/roles";
+import {
+  IMAGE_UPLOAD_MAX_BYTES,
+  IMAGE_UPLOAD_MAX_LABEL,
+  resolveCampusImageType,
+} from "@/config/uploads";
 import type {
+  CampusCampaignKind as PrismaCampaignKind,
   ClubFundraiserStatus,
   ClubLedgerEntryType,
 } from "@/generated/prisma/client";
 import {
   ALL_TIME_PERIOD_KEY,
   buildAvailablePeriods,
+  campusCampaignHeadline,
+  CAMPUS_CAMPAIGN_KIND_LABELS,
+  isCampusCampaignKind,
   isWithinPeriod,
   resolveClubFinancePeriod,
   sumOpeningBalance,
   sumSignedCents,
+  type CampusCampaignBannerView,
+  type CampusCampaignKind,
   type ClubFinanceSnapshot,
   type ClubFundraiserView,
 } from "@/lib/club-finance";
-import { hasOrgPermission } from "@/lib/auth/permissions";
+import { getUserOrgMembership, hasOrgPermission } from "@/lib/auth/permissions";
 import { isPrismaReady, withDatabase } from "@/lib/prisma";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { ensureCampusMediaBucket } from "@/services/media-service";
 
 export type {
+  CampusCampaignBannerView,
+  CampusCampaignKind,
   ClubFinancePeriod,
   ClubFinanceSnapshot,
   ClubFundraiserView,
@@ -26,11 +46,26 @@ export type {
 } from "@/lib/club-finance";
 export {
   ALL_TIME_PERIOD_KEY,
+  campusCampaignHeadline,
+  CAMPUS_CAMPAIGN_KIND_LABELS,
+  CAMPUS_CAMPAIGN_KINDS,
+  defaultCampaignKind,
   SCHOOL_YEAR_PERIOD_KEY,
   formatCents,
   ledgerToCsv,
   resolveClubFinancePeriod,
 } from "@/lib/club-finance";
+
+const FUNDRAISER_FLYER_PREFIX = "club-fundraisers";
+
+const FACULTY_CAMPAIGN_ROLES: CampusRole[] = [
+  "admin",
+  "advisor",
+  "teacher",
+  "staff",
+  "coach",
+  "counselor",
+];
 
 function displayName(user: {
   displayName: string | null;
@@ -67,6 +102,39 @@ export async function canViewClubFinances(
   }
 
   return hasOrgPermission(userId, organizationId, "org:finances:view");
+}
+
+function isFacultyCampaignRole(role: CampusRole): boolean {
+  return (
+    hasPermission(role, "admin:access") ||
+    canManageAcademy(role) ||
+    FACULTY_CAMPAIGN_ROLES.includes(role)
+  );
+}
+
+/**
+ * Club officers + faculty/admin may post campus campaigns. Regular student
+ * members cannot — they could not submit club fundraisers before this either.
+ */
+export async function canPostCampusCampaign(
+  userId: string,
+  role: CampusRole,
+  organizationId: string,
+): Promise<boolean> {
+  if (isFacultyCampaignRole(role)) {
+    return true;
+  }
+
+  const membership = await getUserOrgMembership(userId, organizationId);
+  if (!membership || membership.status !== "ACTIVE") {
+    return false;
+  }
+
+  return orgRoleIsOfficer(membership.orgRole);
+}
+
+export function isClubFundraiserStorageConfigured(): boolean {
+  return isSupabaseAdminConfigured();
 }
 
 /**
@@ -150,8 +218,21 @@ export async function getClubFinanceSnapshot(
       periodRaisedCents: Math.max(0, sumSignedCents(taggedInPeriod)),
       taggedEntryCount: tagged.length,
       status: f.status,
+      kind: isCampusCampaignKind(f.kind) ? f.kind : "CLUB_FUNDRAISER",
+      flyerUrl: f.flyerUrl,
+      linkUrl: f.linkUrl,
+      pricesText: f.pricesText,
       startsAt: f.startsAt,
       endsAt: f.endsAt,
+      arrivesAt: f.arrivesAt,
+      pickupLocation: f.pickupLocation,
+      contactName: f.contactName,
+      contactEmail: f.contactEmail,
+      contactPhone: f.contactPhone,
+      raisingFor: f.raisingFor,
+      isPublic: f.isPublic,
+      organizationName: org.name,
+      organizationSlug: org.slug,
       createdAt: f.createdAt,
     };
   });
@@ -240,15 +321,27 @@ export async function createClubFundraiser(input: {
   title: string;
   description?: string;
   goalCents: number;
+  kind?: CampusCampaignKind;
+  flyerUrl?: string;
+  flyerStoragePath?: string;
+  linkUrl?: string;
+  pricesText?: string;
   startsAt?: Date;
   endsAt?: Date;
+  arrivesAt?: Date;
+  pickupLocation?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  raisingFor?: string;
+  isPublic?: boolean;
   createdById: string;
 }): Promise<string | null> {
   if (!isDatabaseConfigured() || !isPrismaReady()) {
     return null;
   }
 
-  if (input.goalCents <= 0) {
+  if (input.goalCents < 0) {
     return null;
   }
 
@@ -259,8 +352,20 @@ export async function createClubFundraiser(input: {
         title: input.title.trim(),
         description: input.description?.trim() || null,
         goalCents: input.goalCents,
+        kind: (input.kind ?? "CLUB_FUNDRAISER") as PrismaCampaignKind,
+        flyerUrl: input.flyerUrl?.trim() || null,
+        flyerStoragePath: input.flyerStoragePath?.trim() || null,
+        linkUrl: input.linkUrl?.trim() || null,
+        pricesText: input.pricesText?.trim() || null,
         startsAt: input.startsAt ?? null,
         endsAt: input.endsAt ?? null,
+        arrivesAt: input.arrivesAt ?? null,
+        pickupLocation: input.pickupLocation?.trim() || null,
+        contactName: input.contactName?.trim() || null,
+        contactEmail: input.contactEmail?.trim() || null,
+        contactPhone: input.contactPhone?.trim() || null,
+        raisingFor: input.raisingFor?.trim() || null,
+        isPublic: input.isPublic ?? true,
         createdById: input.createdById,
       },
       select: { id: true },
@@ -290,4 +395,202 @@ export async function updateClubFundraiserStatus(input: {
   );
 
   return (updated?.count ?? 0) > 0;
+}
+
+export async function uploadClubFundraiserFlyer(
+  file: File,
+  userId: string,
+): Promise<{ storagePath: string; publicUrl: string }> {
+  if (file.size <= 0) {
+    throw new Error("That photo is empty. Pick the file again and retry.");
+  }
+  if (file.size > IMAGE_UPLOAD_MAX_BYTES) {
+    throw new Error(`Photo must be ${IMAGE_UPLOAD_MAX_LABEL} or smaller.`);
+  }
+
+  const imageType = resolveCampusImageType(file);
+  if (!imageType) {
+    throw new Error("Use a JPG, PNG, WebP, GIF, or HEIC flyer photo.");
+  }
+
+  const admin = createAdminClient();
+  if (!admin) {
+    throw new Error(
+      "Photo storage isn’t configured. Ask an admin to set the campus media bucket.",
+    );
+  }
+
+  await ensureCampusMediaBucket(admin);
+
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
+  const storagePath = `${FUNDRAISER_FLYER_PREFIX}/${userId}/${Date.now()}-${safeName}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const { error } = await admin.storage
+    .from(CAMPUS_MEDIA_BUCKET)
+    .upload(storagePath, buffer, { contentType: imageType, upsert: false });
+
+  if (error) {
+    console.error("[club-fundraiser] Flyer upload failed:", error.message);
+    throw new Error(`Unable to store the flyer (${error.message}).`);
+  }
+
+  const { data } = admin.storage
+    .from(CAMPUS_MEDIA_BUCKET)
+    .getPublicUrl(storagePath);
+
+  return { storagePath, publicUrl: data.publicUrl };
+}
+
+function toIso(value: Date | null | undefined): string | null {
+  return value ? value.toISOString() : null;
+}
+
+function toBannerView(row: {
+  id: string;
+  title: string;
+  description: string | null;
+  kind: string;
+  flyerUrl: string | null;
+  linkUrl: string | null;
+  pricesText: string | null;
+  startsAt: Date | null;
+  endsAt: Date | null;
+  arrivesAt: Date | null;
+  pickupLocation: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  raisingFor: string | null;
+  organization: { name: string; slug: string };
+}): CampusCampaignBannerView {
+  const kind = isCampusCampaignKind(row.kind) ? row.kind : "CLUB_FUNDRAISER";
+  return {
+    id: row.id,
+    headline: campusCampaignHeadline(kind, row.title),
+    title: row.title,
+    kindLabel: CAMPUS_CAMPAIGN_KIND_LABELS[kind],
+    description: row.description,
+    flyerUrl: row.flyerUrl,
+    linkUrl: row.linkUrl,
+    pricesText: row.pricesText,
+    orderOpensAt: toIso(row.startsAt),
+    orderClosesAt: toIso(row.endsAt),
+    arrivesAt: toIso(row.arrivesAt),
+    pickupLocation: row.pickupLocation,
+    contactName: row.contactName,
+    contactEmail: row.contactEmail,
+    contactPhone: row.contactPhone,
+    raisingFor: row.raisingFor,
+    organizationName: row.organization.name,
+    organizationSlug: row.organization.slug,
+    href: `/fundraisers/${row.id}`,
+  };
+}
+
+function campaignSortScore(row: { startsAt: Date | null; endsAt: Date | null; createdAt: Date }, now: Date): number {
+  const start = row.startsAt?.getTime() ?? null;
+  const end = row.endsAt?.getTime() ?? null;
+  const t = now.getTime();
+  if (start !== null && end !== null && t >= start && t <= end) {
+    return 0;
+  }
+  if (start !== null && t < start) {
+    return 1;
+  }
+  return 2;
+}
+
+/** Active school-public campaigns for home / guest / parent headlines. */
+export async function listPublicCampusCampaigns(options?: {
+  take?: number;
+}): Promise<CampusCampaignBannerView[]> {
+  if (!isDatabaseConfigured() || !isPrismaReady()) {
+    return [];
+  }
+
+  const take = options?.take ?? 8;
+  const rows = await withDatabase((prisma) =>
+    prisma.clubFundraiser.findMany({
+      where: { status: "ACTIVE", isPublic: true },
+      include: { organization: { select: { name: true, slug: true } } },
+      orderBy: { createdAt: "desc" },
+      take: Math.max(take, 12),
+    }),
+  );
+
+  const now = new Date();
+  return (rows ?? [])
+    .sort((a, b) => {
+      const score = campaignSortScore(a, now) - campaignSortScore(b, now);
+      if (score !== 0) return score;
+      return b.createdAt.getTime() - a.createdAt.getTime();
+    })
+    .slice(0, take)
+    .map(toBannerView);
+}
+
+export async function getCampusCampaign(
+  id: string,
+): Promise<CampusCampaignBannerView | null> {
+  if (!isDatabaseConfigured() || !isPrismaReady()) {
+    return null;
+  }
+
+  const row = await withDatabase((prisma) =>
+    prisma.clubFundraiser.findUnique({
+      where: { id },
+      include: { organization: { select: { name: true, slug: true } } },
+    }),
+  );
+
+  if (!row) {
+    return null;
+  }
+
+  return toBannerView(row);
+}
+
+export type PostableOrganization = {
+  id: string;
+  slug: string;
+  name: string;
+  type: string;
+};
+
+export async function listPostableOrganizations(
+  userId: string,
+  role: CampusRole,
+): Promise<PostableOrganization[]> {
+  if (!isDatabaseConfigured() || !isPrismaReady()) {
+    return [];
+  }
+
+  if (isFacultyCampaignRole(role)) {
+    const rows = await withDatabase((prisma) =>
+      prisma.organization.findMany({
+        where: { slug: { not: { startsWith: "academy-" } } },
+        select: { id: true, slug: true, name: true, type: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      }),
+    );
+    return rows ?? [];
+  }
+
+  const memberships = await withDatabase((prisma) =>
+    prisma.organizationMembership.findMany({
+      where: {
+        userId,
+        status: "ACTIVE",
+        orgRole: { in: ["PRESIDENT", "VICE_PRESIDENT", "SECRETARY"] },
+      },
+      include: {
+        organization: {
+          select: { id: true, slug: true, name: true, type: true },
+        },
+      },
+    }),
+  );
+
+  return (memberships ?? []).map((row) => row.organization);
 }

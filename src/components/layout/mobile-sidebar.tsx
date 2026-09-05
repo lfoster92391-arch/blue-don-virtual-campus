@@ -59,7 +59,7 @@ export function MobileSidebar({
         <SheetHeader className="border-b border-white/10 px-4 py-4 text-left">
           <SheetTitle className="flex items-center gap-3 text-white">
             <BrandLogo variant="emblem" size="sm" href={null} />
-            <span className="min-w-0 truncate">{siteConfig.shortName}</span>
+            <span className="min-w-0 truncate">{siteConfig.institution}</span>
           </SheetTitle>
           <SheetDescription className="text-[#C6CCD6]">
             {siteConfig.institution}

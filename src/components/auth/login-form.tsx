@@ -148,7 +148,7 @@ export function LoginForm({
     return (
       <AuthShell
         title="Sign in"
-        description="Configure Supabase before signing in to Blue Don Virtual Campus."
+        description="Configure Supabase before signing in to Madonna High School."
       >
         <SupabaseSetupNotice />
       </AuthShell>

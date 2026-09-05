@@ -1,22 +1,37 @@
 import Link from "next/link";
 import { Film } from "lucide-react";
 
+import { HighlightManageActions } from "@/components/sports/highlight-manage-actions";
 import {
   HIGHLIGHT_KIND_LABELS,
   HIGHLIGHT_STATUS_LABELS,
 } from "@/config/sports-highlights";
-import type { SportsHighlightView } from "@/services/sports-highlights-service";
+import type {
+  SportView,
+  SportsGameView,
+  SportsHighlightView,
+} from "@/services/sports-highlights-service";
+
+export type HighlightGridManage = {
+  viewerId: string;
+  canManage: boolean;
+  sports: SportView[];
+  games: SportsGameView[];
+  storageConfigured: boolean;
+};
 
 export function HighlightGrid({
   highlights,
   emptyLabel = "No highlights posted yet.",
   showStatus = false,
   linkGames = true,
+  manage,
 }: {
   highlights: SportsHighlightView[];
   emptyLabel?: string;
   showStatus?: boolean;
   linkGames?: boolean;
+  manage?: HighlightGridManage;
 }) {
   if (highlights.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;
@@ -98,6 +113,19 @@ export function HighlightGrid({
               ) : null}
               {highlight.credit ? <span>📷 {highlight.credit}</span> : null}
             </div>
+
+            {manage &&
+            (manage.canManage || highlight.submittedById === manage.viewerId) ? (
+              <div className="border-t border-border pt-3">
+                <HighlightManageActions
+                  highlight={highlight}
+                  sports={manage.sports}
+                  games={manage.games}
+                  storageConfigured={manage.storageConfigured}
+                  canManage={manage.canManage}
+                />
+              </div>
+            ) : null}
           </div>
         </li>
       ))}

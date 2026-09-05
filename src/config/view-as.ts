@@ -73,3 +73,28 @@ export function homePathForViewAs(persona: ViewAsPersona): string {
       return "/home";
   }
 }
+
+/** Hero eyebrow so each View-as landing reads as that role’s home. */
+export function homeEyebrowForView(
+  role: CampusRole,
+  persona?: ViewAsPersona | null,
+): string {
+  if (persona === "guest") {
+    return "Fan & Family home";
+  }
+  if (persona === "parent" || role === "parent") {
+    return "Parent home";
+  }
+  switch (role) {
+    case "student":
+      return "Student home";
+    case "coach":
+      return "Coach home";
+    case "teacher":
+      return "Faculty home";
+    case "admin":
+      return "Admin home";
+    default:
+      return "School home";
+  }
+}

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
+import { PageDropdown } from "@/components/ui/page-dropdown";
 import { HighlightGrid } from "@/components/sports/highlight-grid";
 import { MatchupMarks } from "@/components/sports/matchup-marks";
 import { SportSwitcher } from "@/components/sports/sport-switcher";
@@ -101,6 +102,7 @@ export function SportsAudienceSections({
   storageConfigured,
   canManage = false,
   showFormsSection = true,
+  viewerId,
 }: {
   data: SportsHubData;
   basePath: string;
@@ -108,8 +110,21 @@ export function SportsAudienceSections({
   storageConfigured: boolean;
   canManage?: boolean;
   showFormsSection?: boolean;
+  viewerId?: string;
 }) {
   const sportLabel = data.activeSport?.name ?? "All sports";
+  const highlightManage = viewerId
+    ? {
+        viewerId,
+        canManage,
+        sports: data.sports,
+        games: data.reportableGames,
+        storageConfigured,
+      }
+    : undefined;
+  const myOpenHighlights = (data.myHighlights ?? []).filter(
+    (highlight) => highlight.status !== "PUBLISHED",
+  );
 
   return (
     <div className="space-y-6">
@@ -129,50 +144,56 @@ export function SportsAudienceSections({
         extraParams={extraParams}
       />
 
-      <DashboardCard
+      <PageDropdown
+        id="highlights"
         title="Top highlights"
         description="Game clips, photos, and stories from the Broadcasting sports desk."
-        icon={<Film className="size-5" />}
-        status={{ label: sportLabel, variant: "info" }}
+        eyebrow={sportLabel}
       >
         <HighlightGrid
           highlights={data.highlights}
           emptyLabel="No highlights published for this sport yet."
+          manage={highlightManage}
         />
-      </DashboardCard>
+      </PageDropdown>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <DashboardCard
-          title="Recent games"
-          description="Scores and results."
-          icon={<Trophy className="size-5" />}
-        >
-          <ScheduleList
-            games={data.recentGames}
-            emptyLabel="No completed games yet."
-          />
-        </DashboardCard>
+      <PageDropdown
+        id="schedule"
+        title="Schedule"
+        description={
+          data.upcoming[0]
+            ? `Next: ${data.upcoming[0].site === "HOME" ? "vs" : "at"} ${data.upcoming[0].opponentName}`
+            : "Recent scores and what's next."
+        }
+      >
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div>
+            <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#0A2342] dark:text-white">
+              <Trophy className="size-4" aria-hidden="true" />
+              Recent games
+            </p>
+            <ScheduleList
+              games={data.recentGames}
+              emptyLabel="No completed games yet."
+            />
+          </div>
+          <div>
+            <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#0A2342] dark:text-white">
+              <CalendarDays className="size-4" aria-hidden="true" />
+              Upcoming
+            </p>
+            <ScheduleList
+              games={data.upcoming}
+              emptyLabel="Nothing scheduled right now."
+            />
+          </div>
+        </div>
+      </PageDropdown>
 
-        <DashboardCard
-          title="Upcoming schedule"
-          description={
-            data.upcoming[0]
-              ? `Next: ${data.upcoming[0].site === "HOME" ? "vs" : "at"} ${data.upcoming[0].opponentName}`
-              : "Who's next on the board."
-          }
-          icon={<CalendarDays className="size-5" />}
-        >
-          <ScheduleList
-            games={data.upcoming}
-            emptyLabel="Nothing scheduled right now."
-          />
-        </DashboardCard>
-      </div>
-
-      <DashboardCard
+      <PageDropdown
+        id="write-ups"
         title="Student write-ups"
         description="Recaps and previews written by students, approved by crew."
-        icon={<Newspaper className="size-5" />}
       >
         {data.publishedReports.length === 0 ? (
           <p className="text-sm text-muted-foreground">
@@ -202,13 +223,13 @@ export function SportsAudienceSections({
             ))}
           </ul>
         )}
-      </DashboardCard>
+      </PageDropdown>
 
       {data.activeSport && data.players.length > 0 ? (
-        <DashboardCard
+        <PageDropdown
+          id="roster"
           title={`${data.activeSport.name} roster`}
           description="Player pages for stats and player-of-the-game callouts."
-          icon={<Users className="size-5" />}
         >
           <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {data.players.map((player) => (
@@ -242,36 +263,56 @@ export function SportsAudienceSections({
               </li>
             ))}
           </ul>
-        </DashboardCard>
+        </PageDropdown>
       ) : null}
 
       {showFormsSection ? (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <DashboardCard
-            title="Write about a game"
-            description="Recap what happened or preview what's next."
-            icon={<ClipboardList className="size-5" />}
-          >
-            <GameReportForm
-              pastGames={data.recentGames}
-              upcomingGames={data.upcoming}
-            />
-          </DashboardCard>
+        <PageDropdown
+          id="submit"
+          title="Submit coverage"
+          description="Write a recap or send in a highlight for the sports desk."
+        >
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div>
+              <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#0A2342] dark:text-white">
+                <ClipboardList className="size-4" aria-hidden="true" />
+                Write about a game
+              </p>
+              <GameReportForm
+                pastGames={data.recentGames}
+                upcomingGames={data.upcoming}
+              />
+            </div>
+            <div>
+              <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#0A2342] dark:text-white">
+                <Film className="size-4" aria-hidden="true" />
+                Send in a highlight
+              </p>
+              <HighlightSubmitForm
+                sports={data.sports}
+                games={data.reportableGames}
+                storageConfigured={storageConfigured}
+                canManage={canManage}
+                defaultSportId={data.activeSport?.id}
+              />
+            </div>
+          </div>
+        </PageDropdown>
+      ) : null}
 
-          <DashboardCard
-            title="Send in a highlight"
-            description="Clips, photos, and stories for the highlights grid."
-            icon={<Film className="size-5" />}
-          >
-            <HighlightSubmitForm
-              sports={data.sports}
-              games={data.reportableGames}
-              storageConfigured={storageConfigured}
-              canManage={canManage}
-              defaultSportId={data.activeSport?.id}
-            />
-          </DashboardCard>
-        </div>
+      {myOpenHighlights.length > 0 ? (
+        <PageDropdown
+          id="my-highlights"
+          title="Your highlight submissions"
+          description="Pending or archived items you can edit, replace the photo on, or delete."
+        >
+          <HighlightGrid
+            highlights={myOpenHighlights}
+            emptyLabel="No open submissions."
+            showStatus
+            manage={highlightManage}
+          />
+        </PageDropdown>
       ) : null}
     </div>
   );
@@ -339,7 +380,12 @@ export function SportsDeskSections({
         description="Publish, feature, or archive submitted clips and photos."
         icon={<Film className="size-5" />}
       >
-        <HighlightReviewList highlights={data.highlights} />
+        <HighlightReviewList
+          highlights={data.highlights}
+          sports={data.sports}
+          games={data.games}
+          storageConfigured={storageConfigured}
+        />
       </DashboardCard>
 
       <DashboardCard

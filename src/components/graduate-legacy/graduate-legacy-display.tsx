@@ -98,7 +98,7 @@ export function GraduateLegacyDisplay({ legacy, preview }: GraduateLegacyDisplay
 
       {!preview ? (
         <footer className="border-t border-border pt-6 text-center text-xs text-muted-foreground">
-          {siteConfig.institution} · {siteConfig.name}
+          {siteConfig.institution} · {siteConfig.shortName}
         </footer>
       ) : null}
     </div>

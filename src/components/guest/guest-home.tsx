@@ -2,10 +2,12 @@ import Link from "next/link";
 import { BookOpen, Cross, Lightbulb, Megaphone, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { CampusCampaignBanner } from "@/components/fundraisers/campus-campaign-banner";
 import { BriefingSection } from "@/components/home/briefing-section";
 import { SchoolCommunityPanels } from "@/components/home/school-community-panels";
 import { AreaWeatherCard } from "@/components/weather/area-weather-card";
 import { PreviewBanner } from "@/components/admin/preview-banner";
+import { ViewAsHeaderControl } from "@/components/admin/view-as-header";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { ShopComingSoonButton } from "@/components/shop/shop-coming-soon-button";
 import { Button } from "@/components/ui/button";
@@ -18,6 +20,7 @@ import type { BroadcastAnnouncementView } from "@/services/broadcast-announcemen
 import type { SportsReportView } from "@/services/sports-highlights-service";
 import type { CampusWeather } from "@/services/weather-service";
 import type { SchoolCommunityData } from "@/components/home/school-community-panels";
+import type { CampusCampaignBannerView } from "@/lib/club-finance";
 
 export function GuestHome({
   dateLabel,
@@ -25,6 +28,7 @@ export function GuestHome({
   announcement,
   reports,
   community,
+  campaigns = [],
   signedInHomeHref,
   previewPersona,
 }: {
@@ -33,6 +37,7 @@ export function GuestHome({
   announcement: BroadcastAnnouncementView | null;
   reports: SportsReportView[];
   community: SchoolCommunityData;
+  campaigns?: CampusCampaignBannerView[];
   signedInHomeHref?: string | null;
   previewPersona?: ViewAsPersona | null;
 }) {
@@ -59,8 +64,16 @@ export function GuestHome({
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
+            {previewPersona === "guest" ? <ViewAsHeaderControl /> : null}
+            <Button
+              variant="action"
+              size="lg"
+              className="h-11"
+              nativeButton={false}
+              render={<Link href="/madonna/participate">Participate</Link>}
+            />
             <ShopComingSoonButton size="lg" className="h-11" />
-            {signedInHomeHref ? (
+            {previewPersona === "guest" ? null : signedInHomeHref ? (
               <Button
                 variant="action"
                 size="lg"
@@ -97,6 +110,8 @@ export function GuestHome({
           </p>
           <p className="mt-2 text-sm text-[#C6CCD6]/80">{dateLabel}</p>
         </header>
+
+        <CampusCampaignBanner campaigns={campaigns} guest />
 
         <SchoolCommunityPanels
           data={community}

@@ -2,7 +2,6 @@ import {
   BookOpen,
   BarChart3,
   Briefcase,
-  Calculator,
   Calendar,
   CircleDollarSign,
   ClipboardCheck,
@@ -26,13 +25,11 @@ import {
   Package,
   Radio,
   Scissors,
-  ScrollText,
   Sparkles,
   Sun,
   Trophy,
   UserCheck,
   Users,
-  Video,
   type LucideIcon,
 } from "lucide-react";
 
@@ -245,8 +242,8 @@ const madonnaHubGroup: NavGroup = {
 };
 
 /**
- * Club-focus pivot navigation — Home + three clubs (+ Staff for admin roles).
- * Club finances and IT Help live under IT Club only.
+ * Club-focus pivot navigation — Home, Watch, Sports, Coach, one Clubs group
+ * (IT / Broadcasting / Cricut), and Staff for admin roles.
  * Used when {@link FOCUSED_CLUBS_MODE} is on. Soft-wiped routes redirect via middleware.
  */
 export const focusedClubsNavigation: NavEntry[] = [
@@ -256,6 +253,13 @@ export const focusedClubsNavigation: NavEntry[] = [
     icon: Home,
     enabled: true,
     mobile: true,
+    primary: true,
+  },
+  {
+    label: "Fundraisers",
+    href: "/fundraisers",
+    icon: CircleDollarSign,
+    enabled: true,
     primary: true,
   },
   madonnaHubGroup,
@@ -307,14 +311,13 @@ export const focusedClubsNavigation: NavEntry[] = [
     roles: ["parent"],
   },
   {
-    label: FOCUS_CLUBS[0].name,
-    icon: Cpu,
+    label: "Clubs",
+    icon: Users,
     defaultOpen: true,
     primary: true,
-    clubSlug: FOCUS_CLUBS[0].slug,
     children: [
       {
-        label: "Overview",
+        label: FOCUS_CLUBS[0].name,
         href: FOCUS_CLUBS[0].href,
         icon: Cpu,
         enabled: true,
@@ -323,32 +326,7 @@ export const focusedClubsNavigation: NavEntry[] = [
         clubSlug: FOCUS_CLUBS[0].slug,
       },
       {
-        label: "Finances",
-        href: `${FOCUS_CLUBS[0].href}?tab=finances`,
-        icon: CircleDollarSign,
-        enabled: true,
-        primary: true,
-        clubSlug: FOCUS_CLUBS[0].slug,
-        requiresFinanceAccess: true,
-      },
-      {
-        label: "IT Help Desk",
-        href: "/service-desk",
-        icon: Headphones,
-        enabled: true,
-        clubSlug: FOCUS_CLUBS[0].slug,
-      },
-    ],
-  },
-  {
-    label: FOCUS_CLUBS[1].name,
-    icon: Radio,
-    defaultOpen: true,
-    primary: true,
-    clubSlug: FOCUS_CLUBS[1].slug,
-    children: [
-      {
-        label: "Overview",
+        label: FOCUS_CLUBS[1].name,
         href: FOCUS_CLUBS[1].href,
         icon: Radio,
         enabled: true,
@@ -357,73 +335,13 @@ export const focusedClubsNavigation: NavEntry[] = [
         clubSlug: FOCUS_CLUBS[1].slug,
       },
       {
-        label: "Daily Rundown",
-        href: `${FOCUS_CLUBS[1].href}?tab=script`,
-        icon: ScrollText,
-        enabled: true,
-        primary: true,
-        clubSlug: FOCUS_CLUBS[1].slug,
-      },
-      {
-        label: "Go Live",
-        href: "/broadcast/phone",
-        icon: Video,
-        enabled: true,
-        mobile: true,
-        primary: true,
-        clubSlug: FOCUS_CLUBS[1].slug,
-      },
-      {
-        label: "Control Room",
-        href: `${FOCUS_CLUBS[1].href}?tab=media`,
-        icon: Megaphone,
-        enabled: true,
-        mobile: true,
-        primary: true,
-        clubSlug: FOCUS_CLUBS[1].slug,
-      },
-    ],
-  },
-  {
-    label: FOCUS_CLUBS[2].name,
-    icon: Scissors,
-    defaultOpen: true,
-    primary: true,
-    clubSlug: FOCUS_CLUBS[2].slug,
-    children: [
-      {
-        label: "Overview",
+        label: FOCUS_CLUBS[2].name,
         href: FOCUS_CLUBS[2].href,
         icon: Scissors,
         enabled: true,
         mobile: true,
         primary: true,
         clubSlug: FOCUS_CLUBS[2].slug,
-      },
-      {
-        label: "Production hub",
-        href: "/cricut",
-        icon: Scissors,
-        enabled: true,
-        primary: true,
-        clubSlug: FOCUS_CLUBS[2].slug,
-      },
-      {
-        label: "Shop",
-        href: "/cricut/shop",
-        icon: CircleDollarSign,
-        enabled: true,
-        primary: true,
-        clubSlug: FOCUS_CLUBS[2].slug,
-      },
-      {
-        label: "Cashier",
-        href: "/cricut/pos",
-        icon: Calculator,
-        enabled: true,
-        primary: true,
-        clubSlug: FOCUS_CLUBS[2].slug,
-        requiresFinanceAccess: true,
       },
     ],
   },
@@ -438,6 +356,13 @@ export const focusedClubsNavigation: NavEntry[] = [
         icon: BarChart3,
         enabled: true,
         roles: ["admin", "advisor", "staff", "counselor"],
+      },
+      {
+        label: "Admin hub",
+        href: "/admin",
+        icon: LayoutGrid,
+        enabled: true,
+        roles: ["admin", "advisor", "staff"],
       },
       {
         label: "Students",
@@ -786,7 +711,6 @@ export function getMobileNavigation(
   options?: ResolveNavigationOptions,
 ): NavItem[] {
   if (FOCUSED_CLUBS_MODE) {
-    const membershipSlugs = options?.membershipSlugs;
     const focusedMobile: NavItem[] = [
       {
         label: "Home",
@@ -810,35 +734,22 @@ export function getMobileNavigation(
           ]
         : []),
       {
-        label: FOCUS_CLUBS[0].shortLabel,
-        href: FOCUS_CLUBS[0].href,
-        icon: Cpu,
+        label: "Watch",
+        href: "/watch",
+        icon: Headphones,
         enabled: true,
         mobile: true,
         primary: true,
-        clubSlug: FOCUS_CLUBS[0].slug,
       },
       {
-        label: FOCUS_CLUBS[1].shortLabel,
-        href: `${FOCUS_CLUBS[1].href}?tab=media`,
-        icon: Radio,
+        label: "Sports",
+        href: "/sports",
+        icon: Trophy,
         enabled: true,
         mobile: true,
         primary: true,
-        clubSlug: FOCUS_CLUBS[1].slug,
       },
-      {
-        label: FOCUS_CLUBS[2].shortLabel,
-        href: FOCUS_CLUBS[2].href,
-        icon: Scissors,
-        enabled: true,
-        mobile: true,
-        primary: true,
-        clubSlug: FOCUS_CLUBS[2].slug,
-      },
-    ].filter((item) =>
-      entryAllowedForMemberships(item.clubSlug, role, membershipSlugs),
-    );
+    ];
     return resolveNavigationForRole(focusedMobile, role);
   }
 

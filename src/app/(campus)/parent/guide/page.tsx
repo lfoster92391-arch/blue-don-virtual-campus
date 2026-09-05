@@ -248,7 +248,7 @@ export default async function ParentGuidePage() {
               {
                 title: "Today",
                 href: "/madonna/today",
-                body: "The bell schedule, campus weather, and the announcement Broadcasting read this morning.",
+                body: "Campus weather and the announcement Broadcasting read this morning.",
               },
               {
                 title: "Sports",
@@ -263,7 +263,7 @@ export default async function ParentGuidePage() {
               {
                 title: "Campus",
                 href: "/madonna/campus",
-                body: "Bell schedule, calendar, weather station, lunch, and the Madonna archive.",
+                body: "Calendar, weather station, lunch, and the Madonna archive.",
               },
               {
                 title: "Home",

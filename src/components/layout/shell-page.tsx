@@ -14,7 +14,7 @@ export function ShellPage({ title, description, actions, children }: ShellPagePr
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
             <p className="text-sm font-medium uppercase tracking-[0.18em] text-[#2F80ED]">
-              {siteConfig.name}
+              {siteConfig.institution}
             </p>
             <h1 className="text-3xl font-semibold tracking-tight text-[#0A2342] dark:text-white">
               {title}

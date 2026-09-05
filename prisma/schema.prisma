@@ -1959,6 +1959,8 @@ model BroadcastAnnouncementSubmission {
   submitterRole    String?                    @map("submitter_role")
   title            String
   body             String
+  airNotes         String?                    @map("air_notes")
+  flyerUrl         String?                    @map("flyer_url")
   preferredAirDate DateTime?                  @map("preferred_air_date")
   status           BroadcastSubmissionStatus  @default(PENDING)
   reviewedById     String?                    @map("reviewed_by_id") @db.Uuid
@@ -2652,6 +2654,18 @@ enum ClubFundraiserStatus {
   CANCELLED
 }
 
+/** Campus-wide headline type — shown on school home, guest, and other landings. */
+enum CampusCampaignKind {
+  CLUB_FUNDRAISER
+  CLUB_EVENT
+  CLASS_FUNDRAISER
+  CLASS_EVENT
+  SCHOOL_FUNDRAISER
+  SCHOOL_EVENT
+  TEAM_FUNDRAISER
+  TEAM_EVENT
+}
+
 /// `createdAt` is when the row was typed in; `occurredAt` is when the money
 /// actually moved. Backfilled ledgers are entered in one sitting, so only
 /// `occurredAt` can group a ledger into real months.
@@ -2946,22 +2960,37 @@ model CricutShopOrderLine {
 }
 
 model ClubFundraiser {
-  id             String               @id @default(cuid())
-  organizationId String               @map("organization_id")
-  title          String
-  description    String?
-  goalCents      Int                  @map("goal_cents")
-  status         ClubFundraiserStatus @default(ACTIVE)
-  startsAt       DateTime?            @map("starts_at")
-  endsAt         DateTime?            @map("ends_at")
-  createdById    String               @map("created_by_id") @db.Uuid
-  createdAt      DateTime             @default(now()) @map("created_at")
-  updatedAt      DateTime             @updatedAt @map("updated_at")
-  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy      User                 @relation("ClubFundraiserCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  ledgerEntries  ClubLedgerEntry[]
+  id               String               @id @default(cuid())
+  organizationId   String               @map("organization_id")
+  title            String
+  description      String?
+  goalCents        Int                  @map("goal_cents")
+  status           ClubFundraiserStatus @default(ACTIVE)
+  kind             CampusCampaignKind   @default(CLUB_FUNDRAISER)
+  flyerUrl         String?              @map("flyer_url")
+  flyerStoragePath String?              @map("flyer_storage_path")
+  linkUrl          String?              @map("link_url")
+  pricesText       String?              @map("prices_text")
+  /** Order window — same columns the ledger already used as campaign dates. */
+  startsAt         DateTime?            @map("starts_at")
+  endsAt           DateTime?            @map("ends_at")
+  arrivesAt        DateTime?            @map("arrives_at")
+  pickupLocation   String?              @map("pickup_location")
+  contactName      String?              @map("contact_name")
+  contactEmail     String?              @map("contact_email")
+  contactPhone     String?              @map("contact_phone")
+  raisingFor       String?              @map("raising_for")
+  /** School-public: Fan & Family / guest home. Default on; no existing private flag. */
+  isPublic         Boolean              @default(true) @map("is_public")
+  createdById      String               @map("created_by_id") @db.Uuid
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  organization     Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy        User                 @relation("ClubFundraiserCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  ledgerEntries    ClubLedgerEntry[]
 
   @@index([organizationId, status])
+  @@index([status, isPublic])
   @@index([createdById])
   @@map("club_fundraisers")
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
+import { CampusCampaignBanner } from "@/components/fundraisers/campus-campaign-banner";
 import { FuelTheDonsRow } from "@/components/lunch/fuel-the-dons-link";
 import {
   MadonnaHubHeader,
@@ -10,6 +11,8 @@ import {
   WhatsHappening,
 } from "@/components/madonna/madonna-hub-panels";
 import { LiveNowPanel } from "@/components/media/live-now-panel";
+import { Button } from "@/components/ui/button";
+import { PageDropdown } from "@/components/ui/page-dropdown";
 import type { MadonnaSectionKey } from "@/config/madonna-hub";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { getTodaysBroadcastAnnouncement } from "@/services/broadcast-announcement-service";
@@ -22,12 +25,13 @@ import {
   buildEmptyHubDigest,
   getTodayHubDigest,
 } from "@/services/school-hub-service";
+import { listPublicCampusCampaigns } from "@/services/club-finance-service";
 import { getCurrentOrNextGame } from "@/services/sports-highlights-service";
 
 export const metadata = {
   title: "Madonna Hub",
   description:
-    "The Madonna student front door — today's schedule and announcement, Blue Don sports, the campus broadcast, school info, and ways to get involved.",
+    "The Madonna student front door — today's announcement, Blue Don sports, the campus broadcast, school info, and ways to get involved.",
 };
 
 /** Soft-fail wrapper — no single tile should take the front door down. */
@@ -45,7 +49,7 @@ export default async function MadonnaHubPage() {
   const firstName = user.firstName ?? user.displayName.split(" ")[0] ?? "Don";
   const isParent = user.role === "parent";
 
-  const [hub, announcement, activeLive, schedule, nextGame, sportsVideos] =
+  const [hub, announcement, activeLive, schedule, nextGame, sportsVideos, campaigns] =
     await Promise.all([
       safe(
         getTodayHubDigest({ id: user.id, role: user.role }),
@@ -56,6 +60,7 @@ export default async function MadonnaHubPage() {
       safe(getBroadcastSchedule(), null),
       safe(getCurrentOrNextGame({ withinHours: 24 * 14 }), null),
       safe(listSportsRecapVideos({ take: 200 }), []),
+      safe(listPublicCampusCampaigns({ take: 3 }), []),
     ]);
 
   // Tile meta is live or absent — never a placeholder count.
@@ -81,10 +86,12 @@ export default async function MadonnaHubPage() {
         isLive={Boolean(activeLive)}
         subtitle={
           isParent
-            ? "Your window into Madonna — the day's schedule, your student's teams, the campus broadcast, and school info."
+            ? "Your window into Madonna — the day's announcement, your student's teams, the campus broadcast, and school info."
             : "Everything Madonna, in five places. Start with today."
         }
       />
+
+      <CampusCampaignBanner campaigns={campaigns} />
 
       <MadonnaSectionNav />
 
@@ -96,38 +103,60 @@ export default async function MadonnaHubPage() {
         />
       ) : null}
 
-      <TodaySnapshot
-        bell={hub.bell}
-        isSchoolDay={hub.isSchoolDay}
-        announcement={announcement}
-      />
+      <PageDropdown
+        id="today"
+        title="Today"
+        description="The announcement Broadcasting posted this morning."
+      >
+        <TodaySnapshot announcement={announcement} />
+      </PageDropdown>
 
-      <WhatsHappening
-        nextGame={nextGame}
-        activeLiveTitle={activeLive?.title ?? null}
-        nextAirAt={schedule?.nextAirAt ?? null}
-      />
+      <PageDropdown
+        id="happening"
+        title="What's happening"
+        description="The next game and the next broadcast."
+      >
+        <WhatsHappening
+          nextGame={nextGame}
+          activeLiveTitle={activeLive?.title ?? null}
+          nextAirAt={schedule?.nextAirAt ?? null}
+        />
+      </PageDropdown>
 
-      <MadonnaSectionTiles role={user.role} meta={meta} />
+      <PageDropdown
+        id="explore"
+        title="Explore Madonna"
+        description="Today, sports, broadcast, campus, and ways to get involved."
+      >
+        <MadonnaSectionTiles role={user.role} meta={meta} />
+      </PageDropdown>
 
-      <FuelTheDonsRow />
+      <PageDropdown id="lunch" title="Lunch" description="Menus and ordering on FuelTheDons.">
+        <FuelTheDonsRow />
+      </PageDropdown>
 
       {isParent ? (
-        <div className="flex flex-wrap gap-3 text-sm">
-          <Link
-            href="/parent"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 font-medium text-[#0A2342] transition-colors hover:bg-muted dark:text-white"
-          >
-            Parent Portal
-            <ArrowRight className="size-3.5" aria-hidden="true" />
-          </Link>
-          <Link
-            href="/parent/guide"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 font-medium text-[#0A2342] transition-colors hover:bg-muted dark:text-white"
-          >
-            Parent Guide
-            <ArrowRight className="size-3.5" aria-hidden="true" />
-          </Link>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            variant="action"
+            nativeButton={false}
+            render={
+              <Link href="/parent">
+                Parent Portal
+                <ArrowRight className="size-3.5" aria-hidden="true" />
+              </Link>
+            }
+          />
+          <Button
+            variant="action"
+            nativeButton={false}
+            render={
+              <Link href="/parent/guide">
+                Parent Guide
+                <ArrowRight className="size-3.5" aria-hidden="true" />
+              </Link>
+            }
+          />
         </div>
       ) : null}
     </section>

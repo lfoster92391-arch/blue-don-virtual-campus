@@ -33,10 +33,10 @@ export const KNOWLEDGE_ARTICLES: SeedArticle[] = [
   {
     id: "kb-welcome",
     slug: "welcome-to-blue-don",
-    title: "Welcome to Blue Don Virtual Campus",
+    title: "Welcome to Madonna High School",
     category: "Getting Started",
     tags: ["onboarding", "campus", "navigation", "featured"],
-    content: `Welcome to **Blue Don Virtual Campus** — Madonna High School's student experience platform. It brings your school life together in one place so you can spend less time hunting for information and more time being a Blue Don.
+    content: `Welcome to **Madonna High School** — your student campus home. It brings school life together in one place so you can spend less time hunting for information and more time being a Blue Don.
 
 Madonna's motto says it best: **"Followers of Christ… Leaders in the World."** This platform is built around that mission.
 
@@ -156,23 +156,17 @@ If you're unsure whether an activity qualifies, ask before you start so it count
   },
   {
     id: "kb-bell-schedule",
-    slug: "bell-schedule-and-daily-rhythm",
-    title: "Bell Schedule & the School Day",
+    slug: "the-school-day",
+    title: "The School Day",
     category: "Campus Life",
-    tags: ["schedule", "bell-schedule", "campus-life", "daily"],
+    tags: ["campus-life", "daily", "attendance"],
     content: `Knowing the flow of the day helps you stay on time and prepared.
-
-## Bell schedules
-
-Madonna publishes official **bell schedules** for the school year, including regular days and special schedules (Mass days, assemblies, early dismissals, and exam days). The most current bell schedule is posted on weirtonmadonna.org under Quick Links and shared by the school office.
-
-Because special schedules change the timing of classes, it's your responsibility to **check for special schedules** — especially on days with a liturgy, assembly, or athletic event.
 
 ## During the day
 
 - Arrive on time; tardies are recorded.
-- Follow the posted schedule for the day (regular vs. special).
-- Watch morning announcements and the **Home** dashboard on Blue Don for changes.
+- Watch morning announcements and the **Home** page for changes.
+- Special days (Mass, assemblies, early dismissals, exam days) are posted on weirtonmadonna.org and shared by the school office.
 
 ## Attendance and events
 

@@ -17,7 +17,7 @@ import { AdvisorMessagesPanel } from "@/components/home/advisor-messages-panel";
 import { ClubOpsPulsePanel } from "@/components/home/club-ops-pulse";
 import { CommandCenterMeetings } from "@/components/home/command-center-meetings";
 import { CommandCenterTasks } from "@/components/home/command-center-tasks";
-import { BellScheduleWidget } from "@/components/school-hub/bell-schedule-widget";
+import { PageDropdown } from "@/components/ui/page-dropdown";
 import { CAMPUS_FEED } from "@/config/campus-feed";
 import { CAMPUS_WEATHER_LOCATION } from "@/config/campus-weather";
 import {
@@ -39,6 +39,8 @@ import {
   getCampusWeatherAlerts,
   type CampusWeather,
 } from "@/services/weather-service";
+import type { CampusRole } from "@/config/roles";
+import { homeEyebrowForView, type ViewAsPersona } from "@/config/view-as";
 import type { CampusUser } from "@/types/auth";
 
 type TodayAtMadonnaProps = {
@@ -50,6 +52,9 @@ type TodayAtMadonnaProps = {
   tasks?: ClubStudentTaskView[];
   opsPulse?: ClubOpsPulse | null;
   children?: ReactNode;
+  viewRole?: CampusRole;
+  previewPersona?: ViewAsPersona | null;
+  previewName?: string | null;
 };
 
 function getGreeting(hour: number) {
@@ -288,6 +293,23 @@ function MadonnaHistoryBriefing({ date }: { date: Date }) {
 }
 
 /** Focused-mode home — Command Center + “Today at Madonna” campus briefing. */
+function homeBlurb(role: CampusRole): string {
+  switch (role) {
+    case "student":
+      return "Advisor messages, club meetings, tasks, and the daily campus briefing.";
+    case "coach":
+      return "Teams, film, and the daily campus briefing — open Coach from Your tools.";
+    case "teacher":
+      return "Classes, club browse, and the daily campus briefing.";
+    case "parent":
+      return "Family tools and the daily campus briefing.";
+    case "admin":
+      return "Office tools, student accounts, and the daily campus briefing.";
+    default:
+      return "Your hub for advisor messages, club meetings, tasks, and the daily campus briefing.";
+  }
+}
+
 export function TodayAtMadonna({
   user,
   hub,
@@ -297,9 +319,16 @@ export function TodayAtMadonna({
   tasks = [],
   opsPulse = null,
   children,
+  viewRole,
+  previewPersona,
+  previewName,
 }: TodayAtMadonnaProps) {
-  const preferredName =
-    user.firstName ?? user.displayName.split(" ")[0] ?? user.displayName;
+  const role = viewRole ?? user.role;
+  const preferredName = previewName
+    ? previewName.split(" ")[0]
+    : previewPersona
+      ? null
+      : (user.firstName ?? user.displayName.split(" ")[0] ?? user.displayName);
   const hour = new Date().getHours();
   const discovery = getDailyDiscovery(hub.today);
   const byKey = Object.fromEntries(discovery.map((item) => [item.key, item]));
@@ -307,20 +336,22 @@ export function TodayAtMadonna({
   const fact = byKey.fact;
   const word = byKey.word;
   const saint = byKey.saint;
+  const greeting = preferredName
+    ? `${getGreeting(hour)}, ${preferredName}.`
+    : `${getGreeting(hour)}.`;
 
   return (
     <div className="flex flex-1 flex-col gap-0">
       <header className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-[#0A2342] via-[#0A2342] to-[#14365f] px-5 py-7 text-white shadow-sm sm:px-8 sm:py-9">
         <div className="relative z-10 max-w-2xl space-y-3">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#C9A227]">
-            Madonna High School · Command Center
+            Madonna High School · {homeEyebrowForView(role, previewPersona)}
           </p>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
             Today at Madonna
           </h1>
           <p className="text-sm text-[#C6CCD6] sm:text-base">
-            {getGreeting(hour)}, {preferredName}. Your hub for advisor messages,
-            club meetings, tasks, and the daily campus briefing.
+            {greeting} {homeBlurb(role)}
           </p>
           <p className="text-sm text-[#C6CCD6]/80">{hub.dateLabel}</p>
         </div>
@@ -334,18 +365,42 @@ export function TodayAtMadonna({
         />
       </header>
 
-      <div className="mt-6 space-y-4">
-        {opsPulse ? <ClubOpsPulsePanel pulse={opsPulse} /> : null}
-        <AdvisorMessagesPanel messages={messages} />
-        <div className="grid gap-4 lg:grid-cols-2">
+      <div className="mt-6 space-y-3">
+        {opsPulse ? (
+          <PageDropdown
+            id="club-ops"
+            title="Club operations"
+            description="What each club is doing right now."
+          >
+            <ClubOpsPulsePanel pulse={opsPulse} />
+          </PageDropdown>
+        ) : null}
+        <PageDropdown
+          id="messages"
+          title="Messages & advisor requests"
+          description="Requests from your advisor and club officers."
+        >
+          <AdvisorMessagesPanel messages={messages} />
+        </PageDropdown>
+        <PageDropdown
+          id="meetings"
+          title="Club meetings"
+          description="What's on your club calendar."
+        >
           <CommandCenterMeetings meetings={meetings} />
+        </PageDropdown>
+        <PageDropdown
+          id="tasks"
+          title="Club tasks"
+          description="Work assigned to you."
+        >
           <CommandCenterTasks tasks={tasks} />
-        </div>
+        </PageDropdown>
       </div>
 
       {children ? <div className="mt-8">{children}</div> : null}
 
-      <div className="mt-8 space-y-0 rounded-2xl border border-border bg-card/40 px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mt-8 space-y-3">
         <BriefingSection
           id="weather"
           eyebrow="01"
@@ -364,20 +419,12 @@ export function TodayAtMadonna({
         </BriefingSection>
 
         <BriefingSection
-          id="schedule"
+          id="lunch"
           eyebrow="02"
-          title="Today's schedule"
-          description={
-            hub.isSchoolDay
-              ? `${hub.schoolYear} · Regular bell schedule`
-              : "Weekend — no regular class periods"
-          }
+          title="Lunch"
+          description="Menus and ordering on FuelTheDons."
         >
-          <BellScheduleWidget
-            schedule={hub.bell}
-            isSchoolDay={hub.isSchoolDay}
-          />
-          <FuelTheDonsRow className="mt-4" />
+          <FuelTheDonsRow />
         </BriefingSection>
 
         <BriefingSection

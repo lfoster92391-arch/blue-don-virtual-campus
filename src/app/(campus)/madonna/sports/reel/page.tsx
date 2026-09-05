@@ -7,6 +7,7 @@ import { HighlightReelPlayer } from "@/components/media/highlight-reel-player";
 import { LiveNowPanel } from "@/components/media/live-now-panel";
 import { VideoGrid } from "@/components/media/video-grid";
 import { VideoUploadForm } from "@/components/media/video-upload-form";
+import { Button } from "@/components/ui/button";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { getBroadcastSchedule } from "@/services/broadcast-production-service";
 import {
@@ -129,21 +130,27 @@ export default async function MadonnaSportsReelPage() {
         </>
       ) : null}
 
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link
-          href="/madonna/sports"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 font-medium text-[#0A2342] transition-colors hover:bg-muted dark:text-white"
-        >
-          Full sports library
-          <ArrowRight className="size-3.5" aria-hidden="true" />
-        </Link>
-        <Link
-          href="/madonna"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 font-medium text-[#0A2342] transition-colors hover:bg-muted dark:text-white"
-        >
-          Madonna Hub
-          <ArrowRight className="size-3.5" aria-hidden="true" />
-        </Link>
+      <div className="flex flex-wrap gap-3">
+        <Button
+          variant="action"
+          nativeButton={false}
+          render={
+            <Link href="/madonna/sports">
+              Full sports library
+              <ArrowRight className="size-3.5" aria-hidden="true" />
+            </Link>
+          }
+        />
+        <Button
+          variant="action"
+          nativeButton={false}
+          render={
+            <Link href="/madonna">
+              Madonna Hub
+              <ArrowRight className="size-3.5" aria-hidden="true" />
+            </Link>
+          }
+        />
       </div>
     </ShellPage>
   );

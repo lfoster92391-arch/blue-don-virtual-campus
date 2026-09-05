@@ -17,7 +17,7 @@ export function buildIcsEvent(input: {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Blue Don Virtual Campus//EN",
+    "PRODID:-//Madonna High School//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",

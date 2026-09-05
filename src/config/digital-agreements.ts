@@ -40,7 +40,7 @@ export type ApprovalChainStep =
 /** Granular opt-in categories for Parent Media Release (#3). */
 export const MEDIA_RELEASE_CATEGORIES = [
   { id: "website", label: "School website" },
-  { id: "blue_don", label: "Blue Don Virtual Campus" },
+  { id: "blue_don", label: "Madonna High School" },
   { id: "livestreams", label: "Livestreams" },
   { id: "facebook", label: "Facebook" },
   { id: "instagram", label: "Instagram" },

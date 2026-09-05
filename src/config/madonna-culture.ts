@@ -419,7 +419,7 @@ export const TRADITIONS: TraditionDetail[] = [
         "Student-led campus tours",
         "Academy showcase booths",
         "Financial aid information session",
-        "Blue Don Virtual Campus demo",
+        "Madonna campus demo",
       ],
     },
     timeline: [{ year: "2005", event: "Student ambassador program formalized" }],
@@ -500,8 +500,8 @@ export const HISTORY_EVENTS: HistoryEvent[] = [
   { year: 2015, title: "Academy Model Introduced", description: "Career academies give students specialized pathways in IT, health sciences, and more.", category: "academics" },
   { year: 2020, title: "Remote Learning Pivot", description: "Madonna adapts to hybrid learning, accelerating digital infrastructure.", category: "technology" },
   { year: 2023, title: "Digital Time Capsule", description: "Seniors begin sealing reflections in a digital time capsule opened at graduation.", category: "campus" },
-  { year: 2025, title: "Blue Don OS Announced", description: "Madonna unveils the vision for a unified digital campus experience.", category: "technology" },
-  { year: 2027, title: "Blue Don Virtual Campus Launches", description: "W18 ships School Culture & Traditions — Madonna's digital heartbeat goes live.", category: "technology" },
+  { year: 2025, title: "Digital campus announced", description: "Madonna unveils the vision for a unified digital campus experience.", category: "technology" },
+  { year: 2027, title: "Madonna digital campus launches", description: "School Culture & Traditions ships — Madonna's digital heartbeat goes live.", category: "technology" },
 ];
 
 export const HALL_INDUCTEES: HallInductee[] = [
@@ -667,7 +667,7 @@ export const CLASS_TIME_CAPSULES: ClassTimeCapsule[] = [
     classYear: "2027",
     motto: "Building the future, honoring the past",
     entries: [
-      { id: "tc-1", author: "Aisha P.", prompt: "What do you hope to accomplish before graduation?", response: "Launch the full Blue Don Virtual Campus and mentor underclassmen in IT Club.", dateLabel: "Sep 2025" },
+      { id: "tc-1", author: "Aisha P.", prompt: "What do you hope to accomplish before graduation?", response: "Help launch Madonna's digital campus and mentor underclassmen in IT Club.", dateLabel: "Sep 2025" },
       { id: "tc-2", author: "Marcus W.", prompt: "What will you miss most about Madonna?", response: "Friday night lights and the people who became family.", dateLabel: "Sep 2025" },
     ],
   },
@@ -682,7 +682,7 @@ export const CLASS_TIME_CAPSULES: ClassTimeCapsule[] = [
 
 export const MADONNA_HISTORY_DAYS: MadonnaHistoryDay[] = [
   { month: 7, day: 8, year: 1955, title: "Madonna High School Opens", description: "On this day in 1955, Madonna High School welcomed its first students to Weirton, West Virginia." },
-  { month: 7, day: 8, year: 2027, title: "Blue Don Virtual Campus — Culture Wave", description: "School Culture & Traditions (W18) launches, making Madonna's heartbeat digital." },
+  { month: 7, day: 8, year: 2027, title: "Madonna digital campus — Culture Wave", description: "School Culture & Traditions launches, making Madonna's heartbeat digital." },
   { month: 7, day: 4, title: "Independence Day Alumni Gatherings", description: "Madonna alumni chapters across the country host annual Fourth of July picnics." },
   { month: 5, day: 24, year: 2025, title: "Class of 2025 Commencement", description: "The Class of 2025 graduated 142 seniors — the largest class in a decade." },
   { month: 10, day: 10, title: "Homecoming Weekend", description: "Blue Dons gather annually for the Homecoming football game and alumni celebrations." },

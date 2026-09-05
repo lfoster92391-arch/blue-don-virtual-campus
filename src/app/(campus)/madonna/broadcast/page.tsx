@@ -10,6 +10,7 @@ import { DailyAnnouncement } from "@/components/media/daily-announcement";
 import { LiveBroadcastPanel } from "@/components/media/live-broadcast-panel";
 import { LiveNowPanel } from "@/components/media/live-now-panel";
 import { VideoGrid } from "@/components/media/video-grid";
+import { Button } from "@/components/ui/button";
 import {
   getBlueDonLiveRtmpPublicConfig,
   isWithinAirPreviewWindow,
@@ -163,25 +164,22 @@ export default async function MadonnaBroadcastPage() {
         <AnnouncementSubmitForm />
       </DashboardCard>
 
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link
-          href="/watch"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 font-medium text-[#0A2342] transition-colors hover:bg-muted dark:text-white"
-        >
-          Watch Broadcasting LIVE
-        </Link>
-        <Link
-          href="/media"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 font-medium text-[#0A2342] transition-colors hover:bg-muted dark:text-white"
-        >
-          Full Broadcasting hub
-        </Link>
-        <Link
-          href="/madonna/participate"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 font-medium text-[#0A2342] transition-colors hover:bg-muted dark:text-white"
-        >
-          Join the crew
-        </Link>
+      <div className="flex flex-wrap gap-3">
+        <Button
+          variant="action"
+          nativeButton={false}
+          render={<Link href="/watch">Watch Broadcasting LIVE</Link>}
+        />
+        <Button
+          variant="action"
+          nativeButton={false}
+          render={<Link href="/media">Full Broadcasting hub</Link>}
+        />
+        <Button
+          variant="action"
+          nativeButton={false}
+          render={<Link href="/madonna/participate">Join the crew</Link>}
+        />
       </div>
     </ShellPage>
   );

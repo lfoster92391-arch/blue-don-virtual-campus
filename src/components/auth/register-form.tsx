@@ -148,7 +148,7 @@ export function RegisterForm({
     return (
       <AuthShell
         title="Create account"
-        description="Configure Supabase before registering for Blue Don Virtual Campus."
+        description="Configure Supabase before registering for Madonna High School."
       >
         <SupabaseSetupNotice />
       </AuthShell>

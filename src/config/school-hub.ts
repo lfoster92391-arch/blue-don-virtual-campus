@@ -1,11 +1,11 @@
 /**
  * School Hub (Module 4, `/hub`) — the daily operations center for Madonna High
- * School. Seed/config data for the bell schedule, rotating lunch menus, staff
- * directory, and school resources. Live data (weather, events, forms) is joined
- * in `src/services/school-hub-service.ts`.
+ * School. Seed/config data for rotating lunch menus, staff directory, and
+ * school resources. Live data (weather, events, forms) is joined in
+ * `src/services/school-hub-service.ts`.
  *
  * IMPORTANT: This is seed/config content. Replace with an admin-managed source
- * (cafeteria menu feed, SIS bell schedule, directory service) when available.
+ * (cafeteria menu feed, directory service) when available.
  */
 
 import {
@@ -32,77 +32,6 @@ import { IT_HELP_DESK_EMAIL, IT_HELP_DESK_NAME } from "@/config/it-help-desk";
 
 /** Day of week index (0 = Sunday … 6 = Saturday), matching `Date.getDay()`. */
 export type WeekdayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
-
-// ---------------------------------------------------------------------------
-// Bell schedule
-// ---------------------------------------------------------------------------
-
-export type BellPeriodKind = "class" | "lunch" | "break" | "activity" | "arrival" | "dismissal";
-
-export type BellPeriod = {
-  id: string;
-  label: string;
-  /** Minutes since midnight (campus timezone), e.g. 8 * 60 + 5 = 485. */
-  startMinutes: number;
-  endMinutes: number;
-  kind: BellPeriodKind;
-  room?: string;
-};
-
-/** Human clock label for minutes-since-midnight, e.g. 485 → "8:05 AM". */
-export function formatMinutes(minutes: number): string {
-  const normalized = ((minutes % 1440) + 1440) % 1440;
-  const hour24 = Math.floor(normalized / 60);
-  const minute = normalized % 60;
-  const period = hour24 >= 12 ? "PM" : "AM";
-  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
-  return `${hour12}:${minute.toString().padStart(2, "0")} ${period}`;
-}
-
-function m(hour: number, minute: number): number {
-  return hour * 60 + minute;
-}
-
-/** Regular weekday bell schedule. Kept intentionally simple for the MVP. */
-export const REGULAR_BELL_SCHEDULE: BellPeriod[] = [
-  { id: "arrival", label: "Arrival & Homeroom", startMinutes: m(7, 45), endMinutes: m(8, 5), kind: "arrival" },
-  { id: "p1", label: "Period 1", startMinutes: m(8, 5), endMinutes: m(8, 52), kind: "class" },
-  { id: "p2", label: "Period 2", startMinutes: m(8, 56), endMinutes: m(9, 43), kind: "class" },
-  { id: "p3", label: "Period 3", startMinutes: m(9, 47), endMinutes: m(10, 34), kind: "class" },
-  { id: "p4", label: "Period 4", startMinutes: m(10, 38), endMinutes: m(11, 25), kind: "class" },
-  { id: "lunch", label: "Lunch", startMinutes: m(11, 25), endMinutes: m(12, 0), kind: "lunch" },
-  { id: "p5", label: "Period 5", startMinutes: m(12, 4), endMinutes: m(12, 51), kind: "class" },
-  { id: "p6", label: "Period 6", startMinutes: m(12, 55), endMinutes: m(13, 42), kind: "class" },
-  { id: "p7", label: "Period 7", startMinutes: m(13, 46), endMinutes: m(14, 33), kind: "class" },
-  { id: "activity", label: "Activity / Extra Help", startMinutes: m(14, 37), endMinutes: m(15, 15), kind: "activity" },
-  { id: "dismissal", label: "Dismissal", startMinutes: m(15, 15), endMinutes: m(15, 20), kind: "dismissal" },
-];
-
-export type ScheduleNote = {
-  id: string;
-  label: string;
-  detail: string;
-  tone: "info" | "warning";
-};
-
-/**
- * Seasonal / upcoming schedule notes (early dismissal, Mass days, etc.).
- * Rendered as an at-a-glance strip on the bell schedule widget.
- */
-export const SCHEDULE_NOTES: ScheduleNote[] = [
-  {
-    id: "mass-first-friday",
-    label: "First Friday Mass",
-    detail: "All-school Mass replaces Period 1 on the first Friday of each month.",
-    tone: "info",
-  },
-  {
-    id: "early-dismissal",
-    label: "Early dismissal reminder",
-    detail: "Faculty in-service on the last Wednesday of the month — 12:30 PM dismissal.",
-    tone: "warning",
-  },
-];
 
 // ---------------------------------------------------------------------------
 // Lunch menu (rotating by weekday)

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  Clock,
   Cloud,
   Megaphone,
   Radio,
@@ -22,7 +21,6 @@ import {
 import { formatCampusDateTime } from "@/lib/datetime/campus-local";
 import { cn } from "@/lib/utils";
 import type { BroadcastAnnouncementView } from "@/services/broadcast-announcement-service";
-import type { HubBellSchedule } from "@/services/school-hub-service";
 import type { SportsGameView } from "@/services/sports-highlights-service";
 import type { CampusWeather } from "@/services/weather-service";
 
@@ -272,36 +270,20 @@ function SectionTile({
 }
 
 /**
- * TODAY snapshot — where you are in the day plus a preview of the announcement,
- * with the full page one tap away. Renders an honest empty state.
+ * TODAY snapshot — a preview of the announcement, with the full page one tap
+ * away. Renders an honest empty state.
  */
 export function TodaySnapshot({
-  bell,
-  isSchoolDay,
   announcement,
 }: {
-  bell: HubBellSchedule;
-  isSchoolDay: boolean;
   announcement: BroadcastAnnouncementView | null;
 }) {
-  const period = bell.currentPeriod ?? bell.nextPeriod;
-  let periodLine: string;
-  if (!isSchoolDay) {
-    periodLine = "No classes today.";
-  } else if (bell.currentPeriod) {
-    periodLine = `Now: ${bell.currentPeriod.label} · ends ${bell.currentPeriod.endLabel}`;
-  } else if (period) {
-    periodLine = `Next: ${period.label} at ${period.startLabel}`;
-  } else {
-    periodLine = "School day complete.";
-  }
-
   return (
-    <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+    <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-base font-semibold text-[#0A2342] dark:text-white">
-          Today
-        </h2>
+        <p className="text-sm text-muted-foreground">
+          Announcement and campus weather for the day.
+        </p>
         <Link
           href="/madonna/today"
           className="inline-flex items-center gap-1 text-sm font-medium text-[#2F80ED] hover:underline"
@@ -311,40 +293,33 @@ export function TodaySnapshot({
         </Link>
       </div>
 
-      <p className="mt-3 flex items-center gap-2 text-sm font-medium text-foreground">
-        <Clock className="size-4 shrink-0 text-[#2F80ED]" aria-hidden="true" />
-        {periodLine}
-      </p>
-
-      <div className="mt-4 border-t border-border pt-4">
-        {announcement ? (
-          <>
-            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#C9A227]">
-              <Megaphone className="size-3.5" aria-hidden="true" />
-              Today&apos;s announcement
-            </p>
-            <p className="mt-1.5 font-semibold text-[#0A2342] dark:text-white">
-              {announcement.title}
-            </p>
-            <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">
-              {announcement.body}
-            </p>
-            <Link
-              href="/madonna/broadcast"
-              className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-[#2F80ED] hover:underline"
-            >
-              Read it all
-              <ArrowRight className="size-3.5" aria-hidden="true" />
-            </Link>
-          </>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            No announcement posted yet today. Broadcasting publishes it from
-            the Control Room — it shows up here as soon as they do.
+      {announcement ? (
+        <>
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#C9A227]">
+            <Megaphone className="size-3.5" aria-hidden="true" />
+            Today&apos;s announcement
           </p>
-        )}
-      </div>
-    </section>
+          <p className="font-semibold text-[#0A2342] dark:text-white">
+            {announcement.title}
+          </p>
+          <p className="line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">
+            {announcement.body}
+          </p>
+          <Link
+            href="/madonna/broadcast"
+            className="inline-flex items-center gap-1 text-sm font-medium text-[#2F80ED] hover:underline"
+          >
+            Read it all
+            <ArrowRight className="size-3.5" aria-hidden="true" />
+          </Link>
+        </>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          No announcement posted yet today. Broadcasting publishes it from
+          the Control Room — it shows up here as soon as they do.
+        </p>
+      )}
+    </div>
   );
 }
 

@@ -84,8 +84,10 @@ import { listTasksForClub } from "@/services/club-student-task-service";
 import { listInvoiceReceiptRequestsForClub } from "@/services/student-message-service";
 import {
   canManageClubFinances,
+  canPostCampusCampaign,
   canViewClubFinances,
   getClubFinanceSnapshot,
+  isClubFundraiserStorageConfigured,
   listFocusClubFinanceSnapshots,
 } from "@/services/club-finance-service";
 import {
@@ -372,7 +374,7 @@ export default async function OrganizationPage({
   const sportSlug = sportParam ?? null;
   const sportsHub =
     !isFallback && slug === "broadcasting" && activeTab === "sports"
-      ? await getSportsHubData(sportSlug)
+      ? await getSportsHubData(sportSlug, { viewerId: user.id })
       : null;
   const sportsDesk =
     !isFallback && slug === "broadcasting" && activeTab === "sports-desk"
@@ -472,6 +474,10 @@ export default async function OrganizationPage({
       slug === "broadcasting" ? getBlueDonLiveRtmpPublicConfig() : null,
     financeSnapshot,
     canManageFinances,
+    canPostCampaign: isFallback
+      ? false
+      : await canPostCampusCampaign(user.id, user.role, organization.id),
+    flyerStorageConfigured: isClubFundraiserStorageConfigured(),
     clubInvoices,
     canSubmitInvoices,
     canReviewInvoices,

@@ -2,10 +2,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   CalendarDays,
-  Clock,
-  Compass,
   FileText,
-  Megaphone,
   Phone,
   School,
   UtensilsCrossed,
@@ -15,9 +12,9 @@ import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { FuelTheDonsRow } from "@/components/lunch/fuel-the-dons-link";
 import { ShellPage } from "@/components/layout/shell-page";
 import { AnnouncementsStrip } from "@/components/school-hub/announcements-strip";
-import { BellScheduleWidget } from "@/components/school-hub/bell-schedule-widget";
 import { DirectoryList } from "@/components/school-hub/directory-list";
 import { Button } from "@/components/ui/button";
+import { PageDropdown } from "@/components/ui/page-dropdown";
 import { CAMPUS_FEED } from "@/config/campus-feed";
 import { FUEL_THE_DONS_NAME } from "@/config/fuel-the-dons";
 import {
@@ -56,17 +53,6 @@ export default async function HubPage() {
   })).filter((group) => group.links.length > 0);
 
   const glanceStats = [
-    {
-      id: "period",
-      label: "Right now",
-      value: digest.bell.currentPeriod?.label ?? (digest.isSchoolDay ? "—" : "No school"),
-      hint: digest.bell.currentPeriod
-        ? `ends ${digest.bell.currentPeriod.endLabel}`
-        : digest.bell.nextPeriod
-          ? `next ${digest.bell.nextPeriod.startLabel}`
-          : digest.dayName,
-      icon: Clock,
-    },
     {
       id: "events",
       label: "Events today",
@@ -123,25 +109,11 @@ export default async function HubPage() {
         ))}
       </div>
 
-      {/* Explore Campus — central launchpad to every major area */}
-      <section aria-labelledby="explore-campus-heading" className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#0A2342]/5 text-[#0A2342] dark:bg-white/10 dark:text-white">
-            <Compass className="size-5" aria-hidden="true" />
-          </div>
-          <div>
-            <h2
-              id="explore-campus-heading"
-              className="text-base font-semibold text-[#0A2342] dark:text-white"
-            >
-              Explore Campus
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Jump to any corner of Blue Don Virtual Campus.
-            </p>
-          </div>
-        </div>
-
+      <PageDropdown
+        id="explore-campus"
+        title="Explore Campus"
+        description="Jump to any corner of Madonna High School."
+      >
         <div className="grid gap-6 lg:grid-cols-2">
           {exploreGroups.map((group) => (
             <DashboardCard
@@ -175,39 +147,27 @@ export default async function HubPage() {
             </DashboardCard>
           ))}
         </div>
-      </section>
+      </PageDropdown>
 
-      {/* Primary two-column grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <DashboardCard
-          title="Bell Schedule"
-          description={`${digest.dayName} · ${digest.schoolYear}`}
-          icon={<Clock className="size-5" />}
-          status={
-            digest.bell.currentPeriod
-              ? { label: "In session", variant: "success" }
-              : { label: digest.isSchoolDay ? "Between classes" : "No classes", variant: "info" }
-          }
-        >
-          <BellScheduleWidget schedule={digest.bell} isSchoolDay={digest.isSchoolDay} />
-        </DashboardCard>
+      <PageDropdown
+        id="lunch"
+        title="Lunch"
+        description={`Menus and ordering live on ${FUEL_THE_DONS_NAME}.`}
+      >
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <UtensilsCrossed className="size-4 text-[#2F80ED]" aria-hidden="true" />
+          {digest.dayName} · {digest.schoolYear}
+        </div>
+        <FuelTheDonsRow className="mt-3" />
+      </PageDropdown>
 
-        <DashboardCard
-          title="Lunch Menu"
-          description={`Menus and ordering live on ${FUEL_THE_DONS_NAME}.`}
-          icon={<UtensilsCrossed className="size-5" />}
-        >
-          <FuelTheDonsRow />
-        </DashboardCard>
-      </div>
-
-      <DashboardCard
+      <PageDropdown
+        id="announcements"
         title="Announcements"
         description="School-wide news from the principal's office and campus ministry."
-        icon={<Megaphone className="size-5" />}
         actions={
           <Button
-            variant="outline"
+            variant="action"
             size="sm"
             nativeButton={false}
             render={
@@ -220,22 +180,32 @@ export default async function HubPage() {
         }
       >
         <AnnouncementsStrip posts={announcements} />
-      </DashboardCard>
+      </PageDropdown>
 
-      <DashboardCard
+      <PageDropdown
+        id="directory"
         title="School Directory"
         description="Quick contacts for the main office, guidance, nurse, and more."
-        icon={<Phone className="size-5" />}
       >
-        <DirectoryList entries={directory} />
-      </DashboardCard>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Phone className="size-4 text-[#2F80ED]" aria-hidden="true" />
+          Main office and campus contacts
+        </div>
+        <div className="mt-3">
+          <DirectoryList entries={directory} />
+        </div>
+      </PageDropdown>
 
-      <DashboardCard
+      <PageDropdown
+        id="resources"
         title="Resources"
         description="Handbook, forms, calendar, and everything else in one place."
-        icon={<FileText className="size-5" />}
-        status={staff ? { label: "Staff view", variant: "info" } : undefined}
       >
+        {staff ? (
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-[#2F80ED]">
+            Staff view
+          </p>
+        ) : null}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {resources.map((resource) => (
             <Link
@@ -253,7 +223,7 @@ export default async function HubPage() {
             </Link>
           ))}
         </div>
-      </DashboardCard>
+      </PageDropdown>
     </ShellPage>
   );
 }

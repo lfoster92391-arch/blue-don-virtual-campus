@@ -12,6 +12,7 @@ import {
   TextArea,
   initialSportsState,
 } from "@/components/sports/form-primitives";
+import { HighlightSubmitForm } from "@/components/sports/sports-student-forms";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -669,10 +670,17 @@ export function GameEditorPanel({
 
 export function HighlightReviewList({
   highlights,
+  sports,
+  games,
+  storageConfigured,
 }: {
   highlights: SportsHighlightView[];
+  sports: SportView[];
+  games: SportsGameView[];
+  storageConfigured: boolean;
 }) {
   const [pending, startTransition] = useTransition();
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   if (highlights.length === 0) {
     return <p className="text-sm text-muted-foreground">No highlights yet.</p>;
@@ -701,9 +709,10 @@ export function HighlightReviewList({
               tone={highlight.status === "PUBLISHED" ? "success" : "muted"}
             />
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <Button
               size="sm"
+              className="min-h-10 w-full sm:w-auto"
               disabled={pending || highlight.status === "PUBLISHED"}
               onClick={() =>
                 startTransition(() => {
@@ -716,6 +725,7 @@ export function HighlightReviewList({
             <Button
               size="sm"
               variant="outline"
+              className="min-h-10 w-full sm:w-auto"
               disabled={pending}
               onClick={() =>
                 startTransition(() => {
@@ -732,6 +742,7 @@ export function HighlightReviewList({
             <Button
               size="sm"
               variant="outline"
+              className="min-h-10 w-full sm:w-auto"
               disabled={pending || highlight.status === "ARCHIVED"}
               onClick={() =>
                 startTransition(() => {
@@ -743,17 +754,49 @@ export function HighlightReviewList({
             </Button>
             <Button
               size="sm"
-              variant="destructive"
+              className="min-h-10 w-full sm:w-auto"
               disabled={pending}
               onClick={() =>
+                setEditingId((current) =>
+                  current === highlight.id ? null : highlight.id,
+                )
+              }
+            >
+              {editingId === highlight.id ? "Cancel edit" : "Edit"}
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="min-h-10 w-full sm:w-auto"
+              disabled={pending}
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    `Delete “${highlight.title}”? This removes the whole submission.`,
+                  )
+                ) {
+                  return;
+                }
                 startTransition(() => {
                   void deleteHighlightAction(highlight.id);
-                })
-              }
+                });
+              }}
             >
               Delete
             </Button>
           </div>
+          {editingId === highlight.id ? (
+            <div className="mt-4 border-t border-border pt-4">
+              <HighlightSubmitForm
+                key={highlight.id}
+                sports={sports}
+                games={games}
+                storageConfigured={storageConfigured}
+                canManage
+                highlight={highlight}
+              />
+            </div>
+          ) : null}
         </li>
       ))}
     </ul>

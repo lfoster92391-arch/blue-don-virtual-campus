@@ -20,7 +20,7 @@ export default async function BusinessPartnerApplyPage() {
     >
       <DashboardCard
         title="Partner application"
-        description="Submit your business for review. Approved partners receive a dedicated page on Blue Don Virtual Campus."
+        description="Submit your business for review. Approved partners receive a dedicated page on the Madonna campus site."
         icon={<Building2 className="size-5" />}
       >
         <ul className="mb-6 space-y-2 text-sm text-muted-foreground">

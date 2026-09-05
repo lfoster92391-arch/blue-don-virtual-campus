@@ -31,6 +31,7 @@ export const FOCUSED_MODE_ALLOWED_PREFIXES = [
   "/events",
   "/clubs",
   "/finances",
+  "/fundraisers",
   "/profile",
   "/settings",
   "/pass",
@@ -71,7 +72,7 @@ export const FOCUSED_MODE_ALLOWED_PREFIXES = [
  */
 export const FOCUSED_MODE_SOFT_REDIRECTS: Record<string, string> = {
   "/discover": "/home#daily-discovery",
-  "/hub": "/home#schedule",
+  "/hub": "/home",
   "/dashboard": "/home",
   "/future": "/home",
   "/pathways": "/home",

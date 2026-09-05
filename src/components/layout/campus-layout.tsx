@@ -5,6 +5,7 @@ import { PageFooter } from "@/components/layout/page-footer";
 import { Sidebar } from "@/components/layout/sidebar";
 import type { CampusRole } from "@/config/roles";
 import type { FocusClubSlug } from "@/config/focused-clubs";
+import { canManageUsers } from "@/config/roles";
 import type { ViewAsPersona } from "@/config/view-as";
 import type { StudentContext } from "@/services/student-context-service";
 import type { CampusUser } from "@/types/auth";
@@ -58,7 +59,7 @@ export function CampusLayout({
             persona={preview.persona}
           />
         ) : null}
-        <Header user={user} />
+        <Header user={user} showViewAs={canManageUsers(user.role)} />
         <main className="flex flex-1 flex-col">
           <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-4 py-6 lg:px-6">
             {children}

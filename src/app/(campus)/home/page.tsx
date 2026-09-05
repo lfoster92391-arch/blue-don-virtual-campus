@@ -1,3 +1,5 @@
+import { CampusCampaignBanner } from "@/components/fundraisers/campus-campaign-banner";
+import { PageDropdown } from "@/components/ui/page-dropdown";
 import { AgreementsWidget } from "@/components/home/agreements-widget";
 import { ClubJoinRequestsAlert } from "@/components/home/club-join-requests-alert";
 import { BlueDonOS } from "@/components/home/blue-don-os";
@@ -45,8 +47,10 @@ import {
   type StudentContext,
 } from "@/services/student-context-service";
 import { listStudentMessagesForUser } from "@/services/student-message-service";
+import { listPublicCampusCampaigns } from "@/services/club-finance-service";
 import { getCricutAmazonWishlistUrl } from "@/services/cricut-shop-service";
 import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
+import { FOCUS_CLUBS } from "@/config/focused-clubs";
 
 const EMPTY_CONTEXT: StudentContext = { clubs: [], teams: [], classes: [] };
 
@@ -85,6 +89,11 @@ export default async function HomePage({
   const viewRole = identity.navRole;
   const { intent: rawIntent } = await searchParams;
   const intent = parseLoginIntent(rawIntent);
+  // Named-student preview uses that student’s inbox. Persona preview must not
+  // reuse Lisa’s admin meetings/tasks — that made View as look like chrome-only.
+  const commandUserId = identity.previewTarget?.id
+    ?? (identity.isPreviewing ? null : user.id);
+  const showOpsPulse = viewRole !== "student" && viewRole !== "parent";
   const [
     digest,
     context,
@@ -100,9 +109,37 @@ export default async function HomePage({
     players,
     activeLive,
     schedule,
+    campaigns,
   ] = await Promise.all([
-    safeHomeData("digest", () => getTodayDigest(user.id), emptyDigest()),
-    safeHomeData("context", () => getStudentContext(user.id), EMPTY_CONTEXT),
+    safeHomeData(
+      "digest",
+      () => getTodayDigest(commandUserId ?? user.id),
+      emptyDigest(),
+    ),
+    safeHomeData(
+      "context",
+      () => {
+        if (identity.forcedMembershipSlugs) {
+          return Promise.resolve({
+            clubs: identity.forcedMembershipSlugs.map((slug) => {
+              const club = FOCUS_CLUBS.find((item) => item.slug === slug)!;
+              return {
+                id: slug,
+                slug,
+                name: club.name,
+                icon: "◆",
+                href: club.href,
+                role: "MEMBER",
+              };
+            }),
+            teams: [],
+            classes: [],
+          } satisfies StudentContext);
+        }
+        return getStudentContext(commandUserId ?? user.id);
+      },
+      EMPTY_CONTEXT,
+    ),
     safeHomeData(
       "broadcast-announcement",
       () => getTodaysBroadcastAnnouncement(),
@@ -110,28 +147,44 @@ export default async function HomePage({
     ),
     safeHomeData(
       "hub",
-      () => getTodayHubDigest({ id: user.id, role: user.role }),
+      () =>
+        getTodayHubDigest({
+          id: commandUserId ?? user.id,
+          role: viewRole,
+        }),
       buildEmptyHubDigest(),
     ),
     safeHomeData(
       "messages",
-      () => listStudentMessagesForUser(user.id),
+      () =>
+        commandUserId
+          ? listStudentMessagesForUser(commandUserId)
+          : Promise.resolve([] as StudentMessageView[]),
       [] as StudentMessageView[],
     ),
     safeHomeData(
       "meetings",
-      () => listMeetingsForStudent(user.id),
+      () =>
+        commandUserId
+          ? listMeetingsForStudent(commandUserId)
+          : Promise.resolve([] as CommandCenterMeetingView[]),
       [] as CommandCenterMeetingView[],
     ),
     safeHomeData(
       "tasks",
-      () => listTasksForStudent(user.id),
+      () =>
+        commandUserId
+          ? listTasksForStudent(commandUserId)
+          : Promise.resolve([] as ClubStudentTaskView[]),
       [] as ClubStudentTaskView[],
     ),
     safeHomeData("cricut-wishlist", () => getCricutAmazonWishlistUrl(), null),
     safeHomeData(
       "club-ops-pulse",
-      () => getClubOpsPulse({ id: user.id, role: user.role }),
+      () =>
+        showOpsPulse
+          ? getClubOpsPulse({ id: user.id, role: viewRole })
+          : Promise.resolve(null as ClubOpsPulse | null),
       null as ClubOpsPulse | null,
     ),
     safeHomeData("sports-banner", () => getSportsBanner(), {
@@ -146,6 +199,7 @@ export default async function HomePage({
     safeHomeData("players", () => listPlayers(), []),
     safeHomeData("live", () => getActiveLiveStream(), null),
     safeHomeData("broadcast-schedule", () => getBroadcastSchedule(), null),
+    safeHomeData("campus-campaigns", () => listPublicCampusCampaigns({ take: 3 }), []),
   ]);
 
   const showAgreements = viewRole === "student" || viewRole === "parent";
@@ -158,9 +212,12 @@ export default async function HomePage({
   return (
     <>
       <CampusVersionBanner />
-      <IntentMismatchNotice intent={intent} role={user.role} />
+      {identity.isPreviewing ? null : (
+        <IntentMismatchNotice intent={intent} role={user.role} />
+      )}
       {showAgreements ? <AgreementsWidget user={user} /> : null}
       {showClubJoinRequests ? <ClubJoinRequestsAlert user={user} /> : null}
+      <CampusCampaignBanner campaigns={campaigns} className="mb-6" />
       {FOCUSED_CLUBS_MODE && cricutWishlistUrl ? (
         <div className="mb-6">
           <CricutAmazonWishlistBanner url={cricutWishlistUrl} compact />
@@ -176,9 +233,18 @@ export default async function HomePage({
         meetings={meetings}
         tasks={tasks}
         opsPulse={opsPulse}
+        viewRole={viewRole}
+        previewPersona={identity.previewPersona}
+        previewName={identity.previewTarget?.displayName ?? null}
       >
-        <div className="space-y-6">
-          <SchoolRoleExtras user={user} context={context} viewRole={viewRole} />
+        <div className="space-y-3">
+          <PageDropdown
+            id="your-tools"
+            title="Your tools"
+            description="Shortcuts for your role on campus."
+          >
+            <SchoolRoleExtras user={user} context={context} viewRole={viewRole} />
+          </PageDropdown>
           <SchoolCommunityPanels
             data={{
               lastGame: banner.lastGame,

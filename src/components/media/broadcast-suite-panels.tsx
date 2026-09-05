@@ -2,6 +2,7 @@
 
 import { useActionState, useTransition } from "react";
 
+import { ImageField } from "@/components/sports/form-primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -153,7 +154,11 @@ export function BookingReviewList({
   );
 }
 
-export function AnnouncementSubmitForm() {
+export function AnnouncementSubmitForm({
+  storageConfigured = true,
+}: {
+  storageConfigured?: boolean;
+}) {
   const [state, formAction, pending] = useActionState(
     submitAnnouncementRequestAction,
     initial,
@@ -165,7 +170,12 @@ export function AnnouncementSubmitForm() {
         Faculty and students can submit items for the daily morning
         announcements. Crew reviews each request before air.
       </p>
-      <Field label="Headline" name="title" required placeholder="Club meeting moved to Wednesday" />
+      <Field
+        label="Headline"
+        name="title"
+        required
+        placeholder="What this announcement is about"
+      />
       <div className="space-y-1.5">
         <label htmlFor="announce-body" className="text-sm font-medium">
           Announcement text
@@ -176,11 +186,35 @@ export function AnnouncementSubmitForm() {
           required
           rows={4}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          placeholder="What should hosts read on air?"
+          placeholder="The full message — what it entails"
         />
       </div>
+      <div className="space-y-1.5">
+        <label htmlFor="announce-air-notes" className="text-sm font-medium">
+          What we should air or post for you
+        </label>
+        <textarea
+          id="announce-air-notes"
+          name="airNotes"
+          rows={3}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          placeholder="Read this line on air, post the flyer, mention the date…"
+        />
+      </div>
+      <ImageField
+        label="Upload image or flyer"
+        fileName="flyer"
+        urlName="flyerUrl"
+        storageConfigured={storageConfigured}
+        idPrefix="announce"
+        hint="Library or camera — PNG, JPG, or WEBP, 4 MB or smaller."
+      />
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Your role (optional)" name="submitterRole" placeholder="Faculty · Student · Coach" />
+        <Field
+          label="Your role (optional)"
+          name="submitterRole"
+          placeholder="Faculty · Student · Coach"
+        />
         <Field label="Preferred air date" name="preferredAirDate" type="date" />
       </div>
       <FormFeedback state={state} pending={pending} submitLabel="Submit for review" />
@@ -220,6 +254,20 @@ export function AnnouncementSubmissionReviewList({
                   : ""}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">{item.body}</p>
+              {item.airNotes ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Air / post: </span>
+                  {item.airNotes}
+                </p>
+              ) : null}
+              {item.flyerUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={item.flyerUrl}
+                  alt=""
+                  className="mt-2 h-24 w-auto rounded-md object-cover ring-1 ring-border"
+                />
+              ) : null}
             </div>
             <StatusPill label={BROADCAST_SUBMISSION_STATUS_LABELS[item.status]} />
           </div>
@@ -639,7 +687,7 @@ function FormFeedback({
 }) {
   return (
     <>
-      <Button type="submit" size="sm" disabled={pending}>
+      <Button type="submit" variant="action" disabled={pending}>
         {pending ? "Submitting…" : submitLabel}
       </Button>
       {state.error ? (

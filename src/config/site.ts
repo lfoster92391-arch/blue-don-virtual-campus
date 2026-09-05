@@ -40,8 +40,8 @@ export const brandColors = {
 } as const;
 
 export const siteConfig = {
-  name: "Blue Don Virtual Campus",
-  shortName: "Blue Don",
+  name: "Madonna High School",
+  shortName: "Blue Dons",
   tagline: "Choose Your Path. Build Your Future.",
   institution: "Madonna High School",
   version: "0.1.0",

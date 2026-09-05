@@ -1,32 +1,9 @@
 import { CAMPUS_WEATHER_LOCATION } from "@/config/campus-weather";
 import type { CampusRole } from "@/config/roles";
 import { getSchoolYear } from "@/config/school-year";
-import {
-  REGULAR_BELL_SCHEDULE,
-  SCHEDULE_NOTES,
-  type BellPeriod,
-  type ScheduleNote,
-} from "@/config/school-hub";
 import { listEventsForDay } from "@/services/event-service";
 import { listFormsForUser } from "@/services/form-service";
 import { getCampusWeather, type CampusWeather } from "@/services/weather-service";
-
-export type BellPeriodStatus = "past" | "current" | "upcoming";
-
-export type BellPeriodView = BellPeriod & {
-  status: BellPeriodStatus;
-  startLabel: string;
-  endLabel: string;
-};
-
-export type HubBellSchedule = {
-  periods: BellPeriodView[];
-  currentPeriod: BellPeriodView | null;
-  nextPeriod: BellPeriodView | null;
-  beforeSchool: boolean;
-  afterSchool: boolean;
-  notes: ScheduleNote[];
-};
 
 export type HubDigest = {
   today: Date;
@@ -34,25 +11,14 @@ export type HubDigest = {
   dateLabel: string;
   schoolYear: string;
   isSchoolDay: boolean;
-  bell: HubBellSchedule;
   weather: CampusWeather;
   eventCount: number;
   formsDueCount: number;
 };
 
-function formatMinutesLabel(minutes: number): string {
-  const normalized = ((minutes % 1440) + 1440) % 1440;
-  const hour24 = Math.floor(normalized / 60);
-  const minute = normalized % 60;
-  const period = hour24 >= 12 ? "PM" : "AM";
-  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
-  return `${hour12}:${minute.toString().padStart(2, "0")} ${period}`;
-}
-
 /**
  * Resolves the campus-local weekday (0–6) and minutes-since-midnight for a
- * given instant, using the campus timezone so the "current period" indicator is
- * correct regardless of server timezone.
+ * given instant, using the campus timezone.
  */
 function campusLocalParts(date: Date): { weekday: number; minutes: number } {
   const formatter = new Intl.DateTimeFormat("en-US", {
@@ -89,62 +55,15 @@ function isSchoolDay(weekday: number): boolean {
   return weekday >= 1 && weekday <= 5;
 }
 
-function buildBellSchedule(
-  weekday: number,
-  nowMinutes: number,
-): HubBellSchedule {
-  const schoolDay = isSchoolDay(weekday);
-
-  const periods: BellPeriodView[] = REGULAR_BELL_SCHEDULE.map((period) => {
-    let status: BellPeriodStatus = "upcoming";
-
-    if (schoolDay) {
-      if (nowMinutes >= period.endMinutes) {
-        status = "past";
-      } else if (nowMinutes >= period.startMinutes) {
-        status = "current";
-      }
-    }
-
-    return {
-      ...period,
-      status,
-      startLabel: formatMinutesLabel(period.startMinutes),
-      endLabel: formatMinutesLabel(period.endMinutes),
-    };
-  });
-
-  const currentPeriod = schoolDay
-    ? periods.find((period) => period.status === "current") ?? null
-    : null;
-  const nextPeriod = schoolDay
-    ? periods.find((period) => period.status === "upcoming") ?? null
-    : null;
-
-  const firstStart = REGULAR_BELL_SCHEDULE[0]?.startMinutes ?? 0;
-  const lastEnd =
-    REGULAR_BELL_SCHEDULE[REGULAR_BELL_SCHEDULE.length - 1]?.endMinutes ?? 0;
-
-  return {
-    periods,
-    currentPeriod,
-    nextPeriod,
-    beforeSchool: schoolDay && nowMinutes < firstStart,
-    afterSchool: schoolDay && nowMinutes >= lastEnd,
-    notes: SCHEDULE_NOTES,
-  };
-}
-
 export type HubDigestUser = {
   id: string;
   role: CampusRole;
 } | null;
 
 /**
- * Assembles today's School Hub digest: bell schedule with a live "current
- * period" indicator, today's + tomorrow's lunch, campus weather, and (when a
- * user is provided and the database is configured) today's event count and the
- * number of forms still due.
+ * Assembles today's School Hub digest: campus weather and (when a user is
+ * provided and the database is configured) today's event count and the number
+ * of forms still due.
  *
  * All live sources degrade gracefully to zero/seed values when the database or
  * weather API is unavailable, so the hub always renders.
@@ -174,7 +93,7 @@ function unavailableWeather(): CampusWeather {
 
 /** Offline / DB-down briefing shell so /home can still render. */
 export function buildEmptyHubDigest(date: Date = new Date()): HubDigest {
-  const { weekday, minutes } = campusLocalParts(date);
+  const { weekday } = campusLocalParts(date);
 
   const dayName = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
@@ -194,7 +113,6 @@ export function buildEmptyHubDigest(date: Date = new Date()): HubDigest {
     dateLabel,
     schoolYear: getSchoolYear(date),
     isSchoolDay: isSchoolDay(weekday),
-    bell: buildBellSchedule(weekday, minutes),
     weather: unavailableWeather(),
     eventCount: 0,
     formsDueCount: 0,
@@ -205,7 +123,7 @@ export async function getTodayHubDigest(
   user: HubDigestUser = null,
   date: Date = new Date(),
 ): Promise<HubDigest> {
-  const { weekday, minutes } = campusLocalParts(date);
+  const { weekday } = campusLocalParts(date);
 
   const [weather, events, forms] = await Promise.all([
     safeHubSideData("weather", () => getCampusWeather(), unavailableWeather()),
@@ -253,7 +171,6 @@ export async function getTodayHubDigest(
     dateLabel,
     schoolYear: getSchoolYear(date),
     isSchoolDay: isSchoolDay(weekday),
-    bell: buildBellSchedule(weekday, minutes),
     weather,
     eventCount: events.length,
     formsDueCount,

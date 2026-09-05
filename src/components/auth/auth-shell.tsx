@@ -18,8 +18,8 @@ export function AuthShell({
         <div className="space-y-6">
           <BrandLogo variant="full" size="lg" href={null} priority />
           <div>
-            <p className="text-sm text-[#C6CCD6]">{siteConfig.institution}</p>
-            <h1 className="mt-2 text-3xl font-semibold">{siteConfig.name}</h1>
+            <p className="text-sm text-[#C6CCD6]">{siteConfig.shortName}</p>
+            <h1 className="mt-2 text-3xl font-semibold">{siteConfig.institution}</h1>
           </div>
         </div>
         <div className="space-y-3">

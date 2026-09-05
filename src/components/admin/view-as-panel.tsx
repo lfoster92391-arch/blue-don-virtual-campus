@@ -17,7 +17,10 @@ const CHOICES: { persona: ViewAsPersona; blurb: string }[] = [
 
 export function ViewAsPanel() {
   return (
-    <section className="space-y-3 rounded-xl border border-border bg-card p-5">
+    <section
+      id="view-as"
+      className="space-y-3 rounded-xl border border-border bg-card p-5"
+    >
       <div className="flex items-center gap-2">
         <Eye className="size-5 text-muted-foreground" />
         <h2 className="text-lg font-semibold text-[#0A2342] dark:text-white">

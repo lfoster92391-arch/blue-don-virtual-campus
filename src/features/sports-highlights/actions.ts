@@ -26,6 +26,7 @@ import {
   setGameScore,
   setSportActive,
   submitGameReport,
+  updateHighlight,
   updateHighlightStatus,
   updateReportStatus,
   uploadSportsImage,
@@ -57,6 +58,8 @@ const reportStatuses = z.enum(["PENDING", "APPROVED", "PUBLISHED", "DECLINED"]);
 
 function revalidateSportsPaths() {
   revalidatePath("/sports");
+  revalidatePath("/sports/games", "layout");
+  revalidatePath("/madonna/sports");
   revalidatePath("/media");
   revalidatePath("/organizations/broadcasting");
   revalidatePath("/home");
@@ -526,7 +529,8 @@ export async function saveHighlightAction(
       return { error: image.error };
     }
 
-    const result = await createHighlight({
+    const highlightId = optionalText(formData, "highlightId");
+    const payload = {
       actorId: user.id,
       actorName: personName(user),
       role: user.role,
@@ -539,14 +543,35 @@ export async function saveHighlightAction(
       credit: optionalText(formData, "credit"),
       isFeatured: formData.get("isFeatured") === "on",
       ...(image ? { imageUrl: image.imageUrl, imagePath: image.imagePath } : {}),
-    });
+    };
+
+    const result = highlightId
+      ? await updateHighlight({
+          ...payload,
+          highlightId,
+          replaceImage: Boolean(image),
+        })
+      : await createHighlight(payload);
 
     if ("error" in result) {
       return { error: result.error };
     }
 
     revalidateSportsPaths();
-    return { success: "Highlight saved." };
+    if (highlightId) {
+      return {
+        success:
+          "resubmitted" in result && result.resubmitted
+            ? "Highlight updated and sent back for review."
+            : "Highlight updated.",
+      };
+    }
+    return {
+      success:
+        result.status === "PUBLISHED"
+          ? "Highlight published."
+          : "Submitted. Broadcasting crew reviews it before it publishes.",
+    };
   } catch (error) {
     return failure(error, "Unable to save highlight.");
   }

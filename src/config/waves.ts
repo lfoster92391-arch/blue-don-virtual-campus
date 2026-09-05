@@ -47,8 +47,8 @@ export const WAVES: readonly Wave[] = [
   },
   {
     id: "W1",
-    label: "Blue Don OS",
-    focus: "Enterprise navigation + Blue Don OS shell, 14-item nav, Today digest.",
+    label: "Campus home",
+    focus: "Enterprise navigation + campus home shell, 14-item nav, Today digest.",
     phase: "17.0",
     status: "complete",
   },

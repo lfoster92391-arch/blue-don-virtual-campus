@@ -3,29 +3,23 @@ import {
   ArrowRight,
   BookOpen,
   Calendar,
-  Clock,
   CloudSun,
   IdCard,
   Landmark,
   UserCheck,
 } from "lucide-react";
 
-import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { FuelTheDonsRow } from "@/components/lunch/fuel-the-dons-link";
 import { MadonnaSectionNav } from "@/components/madonna/madonna-hub-panels";
 import { ShellPage } from "@/components/layout/shell-page";
-import { BellScheduleWidget } from "@/components/school-hub/bell-schedule-widget";
+import { PageDropdown } from "@/components/ui/page-dropdown";
 import { CAMPUS_WEATHER_LOCATION } from "@/config/campus-weather";
 import { requireCompleteProfile } from "@/lib/auth/session";
-import {
-  buildEmptyHubDigest,
-  getTodayHubDigest,
-} from "@/services/school-hub-service";
 
 export const metadata = {
   title: "Madonna Campus",
   description:
-    "Bell schedule, calendar, weather station, lunch on FuelTheDons, and the Madonna archive.",
+    "Calendar, weather station, lunch on FuelTheDons, and the Madonna archive.",
 };
 
 type CampusLink = {
@@ -86,24 +80,9 @@ const STUDENT_LINKS: CampusLink[] = [
   },
 ];
 
-/** Soft-fail wrapper — the schedule card should not take the page down. */
-async function safe<T>(work: Promise<T>, fallback: T): Promise<T> {
-  try {
-    return await work;
-  } catch (error) {
-    console.error("[madonna-campus] data failed:", error);
-    return fallback;
-  }
-}
-
 export default async function MadonnaCampusPage() {
   const user = await requireCompleteProfile();
   const isParent = user.role === "parent";
-
-  const hub = await safe(
-    getTodayHubDigest({ id: user.id, role: user.role }),
-    buildEmptyHubDigest(),
-  );
 
   const links = [
     ...SHARED_LINKS,
@@ -115,54 +94,54 @@ export default async function MadonnaCampusPage() {
       title="Campus"
       description={
         isParent
-          ? "School information in one place — the bell schedule, the calendar, lunch, and the parent guide."
-          : "School information in one place — the bell schedule, the calendar, the weather station, lunch, and the Madonna archive."
+          ? "School information in one place — the calendar, lunch, and the parent guide."
+          : "School information in one place — the calendar, the weather station, lunch, and the Madonna archive."
       }
     >
       <MadonnaSectionNav active="campus" />
 
-      <DashboardCard
-        title="Bell schedule"
-        description={
-          hub.isSchoolDay
-            ? `${hub.schoolYear} · Regular bell schedule · ${hub.dateLabel}`
-            : `Weekend — no regular class periods · ${hub.dateLabel}`
-        }
-        icon={<Clock className="size-5" />}
+      <PageDropdown
+        id="lunch"
+        title="Lunch"
+        description="Menus and ordering on FuelTheDons."
       >
-        <BellScheduleWidget schedule={hub.bell} isSchoolDay={hub.isSchoolDay} />
-      </DashboardCard>
+        <FuelTheDonsRow />
+      </PageDropdown>
 
-      <FuelTheDonsRow />
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        {links.map((link) => {
-          const Icon = link.icon;
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="group flex items-start gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm transition-colors hover:border-[#2F80ED]/40"
-            >
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#0A2342]/5 text-[#0A2342] dark:bg-white/10 dark:text-white">
-                <Icon className="size-5" aria-hidden="true" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-1.5 font-semibold text-[#0A2342] dark:text-white">
-                  {link.label}
-                  <ArrowRight
-                    className="size-3.5 text-[#2F80ED] transition-transform group-hover:translate-x-0.5"
-                    aria-hidden="true"
-                  />
+      <PageDropdown
+        id="campus-links"
+        title="Campus resources"
+        description="Calendar, weather, archive, and school tools."
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          {links.map((link) => {
+            const Icon = link.icon;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="group flex items-start gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm transition-colors hover:border-[#2F80ED]/40"
+              >
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#0A2342]/5 text-[#0A2342] dark:bg-white/10 dark:text-white">
+                  <Icon className="size-5" aria-hidden="true" />
                 </span>
-                <span className="mt-0.5 block text-sm text-muted-foreground">
-                  {link.body}
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5 font-semibold text-[#0A2342] dark:text-white">
+                    {link.label}
+                    <ArrowRight
+                      className="size-3.5 text-[#2F80ED] transition-transform group-hover:translate-x-0.5"
+                      aria-hidden="true"
+                    />
+                  </span>
+                  <span className="mt-0.5 block text-sm text-muted-foreground">
+                    {link.body}
+                  </span>
                 </span>
-              </span>
-            </Link>
-          );
-        })}
-      </div>
+              </Link>
+            );
+          })}
+        </div>
+      </PageDropdown>
     </ShellPage>
   );
 }

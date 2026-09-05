@@ -26,6 +26,7 @@ import {
 import type {
   SportView,
   SportsGameView,
+  SportsHighlightView,
 } from "@/services/sports-highlights-service";
 
 function GameLogo({ game }: { game: SportsGameView }) {
@@ -230,6 +231,7 @@ export function HighlightSubmitForm({
   canManage = false,
   defaultSportId,
   defaultGameId,
+  highlight,
 }: {
   sports: SportView[];
   games: SportsGameView[];
@@ -237,25 +239,46 @@ export function HighlightSubmitForm({
   canManage?: boolean;
   defaultSportId?: string;
   defaultGameId?: string;
+  highlight?: SportsHighlightView;
 }) {
   const [state, formAction, pending] = useActionState(
     saveHighlightAction,
     initialSportsState,
   );
-  const [sportId, setSportId] = useState(defaultSportId ?? sports[0]?.id ?? "");
-  const [gameId, setGameId] = useState(defaultGameId ?? "");
-
-  const sportGames = useMemo(
-    () => games.filter((game) => !sportId || game.sportId === sportId),
-    [games, sportId],
+  const [sportId, setSportId] = useState(
+    highlight?.sportId ?? defaultSportId ?? sports[0]?.id ?? "",
   );
+  const [gameId, setGameId] = useState(
+    highlight?.gameId ?? defaultGameId ?? "",
+  );
+  const editing = Boolean(highlight);
+
+  const sportGames = useMemo(() => {
+    const filtered = games.filter((game) => !sportId || game.sportId === sportId);
+    const attached = highlight?.gameId
+      ? games.find((game) => game.id === highlight.gameId)
+      : undefined;
+    if (attached && !filtered.some((game) => game.id === attached.id)) {
+      return [attached, ...filtered];
+    }
+    return filtered;
+  }, [games, sportId, highlight?.gameId]);
 
   return (
     <form action={formAction} className="space-y-4">
+      {highlight ? (
+        <input type="hidden" name="highlightId" value={highlight.id} />
+      ) : null}
       <p className="text-sm text-muted-foreground">
-        {canManage
-          ? "Posted highlights publish to the Sports page right away."
-          : "Send in a clip, photo, or story. Broadcasting crew reviews it before it publishes."}
+        {editing
+          ? canManage
+            ? "Saving updates this highlight in place."
+            : highlight?.status === "PUBLISHED"
+              ? "Saving sends this back to the sports desk for review."
+              : "Edit the text or photo and save. It stays in the review queue."
+          : canManage
+            ? "Posted highlights publish to the Sports page right away."
+            : "Send in a clip, photo, or story. Broadcasting crew reviews it before it publishes."}
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -277,7 +300,7 @@ export function HighlightSubmitForm({
         <Select
           label="Highlight type"
           name="kind"
-          defaultValue="CLIP"
+          defaultValue={highlight?.kind ?? "CLIP"}
           options={(
             Object.keys(HIGHLIGHT_KIND_LABELS) as HighlightKindKey[]
           ).map((key) => ({ value: key, label: HIGHLIGHT_KIND_LABELS[key] }))}
@@ -287,7 +310,14 @@ export function HighlightSubmitForm({
       <div className="space-y-2">
         <p className="text-sm font-medium">Attach to a game (optional)</p>
         <GamePicker
-          games={sportGames.slice(0, 8)}
+          games={
+            gameId && !sportGames.slice(0, 8).some((game) => game.id === gameId)
+              ? [
+                  ...sportGames.filter((game) => game.id === gameId),
+                  ...sportGames.filter((game) => game.id !== gameId),
+                ].slice(0, 8)
+              : sportGames.slice(0, 8)
+          }
           value={gameId}
           onChange={(next) => setGameId(next === gameId ? "" : next)}
           emptyLabel="No games for this sport yet — you can still post a highlight."
@@ -295,16 +325,25 @@ export function HighlightSubmitForm({
       </div>
       <input type="hidden" name="gameId" value={gameId} />
 
-      <Field label="Title" name="title" required placeholder="Fourth-quarter goal-line stand" />
+      <Field
+        label="Title"
+        name="title"
+        required
+        placeholder="Fourth-quarter goal-line stand"
+        defaultValue={highlight?.title}
+      />
       <TextArea
         label="Description"
         name="description"
         placeholder="What happens in the clip, who's featured…"
+        defaultValue={highlight?.description ?? undefined}
       />
 
       <ImageField
         label="Thumbnail or photo"
         storageConfigured={storageConfigured}
+        currentUrl={highlight?.imageUrl}
+        idPrefix={highlight ? `highlight-${highlight.id}` : "highlight-new"}
         hint="Used as the card image in the highlights grid."
       />
 
@@ -314,13 +353,24 @@ export function HighlightSubmitForm({
           name="videoUrl"
           type="url"
           placeholder="https://… (YouTube, Drive, campus media)"
+          defaultValue={highlight?.videoUrl ?? undefined}
         />
-        <Field label="Credit" name="credit" placeholder="Shot by …" />
+        <Field
+          label="Credit"
+          name="credit"
+          placeholder="Shot by …"
+          defaultValue={highlight?.credit ?? undefined}
+        />
       </div>
 
       {canManage ? (
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="isFeatured" className="size-4" />
+          <input
+            type="checkbox"
+            name="isFeatured"
+            className="size-4"
+            defaultChecked={highlight?.isFeatured}
+          />
           Feature this highlight at the top of the grid
         </label>
       ) : null}
@@ -328,7 +378,17 @@ export function HighlightSubmitForm({
       <FormFeedback
         state={state}
         pending={pending}
-        submitLabel={canManage ? "Publish highlight" : "Submit highlight"}
+        submitLabel={
+          editing
+            ? canManage
+              ? "Save highlight"
+              : highlight?.status === "PUBLISHED"
+                ? "Save and resubmit"
+                : "Save highlight"
+            : canManage
+              ? "Publish highlight"
+              : "Submit highlight"
+        }
       />
     </form>
   );

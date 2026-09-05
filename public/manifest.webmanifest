@@ -1,8 +1,8 @@
 {
-  "name": "Blue Don Virtual Campus",
-  "short_name": "Blue Don",
+  "name": "Madonna High School",
+  "short_name": "Madonna",
   "id": "/",
-  "description": "Choose Your Path. Build Your Future.",
+  "description": "Madonna High School — home of the Blue Dons.",
   "theme_color": "#0A2342",
   "background_color": "#FFFFFF",
   "display": "standalone",

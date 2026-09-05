@@ -13,7 +13,13 @@ import {
 } from "@/config/focus-club-access";
 import { FOCUS_CLUBS, type FocusClubSlug } from "@/config/focused-clubs";
 import { SCHOOL_EMAIL_DOMAIN } from "@/lib/auth/email-domain";
-import { ORG_MEMBERSHIP_ROLES, ORG_ROLE_LABELS } from "@/config/roles";
+import {
+  ADMIN_CREATABLE_ROLES,
+  ORG_MEMBERSHIP_ROLES,
+  ORG_ROLE_LABELS,
+  ROLE_LABELS,
+  type CampusRole,
+} from "@/config/roles";
 import {
   createStudentWithClubAction,
   type StudentAdminActionState,
@@ -21,8 +27,18 @@ import {
 
 const initialState: StudentAdminActionState = {};
 
+const ACCOUNT_ROLE_LABELS: Record<(typeof ADMIN_CREATABLE_ROLES)[number], string> =
+  {
+    student: ROLE_LABELS.student,
+    coach: ROLE_LABELS.coach,
+    teacher: "Faculty",
+    parent: ROLE_LABELS.parent,
+    staff: ROLE_LABELS.staff,
+  };
+
 export function CreateStudentForm() {
   const [clubSlug, setClubSlug] = useState<FocusClubSlug | "">("");
+  const [accountRole, setAccountRole] = useState<CampusRole>("student");
   const [state, formAction, pending] = useActionState(
     createStudentWithClubAction,
     initialState,
@@ -48,12 +64,12 @@ export function CreateStudentForm() {
     >
       <div>
         <h2 className="text-lg font-semibold text-[#0A2342] dark:text-white">
-          Create student
+          Create account
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Provision a login, set a temporary password, and optionally assign
-          them to a club with a role. Use @{SCHOOL_EMAIL_DOMAIN} when the student
-          has a school mailbox; an outside address works too.
+          Choose the account type, set a temporary password, and optionally
+          assign a club. Use @{SCHOOL_EMAIL_DOMAIN} when they have a school
+          mailbox; an outside address works too.
         </p>
       </div>
 
@@ -130,6 +146,28 @@ export function CreateStudentForm() {
         </div>
       </div>
 
+      <div className="space-y-2">
+        <label htmlFor="student-role" className="text-sm font-medium">
+          Account type
+        </label>
+        <select
+          id="student-role"
+          name="role"
+          required
+          value={accountRole}
+          onChange={(e) => setAccountRole(e.target.value as CampusRole)}
+          disabled={pending}
+          className="h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm sm:max-w-xs"
+        >
+          {ADMIN_CREATABLE_ROLES.map((role) => (
+            <option key={role} value={role}>
+              {ACCOUNT_ROLE_LABELS[role]}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {accountRole === "parent" ? null : (
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <label htmlFor="student-club" className="text-sm font-medium">
@@ -173,9 +211,10 @@ export function CreateStudentForm() {
           </select>
         </div>
       </div>
+      )}
 
       <Button type="submit" disabled={pending}>
-        {pending ? "Creating..." : "Create student"}
+        {pending ? "Creating..." : "Create account"}
       </Button>
 
       {state.error ? (

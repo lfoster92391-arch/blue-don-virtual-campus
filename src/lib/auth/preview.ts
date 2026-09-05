@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 
 import {
+  FOCUS_CLUB_SLUGS,
   isFocusClubSlug,
   type FocusClubSlug,
 } from "@/config/focused-clubs";
@@ -132,7 +133,10 @@ export async function resolveAccessIdentity(
       actor,
       membershipUserId: actor.id,
       navRole: navRole ?? actor.role,
-      forcedMembershipSlugs: null,
+      // Persona preview has no real student memberships — show the three
+      // clubs so Lisa can judge student/faculty nav, not an empty sidebar.
+      forcedMembershipSlugs:
+        persona === "student" ? [...FOCUS_CLUB_SLUGS] : null,
       isPreviewing: true,
       previewTarget: null,
       previewClubSlug: null,

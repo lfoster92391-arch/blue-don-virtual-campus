@@ -862,7 +862,7 @@ export const CLASS_WORKSPACES: Record<ClassGrade, Omit<ClassWorkspace, "grade">>
     features: [
       { id: "fr-findplace", title: "Find Your Place", description: "Match with clubs and academies.", icon: "🧭", items: ["Take the interest quiz", "Recommended clubs", "Meet-a-club week"] },
       { id: "fr-clubs", title: "Club Discovery", description: "Browse every club and team.", icon: "🎯", items: ["Club fair — Sept", "Try-it meetings", "Sign-up sheets"] },
-      { id: "fr-tour", title: "Campus Tour", description: "Learn your way around.", icon: "🗺️", items: ["Building map", "Where to find help", "Bell schedule"] },
+      { id: "fr-tour", title: "Campus Tour", description: "Learn your way around.", icon: "🗺️", items: ["Building map", "Where to find help", "Campus calendar"] },
       { id: "fr-mentors", title: "Mentors", description: "Connect with an upperclassman.", icon: "🌟", items: ["Big/little program", "Study buddies", "Advisory group"] },
     ],
   },
