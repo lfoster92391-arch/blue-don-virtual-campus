@@ -4,7 +4,9 @@ import { CalendarDays, ClipboardList, Film, ListChecks } from "lucide-react";
 
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { ShellPage } from "@/components/layout/shell-page";
+import { GameScorePad } from "@/components/sports/game-score-pad";
 import { HighlightGrid } from "@/components/sports/highlight-grid";
+import { OpponentMark } from "@/components/sports/matchup-marks";
 import {
   PlayerStatEditor,
   PlayerStatTable,
@@ -25,7 +27,7 @@ import {
 } from "@/config/sports-highlights";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import {
-  canManageSportsDesk,
+  canManageTeamRoster,
   getGame,
   isSportsImageStorageConfigured,
   listGameReports,
@@ -50,7 +52,7 @@ export default async function GameDetailPage({ params }: GamePageProps) {
 
   const [canManage, highlights, reports, players, stats, sports] =
     await Promise.all([
-      canManageSportsDesk(user.id, user.role),
+      canManageTeamRoster(user.id, user.role),
       listHighlights({ gameId: game.id, publishedOnly: true }),
       listGameReports({ gameId: game.id, publishedOnly: true }),
       listPlayers({ sportId: game.sportId }),
@@ -106,15 +108,12 @@ export default async function GameDetailPage({ params }: GamePageProps) {
             alt={`Madonna ${CAMPUS_TEAM_NAME} logo`}
             className="size-14 rounded-lg bg-white object-contain p-1"
           />
-          {game.opponentLogoUrl ? (
-            // Uploaded by Broadcasting crew or pasted from the school's site.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={game.opponentLogoUrl}
-              alt={`${game.opponentName} logo`}
-              className="size-14 rounded-lg bg-white object-contain p-1"
-            />
-          ) : null}
+          <OpponentMark
+            name={game.opponentName}
+            logoUrl={game.opponentLogoUrl}
+            size="md"
+            tone="dark"
+          />
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#C9A227]">
               {game.sportName} · {GAME_SITE_LABELS[game.site]}
@@ -152,6 +151,16 @@ export default async function GameDetailPage({ params }: GamePageProps) {
           </p>
         ) : null}
       </section>
+
+      {canManage ? (
+        <DashboardCard
+          title="Post the score"
+          description="Coaches and the sports desk — Blue Dons score first."
+          icon={<ClipboardList className="size-5" />}
+        >
+          <GameScorePad games={[game]} defaultGameId={game.id} />
+        </DashboardCard>
+      ) : null}
 
       <DashboardCard
         title="Highlights"

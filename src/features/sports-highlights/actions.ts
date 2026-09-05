@@ -23,6 +23,7 @@ import {
   removeOpponentSportTeam,
   removePlayer,
   savePlayerStat,
+  setGameScore,
   setSportActive,
   submitGameReport,
   updateHighlightStatus,
@@ -59,6 +60,7 @@ function revalidateSportsPaths() {
   revalidatePath("/media");
   revalidatePath("/organizations/broadcasting");
   revalidatePath("/home");
+  revalidatePath("/coach");
 }
 
 function personName(user: {
@@ -436,6 +438,43 @@ export async function saveGameAction(
     return { success: "Game saved to the schedule." };
   } catch (error) {
     return failure(error, "Unable to save game.");
+  }
+}
+
+export async function saveGameScoreAction(
+  _prev: SportsActionState,
+  formData: FormData,
+): Promise<SportsActionState> {
+  try {
+    const user = await requireCompleteProfile();
+    const gameId = text(formData, "gameId");
+    if (!gameId) {
+      return { error: "Pick a game." };
+    }
+
+    const statusRaw = text(formData, "status");
+    const status = statusRaw ? gameStatuses.safeParse(statusRaw) : null;
+    if (status && !status.success) {
+      return { error: "Invalid game status." };
+    }
+
+    const result = await setGameScore({
+      actorId: user.id,
+      role: user.role,
+      gameId,
+      teamScore: optionalInt(formData, "teamScore"),
+      opponentScore: optionalInt(formData, "opponentScore"),
+      status: status?.success ? (status.data as GameStatusKey) : undefined,
+    });
+
+    if ("error" in result) {
+      return { error: result.error };
+    }
+
+    revalidateSportsPaths();
+    return { success: "Score posted." };
+  } catch (error) {
+    return failure(error, "Unable to save the score.");
   }
 }
 

@@ -153,6 +153,7 @@ export const GLOBAL_ROLE_PERMISSIONS: Record<CampusRole, string[]> = {
     "future:explore",
     "rewards:grant",
     "feed:post",
+    "athletics:manage_team",
     "athletics:view",
     "ai:use",
     "lunch:order",
@@ -450,6 +451,15 @@ export function hasOrgRolePermission(
 
 export function canAccessAdmin(role: CampusRole): boolean {
   return hasPermission(role, "admin:access");
+}
+
+/**
+ * Coach film room, roster, and stat sheet. Coaches and campus athletics
+ * overseers (admin / advisor). Students, parents, and teachers without the
+ * coach role stay on the public sports pages.
+ */
+export function canAccessCoachWorkspace(role: CampusRole): boolean {
+  return hasPermission(role, "athletics:manage_team");
 }
 
 export function canManageEvents(role: CampusRole): boolean {

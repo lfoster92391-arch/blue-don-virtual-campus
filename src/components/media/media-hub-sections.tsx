@@ -43,6 +43,8 @@ type MediaHubSectionsProps = {
   myUploads: CampusMediaItemView[];
   activeLive: CampusMediaItemView | null;
   canManageMedia: boolean;
+  /** Phone / laptop camera Go Live — crew members, not only officers. */
+  canGoLive?: boolean;
   storageConfigured: boolean;
   currentUserId: string;
   rtmp: BlueDonLiveRtmpPublicConfig;
@@ -56,6 +58,7 @@ export function MediaHubSections({
   myUploads,
   activeLive,
   canManageMedia,
+  canGoLive: canGoLiveProp,
   storageConfigured,
   currentUserId,
   rtmp,
@@ -63,6 +66,8 @@ export function MediaHubSections({
   schedule,
   crewCredits,
 }: MediaHubSectionsProps) {
+  const canGoLive = canGoLiveProp ?? canManageMedia;
+
   return (
     <>
       <DashboardCard
@@ -84,7 +89,7 @@ export function MediaHubSections({
           Production tools (upload, go live, Daily Rundown) are for Broadcasting
           club members.
         </p>
-        {!canManageMedia ? (
+        {!canGoLive ? (
           <Button
             className="mt-4"
             size="sm"
@@ -100,11 +105,11 @@ export function MediaHubSections({
         ) : null}
       </DashboardCard>
 
-      {canManageMedia ? (
+      {canGoLive ? (
         <>
           <DashboardCard
-            title="Go live"
-            description="Open this phone or laptop’s camera and go live. No OBS."
+            title="Record & Go Live"
+            description="Record a clip for the library, or open this phone or laptop’s camera and go live."
             icon={<Radio className="size-5" />}
             status={
               activeLive
@@ -116,6 +121,7 @@ export function MediaHubSections({
               <LiveBroadcastPanel
                 activeLive={activeLive}
                 isProducer
+                canRecord={canManageMedia}
                 currentUserId={currentUserId}
                 rtmp={rtmp}
                 previewWindow={isWithinAirPreviewWindow(schedule.nextAirAt)}
@@ -143,7 +149,7 @@ export function MediaHubSections({
 
       <DashboardCard
         title="Daily Announcement"
-        description="Today’s message from Broadcasting Studio B."
+        description="Today’s message from Broadcasting."
         icon={<Megaphone className="size-5" />}
         status={{ label: "Broadcasting", variant: "info" }}
       >
@@ -155,14 +161,21 @@ export function MediaHubSections({
 
       {canManageMedia ? (
         <DashboardCard
-          title="Upload Video"
-          description="Publish a finished video to the school library (stored on campus)."
+          title="Record"
+          description="Capture or upload a finished video to the school library."
           icon={<Upload className="size-5" />}
           status={{ label: "Crew only", variant: "info" }}
         >
-          <VideoUploadForm storageConfigured={storageConfigured} />
+          <div id="record">
+            <VideoUploadForm
+              storageConfigured={storageConfigured}
+              submitLabel="Publish recording"
+            />
+          </div>
         </DashboardCard>
-      ) : (
+      ) : null}
+
+      {!canGoLive ? (
         <DashboardCard
           title="Blue Don Live"
           description="Watch the current campus stream when Broadcasting is on air."
@@ -183,7 +196,7 @@ export function MediaHubSections({
             />
           </div>
         </DashboardCard>
-      )}
+      ) : null}
 
       <DashboardCard
         title="Sports Highlights"

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { PhoneLiveStudio } from "@/components/media/phone-live-studio";
 import { requireCampusAccess } from "@/lib/auth/session";
 import {
+  canGoLiveFromDevice,
   canManageCampusMedia,
   getActiveLiveStream,
   isCampusMediaStorageConfigured,
@@ -22,13 +23,14 @@ type PhoneLivePageProps = {
 export default async function PhoneLivePage({ searchParams }: PhoneLivePageProps) {
   const user = await requireCampusAccess();
 
-  if (!(await canManageCampusMedia(user.id, user.role))) {
+  if (!(await canGoLiveFromDevice(user.id, user.role))) {
     redirect("/organizations/broadcasting?tab=media");
   }
 
-  const [{ title }, activeLive] = await Promise.all([
+  const [{ title }, activeLive, canRecord] = await Promise.all([
     searchParams,
     getActiveLiveStream(),
+    canManageCampusMedia(user.id, user.role),
   ]);
 
   const phoneLive = activeLive?.isPhoneLive ? activeLive : null;
@@ -39,6 +41,7 @@ export default async function PhoneLivePage({ searchParams }: PhoneLivePageProps
       storageConfigured={isCampusMediaStorageConfigured()}
       activeLiveId={phoneLive?.id ?? null}
       activeLiveTitle={phoneLive?.title ?? null}
+      canRecord={canRecord}
     />
   );
 }

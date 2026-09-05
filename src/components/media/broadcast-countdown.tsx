@@ -134,7 +134,7 @@ export function BroadcastCountdown({
               id="air-notes"
               name="notes"
               defaultValue={schedule.notes ?? ""}
-              placeholder="Studio B · wear spirit colors"
+              placeholder="Wear spirit colors"
             />
           </div>
           <div className="flex flex-wrap gap-2">

@@ -7,7 +7,7 @@
 
 import { CAMPUS_MEDIA_BUCKET } from "@/config/broadcast-media";
 import { isDatabaseConfigured, isSupabaseAdminConfigured } from "@/config/env";
-import type { CampusRole } from "@/config/roles";
+import { canAccessCoachWorkspace, type CampusRole } from "@/config/roles";
 import {
   DEFAULT_SPORTS,
   SPORTS_LOGO_MAX_BYTES,
@@ -179,6 +179,19 @@ export async function canManageSportsDesk(
   role: CampusRole,
 ): Promise<boolean> {
   return canManageCampusMedia(userId, role);
+}
+
+/**
+ * Coach workspace or Broadcasting sports desk — shared roster, stats, scores,
+ * schedule, and opponent marks.
+ */
+export async function canManageTeamRoster(
+  userId: string,
+  role: CampusRole,
+): Promise<boolean> {
+  return (
+    canAccessCoachWorkspace(role) || (await canManageSportsDesk(userId, role))
+  );
 }
 
 function toStatRecord(value: unknown): Record<string, string> {
@@ -476,8 +489,8 @@ export async function upsertOpponentSchool(input: {
   logoPath?: string | null;
   isActive?: boolean;
 }): Promise<ServiceResult<{ schoolId: string }>> {
-  if (!(await canManageSportsDesk(input.actorId, input.role))) {
-    return { error: "Only Broadcasting crew and admins can manage schools." };
+  if (!(await canManageTeamRoster(input.actorId, input.role))) {
+    return { error: "Only coaches and the sports desk can manage opponent schools." };
   }
 
   const name = input.name.trim();
@@ -534,8 +547,8 @@ export async function removeOpponentSchool(input: {
   role: CampusRole;
   schoolId: string;
 }): Promise<ServiceResult> {
-  if (!(await canManageSportsDesk(input.actorId, input.role))) {
-    return { error: "Only Broadcasting crew and admins can manage schools." };
+  if (!(await canManageTeamRoster(input.actorId, input.role))) {
+    return { error: "Only coaches and the sports desk can manage opponent schools." };
   }
   const updated = await withDatabase((prisma) =>
     prisma.opponentSchool.update({
@@ -559,8 +572,8 @@ export async function upsertOpponentSportTeam(input: {
   notes?: string | null;
   isActive?: boolean;
 }): Promise<ServiceResult> {
-  if (!(await canManageSportsDesk(input.actorId, input.role))) {
-    return { error: "Only Broadcasting crew and admins can manage schools." };
+  if (!(await canManageTeamRoster(input.actorId, input.role))) {
+    return { error: "Only coaches and the sports desk can manage opponent schools." };
   }
 
   const teamName = input.teamName.trim();
@@ -604,8 +617,8 @@ export async function removeOpponentSportTeam(input: {
   role: CampusRole;
   teamId: string;
 }): Promise<ServiceResult> {
-  if (!(await canManageSportsDesk(input.actorId, input.role))) {
-    return { error: "Only Broadcasting crew and admins can manage schools." };
+  if (!(await canManageTeamRoster(input.actorId, input.role))) {
+    return { error: "Only coaches and the sports desk can manage opponent schools." };
   }
   await withDatabase((prisma) =>
     prisma.opponentSportTeam.deleteMany({ where: { id: input.teamId } }),
@@ -904,8 +917,8 @@ export async function setGameScore(input: {
   opponentScore?: number | null;
   status?: GameStatusKey;
 }): Promise<ServiceResult<{ game: SportsGameView }>> {
-  if (!(await canManageSportsDesk(input.actorId, input.role))) {
-    return { error: "Only Broadcasting crew can update the score." };
+  if (!(await canManageTeamRoster(input.actorId, input.role))) {
+    return { error: "Only coaches and the sports desk can update the score." };
   }
 
   const current = await getGame(input.gameId);
@@ -963,8 +976,8 @@ export async function upsertGame(input: {
   streamUrl?: string | null;
   isFeatured?: boolean;
 }): Promise<ServiceResult<{ gameId: string }>> {
-  if (!(await canManageSportsDesk(input.actorId, input.role))) {
-    return { error: "Only Broadcasting crew can manage the schedule." };
+  if (!(await canManageTeamRoster(input.actorId, input.role))) {
+    return { error: "Only coaches and the sports desk can manage the schedule." };
   }
 
   // Selecting a team from the directory implies the school — keep both in sync.
@@ -1030,8 +1043,8 @@ export async function removeGame(input: {
   role: CampusRole;
   gameId: string;
 }): Promise<ServiceResult> {
-  if (!(await canManageSportsDesk(input.actorId, input.role))) {
-    return { error: "Only Broadcasting crew can manage the schedule." };
+  if (!(await canManageTeamRoster(input.actorId, input.role))) {
+    return { error: "Only coaches and the sports desk can manage the schedule." };
   }
   await withDatabase((prisma) =>
     prisma.sportsGame.deleteMany({ where: { id: input.gameId } }),
@@ -1412,8 +1425,8 @@ export async function upsertPlayer(input: {
   bio?: string | null;
   isActive?: boolean;
 }): Promise<ServiceResult> {
-  if (!(await canManageSportsDesk(input.actorId, input.role))) {
-    return { error: "Only Broadcasting crew can manage rosters." };
+  if (!(await canManageTeamRoster(input.actorId, input.role))) {
+    return { error: "Only coaches and the sports desk can manage rosters." };
   }
 
   const firstName = input.firstName.trim();
@@ -1459,8 +1472,8 @@ export async function removePlayer(input: {
   role: CampusRole;
   playerId: string;
 }): Promise<ServiceResult> {
-  if (!(await canManageSportsDesk(input.actorId, input.role))) {
-    return { error: "Only Broadcasting crew can manage rosters." };
+  if (!(await canManageTeamRoster(input.actorId, input.role))) {
+    return { error: "Only coaches and the sports desk can manage rosters." };
   }
   const updated = await withDatabase((prisma) =>
     prisma.sportsPlayer.update({
@@ -1527,8 +1540,8 @@ export async function savePlayerStat(input: {
   stats: Record<string, string>;
   notes?: string | null;
 }): Promise<ServiceResult> {
-  if (!(await canManageSportsDesk(input.actorId, input.role))) {
-    return { error: "Only Broadcasting crew can record stats." };
+  if (!(await canManageTeamRoster(input.actorId, input.role))) {
+    return { error: "Only coaches and the sports desk can record stats." };
   }
 
   const cleaned = Object.entries(input.stats).reduce<Record<string, string>>(

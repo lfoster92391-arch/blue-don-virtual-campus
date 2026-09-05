@@ -1,34 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState, useTransition } from "react";
-import {
-  ChevronDown,
-  Mic,
-  Monitor,
-  MonitorPlay,
-  Radio,
-  SlidersHorizontal,
-  Video,
-} from "lucide-react";
+import { useState, useTransition } from "react";
+import { Video } from "lucide-react";
 
 import type { BlueDonLiveRtmpPublicConfig } from "@/config/broadcast-media";
 import { PHONE_LIVE_ROUTE, PUBLIC_WATCH_PATH } from "@/config/phone-live";
+import { BroadcastPrimaryActions } from "@/components/media/broadcast-primary-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  endStudioBroadcastAction,
-  startStudentBroadcastAction,
-  type StudioTransportState,
-} from "@/features/broadcast-studio/actions";
+import { endStudioBroadcastAction } from "@/features/broadcast-studio/actions";
 import { endLiveBroadcastAction } from "@/features/media/actions";
 import { isHostedPlayerUrl, toMediaEmbedUrl } from "@/lib/media-embed";
 import type { CampusMediaItemView } from "@/services/media-service";
 
 import { PublicLivePlayer } from "./public-live-player";
-import { StreamTargetReveal } from "./stream-target-reveal";
-
-const initialState: StudioTransportState = {};
 
 type AirState = "live" | "preview" | "offline";
 
@@ -41,6 +27,8 @@ type LiveBroadcastPanelProps = {
   previewWindow?: boolean;
   /** Show title from the countdown, offered as the default for step 2. */
   scheduledTitle?: string | null;
+  /** Officers can Record (publish a clip) as well as Go Live. */
+  canRecord?: boolean;
 };
 
 export function LiveBroadcastPanel({
@@ -50,13 +38,10 @@ export function LiveBroadcastPanel({
   rtmp,
   previewWindow = false,
   scheduledTitle = null,
+  canRecord = false,
 }: LiveBroadcastPanelProps) {
   const [ending, startEnd] = useTransition();
   const [title, setTitle] = useState(() => scheduledTitle?.trim() ?? "");
-  const [obsState, obsFormAction, obsPending] = useActionState(
-    startStudentBroadcastAction,
-    initialState,
-  );
   const isLive = Boolean(activeLive);
   const airState: AirState = isLive
     ? "live"
@@ -121,6 +106,7 @@ export function LiveBroadcastPanel({
           </Button>
           {activeLive.isPhoneLive ? (
             <Button
+              variant="action"
               size="lg"
               className="h-12"
               nativeButton={false}
@@ -133,13 +119,6 @@ export function LiveBroadcastPanel({
             />
           ) : null}
         </div>
-        <AdvancedSetup
-          rtmp={rtmp}
-          showName={title}
-          obsAction={obsFormAction}
-          obsPending={obsPending}
-          obsState={obsState}
-        />
       </div>
     );
   }
@@ -164,39 +143,25 @@ export function LiveBroadcastPanel({
               key={preset}
               type="button"
               onClick={() => setTitle(preset)}
-              className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-[#E11D48]/40 hover:text-foreground"
+              className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-[#0A2342]/40 hover:text-foreground"
             >
               {preset}
             </button>
           ))}
         </div>
       </div>
-      <Button
-        size="lg"
-        className="h-14 w-full bg-[#E11D48] text-base text-white hover:bg-[#BE123C]"
-        nativeButton={false}
-        render={
-          <Link href={cameraHref}>
-            <Video className="size-5" />
-            Open camera &amp; Go Live
-          </Link>
-        }
+      <BroadcastPrimaryActions
+        canGoLive
+        canRecord={canRecord}
+        title={title}
       />
       <p className="text-sm text-muted-foreground">
         Works on this phone or laptop. Viewers watch at{" "}
         <Link href={PUBLIC_WATCH_PATH} className="text-[#2F80ED] underline">
           Watch Broadcasting LIVE
-        </Link>{" "}
-        — no login. You do not need OBS.
+        </Link>
+        .
       </p>
-      <AdvancedSetup
-        rtmp={rtmp}
-        showBroadcastDetails
-        showName={title}
-        obsAction={obsFormAction}
-        obsPending={obsPending}
-        obsState={obsState}
-      />
     </div>
   );
 }
@@ -208,7 +173,7 @@ function PanelHeading({ state }: { state: AirState }) {
         <p className="text-sm font-semibold text-foreground">Go live</p>
         <p className="text-xs text-muted-foreground">
           Open this device&apos;s camera, press Go Live, keep the page open.
-          Families watch at Watch Broadcasting LIVE — no login, no OBS.
+          Families watch at Watch Broadcasting LIVE — no login.
         </p>
       </div>
       <AirStatusBadge state={state} />
@@ -241,124 +206,6 @@ function AirStatusBadge({ state }: { state: AirState }) {
       />
       {label}
     </span>
-  );
-}
-
-/**
- * Advisor-only: OBS, RTMP, and the Studio B console. Students leave this closed.
- */
-function AdvancedSetup({
-  rtmp,
-  showBroadcastDetails = false,
-  showName = "",
-  obsAction,
-  obsPending = false,
-  obsState,
-}: {
-  rtmp: BlueDonLiveRtmpPublicConfig;
-  showBroadcastDetails?: boolean;
-  showName?: string;
-  obsAction?: (formData: FormData) => void;
-  obsPending?: boolean;
-  obsState?: StudioTransportState;
-}) {
-  return (
-    <details className="group rounded-lg border border-border bg-muted/20">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-medium text-foreground">
-        <span className="flex items-center gap-2">
-          <SlidersHorizontal className="size-4" aria-hidden="true" />
-          Advanced · Advisor setup
-        </span>
-        <ChevronDown
-          className="size-4 shrink-0 transition-transform group-open:rotate-180"
-          aria-hidden="true"
-        />
-      </summary>
-
-      <div className="space-y-6 border-t border-border px-4 py-4">
-        <p className="text-xs text-muted-foreground">
-          Students going live from a phone or laptop do not need this. OBS and
-          stream keys stay here for Studio B advisors.
-        </p>
-
-        <Button
-          size="sm"
-          variant="outline"
-          nativeButton={false}
-          render={
-            <Link href="/broadcast/studio">
-              <MonitorPlay className="size-4" />
-              Open Broadcast Studio
-            </Link>
-          }
-        />
-
-        {showBroadcastDetails && obsAction ? (
-          <form action={obsAction} className="space-y-4">
-            <input type="hidden" name="title" value={showName || "Blue Don Live"} />
-            <div className="space-y-2">
-              <label htmlFor="live-description" className="text-sm font-medium">
-                Description (optional)
-              </label>
-              <Input
-                id="live-description"
-                name="description"
-                placeholder="Blue Don News · Studio B"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="embedUrl" className="text-sm font-medium">
-                Viewer embed URL (YouTube / Vimeo, optional)
-              </label>
-              <Input
-                id="embedUrl"
-                name="embedUrl"
-                type="url"
-                placeholder="https://www.youtube.com/embed/… or watch URL"
-              />
-            </div>
-            {obsState?.error ? (
-              <p className="text-sm text-destructive" role="alert">
-                {obsState.error}
-              </p>
-            ) : null}
-            <Button type="submit" size="sm" variant="outline" disabled={obsPending}>
-              <Radio className="size-4" />
-              {obsPending ? "Starting Studio B…" : "Go Live with Studio B (OBS)"}
-            </Button>
-          </form>
-        ) : null}
-
-        <div>
-          <p className="text-sm font-medium text-foreground">OBS stream target</p>
-          <StreamTargetReveal hint={rtmp.streamKeyHint} />
-        </div>
-
-        <div>
-          <p className="text-sm font-medium text-foreground">First-time OBS setup</p>
-          <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
-            {rtmp.obsChecklist.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ol>
-        </div>
-
-        <div>
-          <p className="text-sm font-medium text-foreground">Scene setup</p>
-          <ul className="mt-3 space-y-2">
-            {rtmp.sceneTips.map((tip) => (
-              <li key={tip.label} className="flex gap-2 text-sm text-muted-foreground">
-                <SceneIcon label={tip.label} />
-                <span>
-                  <span className="font-medium text-foreground">{tip.label}:</span>{" "}
-                  {tip.tip}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </details>
   );
 }
 
@@ -401,8 +248,8 @@ function ViewerLivePreview({
     return (
       <p className="text-sm text-muted-foreground">
         {producer
-          ? "You are on air. Campus and the public watch page see this show. Add a YouTube Live or Vimeo link under Advanced to embed a player here too — or go live from a phone so clips play automatically."
-          : "Broadcasting is on air. Watch on the public Watch Broadcasting LIVE page, or wait for the crew to add a viewer link."}
+          ? "You are on air. Campus and the public watch page see this show. Go live from a phone so clips play automatically."
+          : "Broadcasting is on air. Watch on the public Watch Broadcasting LIVE page."}
       </p>
     );
   }
@@ -418,14 +265,4 @@ function ViewerLivePreview({
       />
     </div>
   );
-}
-
-function SceneIcon({ label }: { label: string }) {
-  const className = "mt-0.5 size-4 shrink-0 text-[#E11D48]";
-  if (label === "Mic") return <Mic className={className} aria-hidden="true" />;
-  if (label === "Screen share")
-    return <Monitor className={className} aria-hidden="true" />;
-  if (label === "Camera")
-    return <Video className={className} aria-hidden="true" />;
-  return <Radio className={className} aria-hidden="true" />;
 }

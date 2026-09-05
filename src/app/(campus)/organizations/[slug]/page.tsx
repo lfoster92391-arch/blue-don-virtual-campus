@@ -45,7 +45,9 @@ import {
   canManageWishlist,
   listWishlistItems,
 } from "@/services/wishlist-service";
+import { PHONE_LIVE_ROUTE } from "@/config/phone-live";
 import {
+  canGoLiveFromDevice,
   canManageCampusMedia,
   getActiveLiveStream,
   isCampusMediaStorageConfigured,
@@ -325,6 +327,11 @@ export default async function OrganizationPage({
     isBroadcastCrew = true;
   }
 
+  const canGoLive =
+    !isFallback && slug === "broadcasting"
+      ? await canGoLiveFromDevice(user.id, user.role)
+      : false;
+
   const [
     broadcastSchedule,
     broadcastBookings,
@@ -453,6 +460,7 @@ export default async function OrganizationPage({
     showJoinSection:
       !isFallback && canRequestOrganizationMembership(user.role),
     canManageMedia,
+    canGoLive,
     isBroadcastCrew: slug === "broadcasting" ? isBroadcastCrew : true,
     organizationMedia,
     activeLive,
@@ -594,6 +602,30 @@ export default async function OrganizationPage({
         organization.slug === "broadcasting" &&
         isBroadcastCrew ? (
           <>
+            {canGoLive ? (
+              <Button
+                size="sm"
+                variant="action"
+                nativeButton={false}
+                render={
+                  <Link href={PHONE_LIVE_ROUTE}>
+                    Go Live
+                  </Link>
+                }
+              />
+            ) : null}
+            {canManageMedia ? (
+              <Button
+                size="sm"
+                variant="action"
+                nativeButton={false}
+                render={
+                  <Link href="/organizations/broadcasting?tab=media#record">
+                    Record
+                  </Link>
+                }
+              />
+            ) : null}
             <Button
               size="sm"
               nativeButton={false}
@@ -603,13 +635,6 @@ export default async function OrganizationPage({
                 </Link>
               }
             />
-            {canManageMedia ? (
-              <Button
-                size="sm"
-                nativeButton={false}
-                render={<Link href="/broadcast/studio">Broadcast Studio</Link>}
-              />
-            ) : null}
           </>
         ) : null}
         {FOCUSED_CLUBS_MODE && organization.slug === "cricut-club" ? (

@@ -90,7 +90,7 @@ export function PublicLivePlayer({
 
   return (
     <p className="border-t border-white/10 px-5 py-4 text-sm text-white/70">
-      Broadcasting is on air in Studio B. A public player appears here once the
+      Broadcasting is on air. A public player appears here once the
       crew goes live from a phone or adds a YouTube / Vimeo watch link.
     </p>
   );

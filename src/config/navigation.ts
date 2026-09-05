@@ -17,12 +17,12 @@ import {
   Gamepad2,
   Heart,
   Home,
+  KeyRound,
   Landmark,
   LayoutGrid,
   Mail,
   Map,
   Megaphone,
-  MonitorPlay,
   Package,
   Radio,
   Scissors,
@@ -32,6 +32,7 @@ import {
   Trophy,
   UserCheck,
   Users,
+  Video,
   type LucideIcon,
 } from "lucide-react";
 
@@ -40,7 +41,11 @@ import { canBrowseAllFocusClubs } from "@/config/focus-club-access";
 import { FOCUS_CLUBS, type FocusClubSlug } from "@/config/focused-clubs";
 import { MADONNA_HUB_SECTIONS } from "@/config/madonna-hub";
 import type { CampusRole } from "@/config/roles";
-import { canAccessAdmin, isFacultyClubLookupRole } from "@/config/roles";
+import {
+  canAccessAdmin,
+  canAccessCoachWorkspace,
+  isFacultyClubLookupRole,
+} from "@/config/roles";
 
 export type NavItem = {
   label: string;
@@ -115,6 +120,13 @@ export const primaryNavigation: NavItem[] = [
     mobile: true,
   },
   { label: "Athletics", href: "/athletics", icon: Trophy, enabled: true },
+  {
+    label: "Coach",
+    href: "/coach",
+    icon: ClipboardList,
+    enabled: true,
+    roles: ["coach", "admin", "advisor"],
+  },
   { label: "Service Center", href: "/service", icon: Heart, enabled: true },
   {
     label: "Future Center",
@@ -272,6 +284,14 @@ export const focusedClubsNavigation: NavEntry[] = [
     primary: true,
   },
   {
+    label: "Coach",
+    href: "/coach",
+    icon: ClipboardList,
+    enabled: true,
+    primary: true,
+    roles: ["coach", "admin", "advisor"],
+  },
+  {
     label: "Parent Portal",
     href: "/parent",
     icon: UserCheck,
@@ -345,26 +365,20 @@ export const focusedClubsNavigation: NavEntry[] = [
         clubSlug: FOCUS_CLUBS[1].slug,
       },
       {
+        label: "Go Live",
+        href: "/broadcast/phone",
+        icon: Video,
+        enabled: true,
+        mobile: true,
+        primary: true,
+        clubSlug: FOCUS_CLUBS[1].slug,
+      },
+      {
         label: "Control Room",
         href: `${FOCUS_CLUBS[1].href}?tab=media`,
         icon: Megaphone,
         enabled: true,
-        primary: true,
-        clubSlug: FOCUS_CLUBS[1].slug,
-      },
-      {
-        label: "Broadcast Studio",
-        href: "/broadcast/studio",
-        icon: MonitorPlay,
-        enabled: true,
-        primary: true,
-        clubSlug: FOCUS_CLUBS[1].slug,
-      },
-      {
-        label: "Sports desk",
-        href: `${FOCUS_CLUBS[1].href}?tab=sports-desk`,
-        icon: Trophy,
-        enabled: true,
+        mobile: true,
         primary: true,
         clubSlug: FOCUS_CLUBS[1].slug,
       },
@@ -395,14 +409,6 @@ export const focusedClubsNavigation: NavEntry[] = [
         clubSlug: FOCUS_CLUBS[2].slug,
       },
       {
-        label: "Projects",
-        href: "/cricut/projects",
-        icon: Scissors,
-        enabled: true,
-        primary: true,
-        clubSlug: FOCUS_CLUBS[2].slug,
-      },
-      {
         label: "Shop",
         href: "/cricut/shop",
         icon: CircleDollarSign,
@@ -418,22 +424,6 @@ export const focusedClubsNavigation: NavEntry[] = [
         primary: true,
         clubSlug: FOCUS_CLUBS[2].slug,
         requiresFinanceAccess: true,
-      },
-      {
-        label: "Designs",
-        href: "/cricut/designs",
-        icon: Scissors,
-        enabled: true,
-        primary: true,
-        clubSlug: FOCUS_CLUBS[2].slug,
-      },
-      {
-        label: "Orders",
-        href: "/cricut/orders",
-        icon: CircleDollarSign,
-        enabled: true,
-        primary: true,
-        clubSlug: FOCUS_CLUBS[2].slug,
       },
     ],
   },
@@ -453,6 +443,13 @@ export const focusedClubsNavigation: NavEntry[] = [
         label: "Students",
         href: "/admin/students",
         icon: Users,
+        enabled: true,
+        roles: ["admin"],
+      },
+      {
+        label: "Reset passwords",
+        href: "/admin/passwords",
+        icon: KeyRound,
         enabled: true,
         roles: ["admin"],
       },
@@ -528,6 +525,13 @@ export const groupedNavigation: NavEntry[] = [
       { label: "Find Your Place", href: "/find-your-place", icon: Users, enabled: true },
       { label: "Academies", href: "/academies", icon: GraduationCap, enabled: true },
       { label: "Athletics", href: "/athletics", icon: Trophy, enabled: true },
+      {
+        label: "Coach",
+        href: "/coach",
+        icon: ClipboardList,
+        enabled: true,
+        roles: ["coach", "admin", "advisor"],
+      },
       { label: "Community", href: "/community", icon: Megaphone, enabled: true },
       { label: "Daily Discovery", href: "/discover", icon: Sun, enabled: true },
     ],
@@ -616,6 +620,13 @@ export const groupedNavigation: NavEntry[] = [
         icon: BarChart3,
         enabled: true,
         roles: ["admin", "advisor", "staff", "counselor"],
+      },
+      {
+        label: "Reset passwords",
+        href: "/admin/passwords",
+        icon: KeyRound,
+        enabled: true,
+        roles: ["admin"],
       },
       {
         label: "Administration",
@@ -785,6 +796,19 @@ export function getMobileNavigation(
         mobile: true,
         primary: true,
       },
+      ...(canAccessCoachWorkspace(role)
+        ? [
+            {
+              label: "Coach",
+              href: "/coach",
+              icon: ClipboardList,
+              enabled: true,
+              mobile: true,
+              primary: true,
+              roles: ["coach", "admin", "advisor"] as CampusRole[],
+            },
+          ]
+        : []),
       {
         label: FOCUS_CLUBS[0].shortLabel,
         href: FOCUS_CLUBS[0].href,
@@ -796,7 +820,7 @@ export function getMobileNavigation(
       },
       {
         label: FOCUS_CLUBS[1].shortLabel,
-        href: FOCUS_CLUBS[1].href,
+        href: `${FOCUS_CLUBS[1].href}?tab=media`,
         icon: Radio,
         enabled: true,
         mobile: true,

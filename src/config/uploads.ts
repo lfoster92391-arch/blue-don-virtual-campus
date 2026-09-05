@@ -8,7 +8,7 @@
  * between the target and the ceiling.
  *
  * Campus video is the one exception: it PUTs straight to Supabase Storage from
- * the browser, so it lives under `campus-video.ts` with a 50 MB limit.
+ * the browser, so it lives under `campus-video.ts` (150 MB).
  */
 
 /** Matches `experimental.serverActions.bodySizeLimit` in next.config.ts. */

@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import {
   endLiveBroadcastAction,
-  requireMediaProducer,
+  requirePhoneLiveProducer,
   type MediaActionState,
 } from "@/features/media/actions";
 import { revalidateMediaPaths } from "@/lib/media/revalidate";
@@ -43,7 +43,7 @@ export async function startPhoneLiveBroadcastAction(input: {
   description?: string;
 }): Promise<PhoneLiveActionState> {
   try {
-    const user = await requireMediaProducer();
+    const user = await requirePhoneLiveProducer();
     const parsed = startSchema.safeParse(input);
 
     if (!parsed.success) {
@@ -86,7 +86,7 @@ export async function createPhoneLiveSegmentTicketAction(input: {
   type?: string | null;
 }): Promise<{ error?: string; ticket?: CampusVideoUploadTicket }> {
   try {
-    const user = await requireMediaProducer();
+    const user = await requirePhoneLiveProducer();
     const parsed = segmentSchema.safeParse(input);
     if (!parsed.success) {
       return { error: parsed.error.issues[0]?.message ?? "Invalid live clip." };

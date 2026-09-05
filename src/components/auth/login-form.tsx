@@ -12,6 +12,10 @@ import {
   AUTH_CURRENT_PASSWORD_INPUT_PROPS,
   AUTH_EMAIL_INPUT_PROPS,
 } from "@/components/auth/auth-input-props";
+import {
+  PhoneAccessHint,
+  type PhoneAccessHintData,
+} from "@/components/auth/phone-access-hint";
 import { SupabaseSetupNotice } from "@/components/auth/supabase-setup-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,8 +49,10 @@ function formatSignInError(message: string): string {
 
 export function LoginForm({
   supabaseConfigured,
+  phoneAccessHint,
 }: {
   supabaseConfigured: boolean;
+  phoneAccessHint?: PhoneAccessHintData | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -144,6 +150,8 @@ export function LoginForm({
       title="Sign in"
       description="Enter your campus credentials to access Blue Don Virtual Campus."
     >
+      {phoneAccessHint ? <PhoneAccessHint hint={phoneAccessHint} /> : null}
+
       <form
         className="space-y-4"
         autoCapitalize="none"
@@ -196,6 +204,7 @@ export function LoginForm({
             <p className="text-sm text-destructive">{error}</p>
             {credentialsFailed ? (
               <Button
+                variant="action"
                 nativeButton={false}
                 className="w-full"
                 size="lg"
@@ -205,7 +214,7 @@ export function LoginForm({
           </div>
         ) : null}
 
-        <Button type="submit" className="w-full" disabled={loading}>
+        <Button type="submit" variant="action" className="w-full" disabled={loading}>
           {loading ? "Signing in..." : "Sign in"}
         </Button>
       </form>

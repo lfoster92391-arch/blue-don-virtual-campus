@@ -583,7 +583,7 @@ const WORKSPACES: Record<ClubType, Omit<ClubWorkspace, "clubType" | "theme">> = 
         description: "Morning announcements and live game production.",
         icon: "🎥",
         href: "/media",
-        items: ["Daily announcements", "Friday game livestream", "Studio B booking"],
+        items: ["Daily announcements", "Friday game livestream", "Coverage booking"],
       },
       {
         id: "it-design",
@@ -642,15 +642,15 @@ const WORKSPACES: Record<ClubType, Omit<ClubWorkspace, "clubType" | "theme">> = 
     },
   },
   broadcasting: {
-    intro: "Studio B command center — go live, upload packages, and crew game day.",
+    intro: "Broadcast command center — record, go live, upload packages, and crew game day.",
     features: [
       {
         id: "bc-live",
         title: "Go Live",
-        description: "Start a Blue Don Live stream from your phone or Studio B.",
+        description: "Start a Blue Don Live stream from this phone or laptop.",
         icon: "📡",
         href: "/broadcast/phone",
-        items: ["OBS / YouTube Live", "Morning announcements", "Game day"],
+        items: ["Record a clip", "Morning announcements", "Game day"],
       },
       {
         id: "bc-library",

@@ -53,6 +53,12 @@ export default async function AdminStudentsPage() {
       description="Create accounts, assign club roles, message students, preview what they see, and reset passwords."
       actions={
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="action"
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/admin/passwords">Reset passwords</Link>}
+          />
           {showLeadership ? (
             <Button
               variant="outline"

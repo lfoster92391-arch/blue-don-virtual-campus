@@ -4,7 +4,11 @@ import { redirect } from "next/navigation";
 import { LeadershipAnalyticsDashboard } from "@/components/leadership/leadership-analytics-dashboard";
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
-import { canAccessAdmin, canViewLeadershipAnalytics } from "@/config/roles";
+import {
+  canAccessAdmin,
+  canManageUsers,
+  canViewLeadershipAnalytics,
+} from "@/config/roles";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { getLeadershipAnalytics } from "@/services/leadership-analytics-service";
 
@@ -23,6 +27,14 @@ export default async function LeadershipAnalyticsPage() {
       description="Leadership command center — fundraising, service hours, student body pulse, and campus-wide activity."
       actions={
         <div className="flex flex-wrap gap-2">
+          {canManageUsers(user.role) ? (
+            <Button
+              variant="action"
+              size="sm"
+              nativeButton={false}
+              render={<Link href="/admin/passwords">Reset passwords</Link>}
+            />
+          ) : null}
           {canAccessAdmin(user.role) ? (
             <Button
               variant="outline"

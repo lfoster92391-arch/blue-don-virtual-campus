@@ -127,3 +127,15 @@ export async function requireRole(permission: string): Promise<CampusUser> {
 
   return user;
 }
+
+/** Coach film room — coaches, admins, and advisors. Everyone else goes Home. */
+export async function requireCoachWorkspace(): Promise<CampusUser> {
+  const user = await requireCampusAccess();
+  const { canAccessCoachWorkspace } = await import("@/config/roles");
+
+  if (!canAccessCoachWorkspace(user.role)) {
+    redirect("/home");
+  }
+
+  return user;
+}

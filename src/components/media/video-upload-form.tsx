@@ -11,6 +11,10 @@ import {
   resolveCampusVideoContentType,
 } from "@/config/campus-video";
 import {
+  createCoachFilmUploadTicketAction,
+  uploadCoachFilmAction,
+} from "@/features/coach/actions";
+import {
   createVideoUploadTicketAction,
   uploadCampusVideoAction,
   type MediaActionState,
@@ -26,11 +30,13 @@ type VideoUploadFormProps = {
   defaultHighlightReel?: boolean;
   titlePlaceholder?: string;
   submitLabel?: string;
+  /** Coach film room — locks category and skips crew-only reel controls. */
+  variant?: "crew" | "coach-film";
 };
 
 /**
  * PUTs the file straight to the signed Supabase URL. XHR rather than fetch
- * because uploading 50 MB over school Wi-Fi needs a progress bar — without one
+ * because uploading a large clip over school Wi-Fi needs a progress bar — without one
  * the form looks frozen and producers give up thinking it is broken.
  */
 function putToSignedUrl(
@@ -87,8 +93,13 @@ export function VideoUploadForm({
   defaultHighlightReel = false,
   titlePlaceholder = "Friday game highlights",
   submitLabel = "Publish video",
+  variant = "crew",
 }: VideoUploadFormProps) {
-  const [state, formAction, saving] = useActionState(uploadCampusVideoAction, initialState);
+  const isCoachFilm = variant === "coach-film";
+  const [state, formAction, saving] = useActionState(
+    isCoachFilm ? uploadCoachFilmAction : uploadCampusVideoAction,
+    initialState,
+  );
   const [isSubmitting, startSubmitting] = useTransition();
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
@@ -125,7 +136,10 @@ export function VideoUploadForm({
 
     setProgress(0);
 
-    const { ticket, error } = await createVideoUploadTicketAction({
+    const requestTicket = isCoachFilm
+      ? createCoachFilmUploadTicketAction
+      : createVideoUploadTicketAction;
+    const { ticket, error } = await requestTicket({
       name: file.name,
       size: file.size,
       type: file.type,
@@ -193,7 +207,7 @@ export function VideoUploadForm({
 
       <div className="space-y-2">
         <label htmlFor="videoFile" className="text-sm font-medium">
-          Video file
+          Record or choose a video
         </label>
         <input
           id="videoFile"
@@ -203,7 +217,8 @@ export function VideoUploadForm({
           className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-2 file:text-sm file:font-medium"
         />
         <p className="text-xs text-muted-foreground">
-          MP4, WebM, or MOV · up to {CAMPUS_MEDIA_MAX_LABEL}
+          MP4, WebM, or MOV · up to {CAMPUS_MEDIA_MAX_LABEL} (about 5–8 minutes
+          at 1080p)
           {storageConfigured ? "" : " · storage bucket not configured — use URL below"}
         </p>
       </div>
@@ -247,36 +262,40 @@ export function VideoUploadForm({
         </p>
       </div>
 
-      <div className="space-y-2">
-        <label htmlFor="media-category" className="text-sm font-medium">
-          On-demand category
-        </label>
-        <select
-          id="media-category"
-          name="category"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          defaultValue={defaultCategory}
-        >
-          <option value="">Uncategorized</option>
-          <option value="MORNING_ANNOUNCEMENTS">Morning Announcements</option>
-          <option value="SPORTS_HIGHLIGHTS">Sports Highlights</option>
-          <option value="STUDENT_SPOTLIGHT">Student Spotlight</option>
-          <option value="SPECIAL_EVENTS">Special Events</option>
-          <option value="HIGHLIGHT_REEL">Highlight Reel</option>
-          <option value="OTHER">Other</option>
-        </select>
-      </div>
+      {isCoachFilm ? null : (
+        <>
+          <div className="space-y-2">
+            <label htmlFor="media-category" className="text-sm font-medium">
+              On-demand category
+            </label>
+            <select
+              id="media-category"
+              name="category"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              defaultValue={defaultCategory}
+            >
+              <option value="">Uncategorized</option>
+              <option value="MORNING_ANNOUNCEMENTS">Morning Announcements</option>
+              <option value="SPORTS_HIGHLIGHTS">Sports Highlights</option>
+              <option value="STUDENT_SPOTLIGHT">Student Spotlight</option>
+              <option value="SPECIAL_EVENTS">Special Events</option>
+              <option value="HIGHLIGHT_REEL">Highlight Reel</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
 
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          name="isHighlightReel"
-          value="1"
-          defaultChecked={defaultHighlightReel}
-          className="size-4"
-        />
-        Feature in Highlight Reel
-      </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="isHighlightReel"
+              value="1"
+              defaultChecked={defaultHighlightReel}
+              className="size-4"
+            />
+            Feature in Highlight Reel
+          </label>
+        </>
+      )}
 
       {uploadError ?? state.error ? (
         <p className="text-sm text-destructive" role="alert">
@@ -289,7 +308,7 @@ export function VideoUploadForm({
         </p>
       ) : null}
 
-      <Button type="submit" disabled={busy}>
+      <Button type="submit" variant="action" disabled={busy}>
         {buttonLabel}
       </Button>
     </form>

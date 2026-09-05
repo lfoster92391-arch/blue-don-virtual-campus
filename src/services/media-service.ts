@@ -187,6 +187,25 @@ export async function canManageCampusMedia(
  * selling sponsor slots stay with the officers; writing the crew's own show is
  * the whole point of being on the crew.
  */
+/**
+ * Phone / laptop camera Go Live — any Broadcasting roster member, plus the
+ * officer / academy / faculty set in {@link canManageCampusMedia}.
+ *
+ * Regular club `member`s do not have `org:media:manage`, so they were silently
+ * locked out of the student phone path. OBS, uploads, and the Studio B console
+ * stay on {@link canManageCampusMedia}.
+ */
+export async function canGoLiveFromDevice(
+  userId: string,
+  role: CampusRole,
+): Promise<boolean> {
+  if (await canManageCampusMedia(userId, role)) {
+    return true;
+  }
+
+  return isBroadcastCrewMember(userId);
+}
+
 export async function isBroadcastCrewMember(userId: string): Promise<boolean> {
   try {
     const broadcastOrgId = await getBroadcastOrganizationId();
@@ -245,6 +264,7 @@ export async function listSchoolBroadcasts(): Promise<CampusMediaItemView[]> {
     prisma.campusMediaItem.findMany({
       where: {
         status: { in: ["PUBLISHED", "LIVE", "ENDED"] },
+        NOT: { category: "COACH_FILM" },
       },
       orderBy: [{ status: "asc" }, { publishedAt: "desc" }, { createdAt: "desc" }],
       take: 48,
@@ -294,6 +314,7 @@ export async function listVideoArchive(options?: {
           ? { organizationId: options.organizationId }
           : {}),
         ...typeFilter,
+        NOT: { category: "COACH_FILM" },
       },
       orderBy: [{ publishedAt: "desc" }, { endedAt: "desc" }, { createdAt: "desc" }],
       take,
@@ -335,6 +356,7 @@ export async function listOrganizationMedia(
       where: {
         organizationId,
         status: { in: ["PUBLISHED", "LIVE", "ENDED"] },
+        NOT: { category: "COACH_FILM" },
       },
       orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
       take: 48,
@@ -426,6 +448,12 @@ export async function ensureCampusMediaBucket(admin: AdminClient): Promise<void>
     bucketReady = (async () => {
       const { data } = await admin.storage.getBucket(CAMPUS_MEDIA_BUCKET);
       if (data) {
+        if ((data.file_size_limit ?? 0) < CAMPUS_MEDIA_MAX_BYTES) {
+          await admin.storage.updateBucket(CAMPUS_MEDIA_BUCKET, {
+            public: true,
+            fileSizeLimit: CAMPUS_MEDIA_MAX_BYTES,
+          });
+        }
         return;
       }
 
@@ -449,8 +477,14 @@ export async function ensureCampusMediaBucket(admin: AdminClient): Promise<void>
   return bucketReady;
 }
 
-function buildVideoStoragePath(userId: string, fileName: string): string {
-  return `videos/${userId}/${Date.now()}-${sanitizeFilename(fileName)}`;
+const COACH_FILM_FOLDER = "coach-film";
+
+function buildVideoStoragePath(
+  userId: string,
+  fileName: string,
+  folder: "videos" | typeof COACH_FILM_FOLDER = "videos",
+): string {
+  return `${folder}/${userId}/${Date.now()}-${sanitizeFilename(fileName)}`;
 }
 
 /** Shared file validation for both the direct-upload and server-relay paths. */
@@ -496,11 +530,13 @@ export type CampusVideoUploadTicket = {
  * over 4.5 MB at the infrastructure level, which no config can raise. Every
  * real clip exceeds both.
  *
- * Callers must authorize with {@link canManageCampusMedia} first.
+ * Callers must authorize first ({@link canManageCampusMedia} or the coach
+ * film room).
  */
 export async function createCampusVideoUploadTicket(
   input: { name: string; size: number; type?: string | null },
   userId: string,
+  options?: { folder?: "videos" | typeof COACH_FILM_FOLDER },
 ): Promise<CampusVideoUploadTicket | null> {
   if (!isSupabaseAdminConfigured()) {
     return null;
@@ -515,7 +551,11 @@ export async function createCampusVideoUploadTicket(
 
   await ensureCampusMediaBucket(admin);
 
-  const storagePath = buildVideoStoragePath(userId, input.name);
+  const storagePath = buildVideoStoragePath(
+    userId,
+    input.name,
+    options?.folder ?? "videos",
+  );
   const { data, error } = await admin.storage
     .from(CAMPUS_MEDIA_BUCKET)
     .createSignedUploadUrl(storagePath);
@@ -544,8 +584,11 @@ export async function resolveUploadedCampusVideo(
   storagePath: string,
   userId: string,
 ): Promise<{ storagePath: string; publicUrl: string } | null> {
-  const expectedPrefix = `videos/${userId}/`;
-  if (!storagePath.startsWith(expectedPrefix) || storagePath.includes("..")) {
+  const allowedPrefixes = [`videos/${userId}/`, `${COACH_FILM_FOLDER}/${userId}/`];
+  if (
+    !allowedPrefixes.some((prefix) => storagePath.startsWith(prefix)) ||
+    storagePath.includes("..")
+  ) {
     throw new Error("That upload does not belong to your account. Try again.");
   }
 
@@ -947,6 +990,8 @@ function categoryKicker(category: CampusMediaCategory | null): string {
       return "Special Events";
     case "HIGHLIGHT_REEL":
       return "Highlight Reel";
+    case "COACH_FILM":
+      return "Coach film";
     default:
       return "Broadcasting";
   }
@@ -1100,6 +1145,39 @@ export async function listAnnouncementVideos(options?: {
             ],
           },
         ],
+      },
+      orderBy: [
+        { publishedAt: "desc" },
+        { endedAt: "desc" },
+        { createdAt: "desc" },
+      ],
+      take,
+      select: mediaSelect,
+    }),
+  );
+
+  return sortCardsNewestFirst(
+    (rows ?? [])
+      .map(mapMediaRow)
+      .map((view) => mediaViewToCard(view, categoryKicker(view.category))),
+  );
+}
+
+/** Game and practice film for the coach workspace — not on public sports pages. */
+export async function listCoachFilmVideos(options?: {
+  take?: number;
+}): Promise<CampusVideoCard[]> {
+  const take = options?.take ?? 80;
+
+  if (!isDatabaseConfigured() || !isPrismaReady()) {
+    return [];
+  }
+
+  const rows = await withDatabase((prisma) =>
+    prisma.campusMediaItem.findMany({
+      where: {
+        OR: WATCHABLE_ARCHIVE,
+        category: "COACH_FILM",
       },
       orderBy: [
         { publishedAt: "desc" },

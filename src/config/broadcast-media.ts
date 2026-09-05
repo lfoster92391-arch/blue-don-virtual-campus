@@ -126,7 +126,7 @@ export const MADONNA_GO_LIVE_NOTES = [
   },
   {
     label: "If something breaks",
-    text: "End the broadcast, fix it, and go live again. Do not touch OBS — you do not need it for a normal show.",
+    text: "End the broadcast, fix it, and go live again from this phone or laptop.",
   },
 ];
 

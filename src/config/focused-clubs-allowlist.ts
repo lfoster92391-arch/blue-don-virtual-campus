@@ -20,6 +20,7 @@ export const FOCUSED_MODE_ALLOWED_PREFIXES = [
   "/media",
   "/broadcast",
   "/sports",
+  "/coach",
   "/archive",
   "/service-desk",
   "/weather",

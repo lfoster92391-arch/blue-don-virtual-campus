@@ -1,10 +1,9 @@
 /**
- * Phone go-live — browser camera, not OBS.
+ * Phone go-live — browser camera on this device.
  *
  * Safe to import from client components. No stream keys, no bridge tokens.
  * The phone records short self-contained segments and uploads them to campus
- * storage; the public watch page plays those segments. Studio B / OBS stays
- * the desktop encoder path.
+ * storage; the public watch page plays those segments.
  */
 
 export const PUBLIC_WATCH_PATH = "/watch";
@@ -25,8 +24,8 @@ export const PHONE_LIVE_SEGMENT_MS = 4_000;
 /** How often the public player re-reads the segment list. */
 export const PHONE_LIVE_POLL_MS = 2_500;
 
-/** Soft ceiling per segment — well under the 50 MB campus-video bucket limit. */
-export const PHONE_LIVE_MAX_SEGMENT_BYTES = 12 * 1024 * 1024;
+/** Soft ceiling per 4s live segment — well under the campus-video bucket limit. */
+export const PHONE_LIVE_MAX_SEGMENT_BYTES = 20 * 1024 * 1024;
 
 export function isPhoneLiveEmbed(
   url: string | null | undefined,

@@ -260,13 +260,13 @@ export const ORGANIZATION_PROFILES: Record<string, OrganizationProfile> = {
     icon: "🎥",
     tagline: "Live production • Media • Storytelling",
     pitch:
-      "Madonna’s student broadcast team — morning announcements, games, and campus media from Studio B.",
+      "Madonna’s student broadcast team — morning announcements, games, and campus media.",
     skills: ["Camera", "Audio", "Live production", "Editing"],
     xpOpportunities: ["Broadcast XP", "Production credits"],
     interestTags: ["broadcasting", "media", "photography", "technology"],
     discoveryFilters: ["all", "technology", "arts"],
     advisor: "Broadcasting Advisor",
-    meetingSchedule: "Daily · Studio B",
+    meetingSchedule: "Daily · Broadcasting",
     careerConnections: ["Broadcasting", "Journalism", "Film"],
     relatedSlugs: ["it-club"],
     projects: [
@@ -279,7 +279,7 @@ export const ORGANIZATION_PROFILES: Record<string, OrganizationProfile> = {
         description: "Produce daily campus news and video packages.",
       },
     ],
-    currentProject: "Live game broadcasts and daily morning announcements from Studio B.",
+    currentProject: "Live game broadcasts and daily morning announcements.",
     leadership: [
       { role: "Broadcast Director", name: "Student Lead" },
       { role: "Producer", name: "Student Officer" },

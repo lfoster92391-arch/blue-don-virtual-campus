@@ -65,7 +65,7 @@ export const MADONNA_HUB_SECTIONS: readonly MadonnaHubSection[] = [
     icon: Radio,
     eyebrow: "Blue Don Live",
     description:
-      "The live stream when Studio B is on air, today's announcement, and the full announcement archive.",
+      "The live stream when Broadcasting is on air, today's announcement, and the full announcement archive.",
     parentDescription:
       "Watch the student broadcast live or catch up on any past announcement show.",
   },

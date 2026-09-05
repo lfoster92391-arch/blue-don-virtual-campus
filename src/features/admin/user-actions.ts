@@ -28,6 +28,8 @@ export type AdminUserActionState = {
 function revalidateUserPaths() {
   revalidatePath("/service-desk/users");
   revalidatePath("/admin/users");
+  revalidatePath("/admin/passwords");
+  revalidatePath("/admin/students");
   revalidatePath("/admin/parent-approvals");
   revalidatePath("/service-desk");
 }

@@ -2,7 +2,10 @@ import Link from "next/link";
 import { CalendarDays, Radio, Trophy } from "lucide-react";
 
 import {
-  CAMPUS_TEAM_LOGO_URL,
+  CampusMark,
+  MatchupMarks,
+} from "@/components/sports/matchup-marks";
+import {
   CAMPUS_TEAM_NAME,
   formatGameDateTime,
   GAME_RESULT_LABELS,
@@ -10,68 +13,6 @@ import {
   GAME_STATUS_LABELS,
 } from "@/config/sports-highlights";
 import type { SportsGameView } from "@/services/sports-highlights-service";
-
-/**
- * Our own mark. It is a static public asset, not an upload, so unlike the
- * opponent's it is always there and never needs a monogram fallback.
- */
-function CampusMark({ size = "md" }: { size?: "sm" | "md" }) {
-  const dimension = size === "sm" ? "size-8" : "size-12";
-
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={CAMPUS_TEAM_LOGO_URL}
-      alt={`Madonna ${CAMPUS_TEAM_NAME} logo`}
-      className={`${dimension} shrink-0 rounded-lg bg-white object-contain p-0.5 ring-1 ring-white/30`}
-    />
-  );
-}
-
-function OpponentMark({
-  game,
-  size = "md",
-}: {
-  game: SportsGameView;
-  size?: "sm" | "md";
-}) {
-  const dimension = size === "sm" ? "size-8" : "size-12";
-
-  if (game.opponentLogoUrl) {
-    return (
-      // Opponent logos are arbitrary remote URLs; next/image would need every
-      // school host allowlisted in next.config.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={game.opponentLogoUrl}
-        alt={`${game.opponentName} logo`}
-        className={`${dimension} shrink-0 rounded-lg bg-white object-contain p-0.5 ring-1 ring-white/30`}
-      />
-    );
-  }
-
-  return (
-    <span
-      className={`${dimension} flex shrink-0 items-center justify-center rounded-lg bg-white/15 text-sm font-semibold uppercase`}
-      aria-hidden="true"
-    >
-      {game.opponentName.slice(0, 2)}
-    </span>
-  );
-}
-
-/** Both marks for a matchup, read the way the game is billed: Dons first. */
-function MatchupMarks({ game }: { game: SportsGameView }) {
-  return (
-    <span className="flex shrink-0 items-center gap-2">
-      <CampusMark />
-      <span className="text-xs font-semibold uppercase text-white/60">
-        {game.site === "HOME" ? "vs" : "at"}
-      </span>
-      <OpponentMark game={game} />
-    </span>
-  );
-}
 
 function ResultPill({ game }: { game: SportsGameView }) {
   if (game.status === "LIVE") {
@@ -159,7 +100,7 @@ export function SportsBanner({
               className="mt-4 block rounded-lg transition-colors hover:bg-white/5"
             >
               <div className="flex flex-wrap items-center gap-4">
-                <MatchupMarks game={lastGame} />
+                <MatchupMarks game={lastGame} tone="dark" />
                 <div className="min-w-0 flex-1">
                   <p className="text-lg font-semibold">
                     {CAMPUS_TEAM_NAME} {lastGame.site === "HOME" ? "vs" : "at"}{" "}
@@ -210,7 +151,7 @@ export function SportsBanner({
                     href={`/sports/games/${game.id}`}
                     className="flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/5"
                   >
-                    <OpponentMark game={game} size="sm" />
+                    <MatchupMarks game={game} size="sm" tone="dark" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">
                         {game.site === "HOME" ? "vs" : "at"} {game.opponentName}

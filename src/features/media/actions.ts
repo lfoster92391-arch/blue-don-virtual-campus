@@ -7,6 +7,7 @@ import { requireCompleteProfile } from "@/lib/auth/session";
 import { revalidateMediaPaths } from "@/lib/media/revalidate";
 import { upsertTodaysBroadcastAnnouncement } from "@/services/broadcast-announcement-service";
 import {
+  canGoLiveFromDevice,
   canManageCampusMedia,
   createCampusVideoUpload,
   createCampusVideoUploadTicket,
@@ -74,7 +75,21 @@ export async function requireMediaProducer() {
 
   if (!allowed) {
     throw new Error(
-      "Only Broadcasting club members and Broadcast Academy students can upload or go live.",
+      "Only Broadcasting officers and Broadcast Academy students can publish recordings.",
+    );
+  }
+
+  return user;
+}
+
+/** Camera Go Live from a phone or laptop — any active Broadcasting crew member. */
+export async function requirePhoneLiveProducer() {
+  const user = await requireCompleteProfile();
+  const allowed = await canGoLiveFromDevice(user.id, user.role);
+
+  if (!allowed) {
+    throw new Error(
+      "Only Broadcasting club members can go live from this device.",
     );
   }
 
@@ -84,7 +99,7 @@ export async function requireMediaProducer() {
 /**
  * Step 1 of a video upload: authorize the producer and hand back a signed
  * Supabase URL the browser PUTs the file to directly. The bytes never touch
- * this server, which is what keeps 50 MB clips under Vercel's 4.5 MB request
+ * this server, which is what keeps large clips under Vercel's 4.5 MB request
  * body ceiling.
  */
 export async function createVideoUploadTicketAction(input: {
@@ -290,7 +305,7 @@ export async function startLiveBroadcastAction(
 
     revalidateMediaPaths();
     return {
-      success: "You are live on Blue Don Live. Keep OBS streaming until you End broadcast.",
+      success: "You are live on Blue Don Live. Keep this page open until you End broadcast.",
       itemId: started.id,
     };
   } catch (error) {
@@ -302,7 +317,7 @@ export async function startLiveBroadcastAction(
 
 export async function endLiveBroadcastAction(itemId: string): Promise<MediaActionState> {
   try {
-    await requireMediaProducer();
+    await requirePhoneLiveProducer();
     const ended = await endCampusLiveStream(itemId);
 
     if (!ended) {

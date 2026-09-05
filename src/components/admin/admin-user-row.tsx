@@ -4,12 +4,10 @@ import { useActionState } from "react";
 
 import { AssignClubForm } from "@/components/admin/assign-club-form";
 import { ParentStudentLinkForm } from "@/components/admin/parent-student-link-form";
-import { AUTH_NEW_PASSWORD_INPUT_PROPS } from "@/components/auth/auth-input-props";
+import { ResetPasswordFields } from "@/components/admin/reset-password-fields";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { CAMPUS_ROLES, ROLE_LABELS, type CampusRole } from "@/config/roles";
 import {
-  resetUserPasswordAction,
   updateUserRoleAction,
   type AdminUserActionState,
 } from "@/features/admin/user-actions";
@@ -46,10 +44,6 @@ export function AdminUserRow({
   students = [],
   clubMemberships = [],
 }: AdminUserRowProps) {
-  const [passwordState, passwordAction, passwordPending] = useActionState(
-    resetUserPasswordAction,
-    initialState,
-  );
   const [roleState, roleAction, rolePending] = useActionState(
     updateUserRoleAction,
     initialState,
@@ -109,54 +103,10 @@ export function AdminUserRow({
           ) : null}
         </form>
 
-        <form action={passwordAction} className="space-y-2">
-          <input type="hidden" name="userId" value={userId} />
-          <label
-            htmlFor={`password-${userId}`}
-            className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-          >
-            Set new password
-          </label>
-          <div className="space-y-2">
-            <Input
-              id={`password-${userId}`}
-              name="password"
-              required
-              minLength={8}
-              {...AUTH_NEW_PASSWORD_INPUT_PROPS}
-              disabled={!passwordManagementEnabled || passwordPending}
-              placeholder="New password (min 8 characters)"
-            />
-            <div className="flex gap-2">
-              <Input
-                name="confirmPassword"
-                required
-                minLength={8}
-                {...AUTH_NEW_PASSWORD_INPUT_PROPS}
-                disabled={!passwordManagementEnabled || passwordPending}
-                placeholder="Confirm password"
-              />
-              <Button
-                type="submit"
-                size="sm"
-                disabled={!passwordManagementEnabled || passwordPending}
-              >
-                {passwordPending ? "Updating..." : "Update"}
-              </Button>
-            </div>
-          </div>
-          {!passwordManagementEnabled ? (
-            <p className="text-xs text-muted-foreground">
-              Add the Supabase service-role key to enable password changes.
-            </p>
-          ) : null}
-          {passwordState.error ? (
-            <p className="text-xs text-destructive">{passwordState.error}</p>
-          ) : null}
-          {passwordState.success ? (
-            <p className="text-xs text-[#2E8B57]">{passwordState.success}</p>
-          ) : null}
-        </form>
+        <ResetPasswordFields
+          userId={userId}
+          enabled={passwordManagementEnabled}
+        />
       </div>
 
       {role === "student" || role === "alumni" ? (

@@ -74,7 +74,7 @@ export default async function MadonnaTodayPage() {
 
       <DashboardCard
         title="Today's announcement"
-        description="The daily message from Broadcasting Studio B."
+        description="The daily message from Broadcasting."
         icon={<Megaphone className="size-5" />}
         status={
           announcement

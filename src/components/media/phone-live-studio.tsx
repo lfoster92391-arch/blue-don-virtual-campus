@@ -33,6 +33,7 @@ type PhoneLiveStudioProps = {
   storageConfigured: boolean;
   activeLiveId?: string | null;
   activeLiveTitle?: string | null;
+  canRecord?: boolean;
 };
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
@@ -129,6 +130,7 @@ export function PhoneLiveStudio({
   storageConfigured,
   activeLiveId = null,
   activeLiveTitle = null,
+  canRecord = false,
 }: PhoneLiveStudioProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -483,15 +485,25 @@ export function PhoneLiveStudio({
             End broadcast
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={() => void handleGoLive()}
-            disabled={goingLive}
-            className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#E11D48] text-base font-semibold text-white disabled:opacity-50"
-          >
-            <Radio className="size-5" aria-hidden="true" />
-            {goingLive ? "Going live…" : "Go Live"}
-          </button>
+          <div className="flex flex-col gap-2">
+            {canRecord ? (
+              <Link
+                href="/organizations/broadcasting?tab=media#record"
+                className="campus-btn-royal inline-flex h-14 w-full items-center justify-center gap-2 rounded-full text-base font-semibold"
+              >
+                Record
+              </Link>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => void handleGoLive()}
+              disabled={goingLive}
+              className="campus-btn-royal inline-flex h-14 w-full items-center justify-center gap-2 rounded-full text-base font-semibold disabled:opacity-50"
+            >
+              <Radio className="size-5" aria-hidden="true" />
+              {goingLive ? "Going live…" : "Go Live"}
+            </button>
+          </div>
         )}
 
         <p className="text-center text-xs text-white/45">

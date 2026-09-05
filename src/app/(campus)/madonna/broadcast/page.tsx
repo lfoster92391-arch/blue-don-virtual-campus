@@ -22,6 +22,7 @@ import {
   type BroadcastScheduleView,
 } from "@/services/broadcast-production-service";
 import {
+  canGoLiveFromDevice,
   canManageCampusMedia,
   getActiveLiveStream,
   listAnnouncementVideos,
@@ -55,9 +56,10 @@ async function safe<T>(work: Promise<T>, fallback: T): Promise<T> {
 export default async function MadonnaBroadcastPage() {
   const user = await requireCompleteProfile();
 
-  const [canManageMedia, activeLive, dailyAnnouncement, schedule, videos] =
+  const [canManageMedia, canGoLive, activeLive, dailyAnnouncement, schedule, videos] =
     await Promise.all([
       safe(canManageCampusMedia(user.id, user.role), false),
+      safe(canGoLiveFromDevice(user.id, user.role), false),
       safe(getActiveLiveStream(), null),
       safe(getTodaysBroadcastAnnouncement(), null),
       safe(getBroadcastSchedule(), EMPTY_SCHEDULE),
@@ -69,7 +71,7 @@ export default async function MadonnaBroadcastPage() {
   return (
     <ShellPage
       title="Broadcast"
-      description="Blue Don Live when Studio B is on air, today's message from Broadcasting, and every past announcement broadcast."
+      description="Blue Don Live when Broadcasting is on air, today's message from the crew, and every past announcement broadcast."
       actions={
         <span
           className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
@@ -93,7 +95,7 @@ export default async function MadonnaBroadcastPage() {
 
       <DashboardCard
         title="Today's announcement"
-        description="The daily message from Broadcasting Studio B."
+        description="The daily message from Broadcasting."
         icon={<Megaphone className="size-5" />}
         status={{ label: "Daily", variant: "info" }}
       >
@@ -103,10 +105,10 @@ export default async function MadonnaBroadcastPage() {
         />
       </DashboardCard>
 
-      {canManageMedia ? (
+      {canGoLive ? (
         <DashboardCard
           title="Go live"
-          description="Open this phone or laptop’s camera and go live. No OBS."
+          description="Record a clip or open this phone or laptop’s camera and go live."
           icon={<Radio className="size-5" />}
           status={
             activeLive
@@ -117,6 +119,7 @@ export default async function MadonnaBroadcastPage() {
           <LiveBroadcastPanel
             activeLive={activeLive}
             isProducer
+            canRecord={canManageMedia}
             currentUserId={user.id}
             rtmp={rtmp}
             previewWindow={isWithinAirPreviewWindow(schedule.nextAirAt)}

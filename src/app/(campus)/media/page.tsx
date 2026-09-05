@@ -10,6 +10,7 @@ import {
   listCrewCredits,
 } from "@/services/broadcast-production-service";
 import {
+  canGoLiveFromDevice,
   canManageCampusMedia,
   getActiveLiveStream,
   isCampusMediaStorageConfigured,
@@ -23,6 +24,7 @@ export default async function MediaPage() {
   const user = await requireCompleteProfile();
   const [
     canManageMedia,
+    canGoLive,
     schoolBroadcasts,
     myUploads,
     activeLive,
@@ -31,6 +33,7 @@ export default async function MediaPage() {
     crewCredits,
   ] = await Promise.all([
     canManageCampusMedia(user.id, user.role),
+    canGoLiveFromDevice(user.id, user.role),
     listSchoolBroadcasts(),
     listUserMediaUploads(user.id),
     getActiveLiveStream(),
@@ -45,7 +48,7 @@ export default async function MediaPage() {
   return (
     <ShellPage
       title="Watch Broadcasting"
-      description="Live streams, countdown, on-demand categories, and highlight reels from Studio B."
+      description="Live streams, countdown, on-demand categories, and highlight reels from Broadcasting."
       actions={
         <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0A2342]/10 px-3 py-1 text-xs font-medium text-[#0A2342] dark:bg-[#C9A227]/15 dark:text-[#C9A227]">
           <Video className="size-3.5" aria-hidden="true" />
@@ -58,6 +61,7 @@ export default async function MediaPage() {
         myUploads={myUploads}
         activeLive={activeLive}
         canManageMedia={canManageMedia}
+        canGoLive={canGoLive}
         storageConfigured={isCampusMediaStorageConfigured()}
         currentUserId={user.id}
         rtmp={rtmp}

@@ -293,6 +293,49 @@ export type CampusUserSummary = CampusUser & {
   createdAt: Date;
 };
 
+export async function searchCampusUsers(options?: {
+  query?: string;
+  role?: CampusRole;
+  take?: number;
+}): Promise<CampusUserSummary[]> {
+  if (!isDatabaseConfigured()) {
+    return [];
+  }
+
+  const query = options?.query?.trim();
+  const role = options?.role;
+  const take = options?.take ?? 40;
+
+  const users = await withDatabase((prisma) =>
+    prisma.user.findMany({
+      where: {
+        ...(role ? { role: toUserRole(role) } : {}),
+        ...(query
+          ? {
+              OR: [
+                { email: { contains: query, mode: "insensitive" } },
+                { displayName: { contains: query, mode: "insensitive" } },
+                { firstName: { contains: query, mode: "insensitive" } },
+                { lastName: { contains: query, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ lastName: "asc" }, { displayName: "asc" }, { email: "asc" }],
+      take,
+    }),
+  );
+
+  if (!users) {
+    return [];
+  }
+
+  return users.map((user) => ({
+    ...mapCampusUser(user),
+    createdAt: user.createdAt,
+  }));
+}
+
 export async function listCampusUsers(): Promise<CampusUserSummary[]> {
   if (!isDatabaseConfigured()) {
     return [];

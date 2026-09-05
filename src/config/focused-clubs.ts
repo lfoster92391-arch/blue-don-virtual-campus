@@ -38,7 +38,7 @@ export const FOCUS_CLUBS: {
     accent: "#E11D48",
     tagline: "Live · Media · Storytelling",
     description:
-      "Go live from Studio B — morning announcements, games, and student media.",
+      "Record and go live — morning announcements, games, and student media.",
   },
   {
     slug: "cricut-club",

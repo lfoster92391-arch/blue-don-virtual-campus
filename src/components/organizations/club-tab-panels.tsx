@@ -39,6 +39,7 @@ import {
   JoinApplicationReviewList,
   JoinClubPortal,
 } from "@/components/media/broadcast-suite-panels";
+import { BroadcastPrimaryActions } from "@/components/media/broadcast-primary-actions";
 import { HowWeGoLiveCard } from "@/components/media/how-we-go-live";
 import { LiveBroadcastPanel } from "@/components/media/live-broadcast-panel";
 import {
@@ -91,7 +92,6 @@ import {
   FlaskConical,
   GraduationCap,
   Megaphone,
-  MonitorPlay,
   Radio,
   Sparkles,
   Users,
@@ -125,6 +125,8 @@ export type ClubTabPanelsProps = {
   organizationType: string;
   showJoinSection?: boolean;
   canManageMedia?: boolean;
+  /** Phone / laptop camera Go Live — roster members, not faculty preview alone. */
+  canGoLive?: boolean;
   /** Broadcasting club members / faculty with production access. */
   isBroadcastCrew?: boolean;
   organizationMedia?: CampusMediaItemView[];
@@ -356,7 +358,7 @@ function OverviewPanel(props: ClubTabPanelsProps) {
           title={isBroadcastCrew ? "Crew workspace" : "Watch Broadcasting"}
           description={
             isBroadcastCrew
-              ? "You have production access — Daily Rundown, Control Room, and uploads."
+              ? "Record, Go Live, Daily Rundown, and the Control Room."
               : "Anyone on campus can watch live and browse past broadcasts."
           }
           icon={<Megaphone className="size-5" />}
@@ -366,18 +368,35 @@ function OverviewPanel(props: ClubTabPanelsProps) {
           }}
         >
           {isBroadcastCrew ? (
-            <p className="text-sm text-muted-foreground">
-              Use Daily Rundown for the morning script and Control Room to
-              upload videos or go live. The whole school watches on{" "}
-              <Link href="/watch" className="text-[#2F80ED] underline">
-                Watch Broadcasting LIVE
-              </Link>
-              .
-            </p>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Record a clip or Go Live from this phone or laptop. Daily
+                Rundown holds the morning script. The whole school watches on{" "}
+                <Link href="/watch" className="text-[#2F80ED] underline">
+                  Watch Broadcasting LIVE
+                </Link>
+                .
+              </p>
+              <BroadcastPrimaryActions
+                canGoLive={Boolean(props.canGoLive)}
+                canRecord={Boolean(props.canManageMedia)}
+              />
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-12 w-full sm:w-auto"
+                nativeButton={false}
+                render={
+                  <Link href="/organizations/broadcasting?tab=media">
+                    Open Control Room
+                  </Link>
+                }
+              />
+            </div>
           ) : (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Open Watch to see Blue Don Live when Studio B is on air, plus
+                Open Watch to see Blue Don Live when Broadcasting is on air, plus
                 the archive of past broadcasts. Book coverage, submit
                 announcements, or apply to join from the tabs above.
               </p>
@@ -421,7 +440,7 @@ function OverviewPanel(props: ClubTabPanelsProps) {
       {isBroadcasting ? (
         <DashboardCard
           title="Daily Announcement"
-          description="Today’s message from Studio B."
+          description="Today’s message from Broadcasting."
           icon={<Megaphone className="size-5" />}
         >
           <DailyAnnouncement
@@ -937,6 +956,7 @@ function MediaPanel(props: ClubTabPanelsProps) {
 
   if (isBroadcasting) {
     const isCrew = props.isBroadcastCrew !== false;
+    const canGoLive = Boolean(props.canGoLive ?? canManageMedia);
     const schedule = props.broadcastSchedule ?? {
       id: null,
       organizationId: null,
@@ -948,11 +968,11 @@ function MediaPanel(props: ClubTabPanelsProps) {
 
     return (
       <div className="space-y-8">
-        {canManageMedia && props.rtmpConfig ? (
+        {canGoLive && props.rtmpConfig ? (
           <>
             <DashboardCard
-              title="Go live"
-              description="Open this phone or laptop’s camera and go live. No OBS."
+              title="Record & Go Live"
+              description="Record a clip for the library, or open this phone or laptop’s camera and go live."
               icon={<Radio className="size-5" />}
               status={
                 props.activeLive
@@ -963,6 +983,7 @@ function MediaPanel(props: ClubTabPanelsProps) {
               <LiveBroadcastPanel
                 activeLive={props.activeLive ?? null}
                 isProducer
+                canRecord={Boolean(canManageMedia)}
                 currentUserId={props.currentUserId ?? ""}
                 rtmp={props.rtmpConfig}
                 previewWindow={isWithinAirPreviewWindow(schedule.nextAirAt)}
@@ -1018,13 +1039,16 @@ function MediaPanel(props: ClubTabPanelsProps) {
 
         {canManageMedia ? (
           <DashboardCard
-            title="Media archive"
-            description="Publish clips with on-demand categories or mark a highlight reel."
+            title="Record"
+            description="Capture or upload a clip to the school library — not a live show."
             icon={<Camera className="size-5" />}
           >
-            <VideoUploadForm
-              storageConfigured={Boolean(props.mediaStorageConfigured)}
-            />
+            <div id="record">
+              <VideoUploadForm
+                storageConfigured={Boolean(props.mediaStorageConfigured)}
+                submitLabel="Publish recording"
+              />
+            </div>
           </DashboardCard>
         ) : null}
 
@@ -1053,42 +1077,6 @@ function MediaPanel(props: ClubTabPanelsProps) {
             canCategorize={Boolean(canManageMedia)}
           />
         </DashboardCard>
-
-        {canManageMedia ? (
-          <DashboardCard
-            title="Advanced · Advisor setup"
-            description="The full production console and the machines behind it."
-            icon={<MonitorPlay className="size-5" />}
-            status={{ label: "Advisors", variant: "info" }}
-            expandable
-            defaultExpanded={false}
-          >
-            <p className="text-sm text-muted-foreground">
-              The Broadcast Control Studio is the dark 1080p console outside the
-              campus shell — scenes, program, graphics, sponsors, run of show,
-              and the game score, all driving OBS through the Studio Bridge.
-              Students running a normal show do not need it; whoever is calling
-              a game does.
-            </p>
-            <div className="mt-4">
-              <Button
-                size="sm"
-                nativeButton={false}
-                render={
-                  <Link href="/broadcast/studio">
-                    Open Broadcast Studio
-                    <ArrowRight className="size-3.5" />
-                  </Link>
-                }
-              />
-            </div>
-            <p className="mt-4 text-xs text-muted-foreground">
-              Stream keys, the RTMP target, and first-time OBS setup are under
-              Advanced inside Go live. Bridge and overlay install steps are in
-              docs/STUDIO_BRIDGE_SETUP.md and docs/STUDIO_OVERLAY_SETUP.md.
-            </p>
-          </DashboardCard>
-        ) : null}
 
         {!isCrew ? (
           <p className="text-sm text-muted-foreground">
@@ -1466,7 +1454,7 @@ export function ClubTabPanels(props: ClubTabPanelsProps) {
       return (
         <DashboardCard
           title="Equipment checklist"
-          description="Pre-show inventory check-in for Studio B gear."
+          description="Pre-show inventory check-in for broadcast gear."
           icon={<Megaphone className="size-5" />}
         >
           <EquipmentChecklist

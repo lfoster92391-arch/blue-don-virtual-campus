@@ -8,6 +8,7 @@ export const CAMPUS_MEDIA_CATEGORY_LABELS = {
   STUDENT_SPOTLIGHT: "Student Spotlight",
   SPECIAL_EVENTS: "Special Events",
   HIGHLIGHT_REEL: "Highlight Reel",
+  COACH_FILM: "Coach film",
   OTHER: "Other",
 } as const;
 
@@ -87,7 +88,7 @@ export const DEFAULT_BROADCAST_EQUIPMENT = [
   { name: "LED key light", category: "Lighting", sortOrder: 7 },
   { name: "Fill / hair light", category: "Lighting", sortOrder: 8 },
   { name: "Teleprompter", category: "Studio", sortOrder: 9 },
-  { name: "Switching computer (OBS)", category: "Control", sortOrder: 10 },
+  { name: "Switching computer", category: "Control", sortOrder: 10 },
   { name: "Graphics / lower-thirds laptop", category: "Control", sortOrder: 11 },
   { name: "Spare SD / media cards", category: "Accessories", sortOrder: 12 },
 ] as const;

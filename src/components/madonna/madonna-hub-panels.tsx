@@ -340,7 +340,7 @@ export function TodaySnapshot({
         ) : (
           <p className="text-sm text-muted-foreground">
             No announcement posted yet today. Broadcasting publishes it from
-            Studio B — it shows up here as soon as they do.
+            the Control Room — it shows up here as soon as they do.
           </p>
         )}
       </div>

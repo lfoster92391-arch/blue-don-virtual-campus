@@ -4,14 +4,9 @@ import { useActionState } from "react";
 import { Eye } from "lucide-react";
 
 import { AssignClubForm } from "@/components/admin/assign-club-form";
-import { AUTH_NEW_PASSWORD_INPUT_PROPS } from "@/components/auth/auth-input-props";
+import { ResetPasswordFields } from "@/components/admin/reset-password-fields";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { focusClubRoleLabel } from "@/config/focus-club-access";
-import {
-  resetUserPasswordAction,
-  type AdminUserActionState,
-} from "@/features/admin/user-actions";
 import { startStudentPreviewAction } from "@/features/admin/preview-actions";
 import {
   setStudentStatusAction,
@@ -20,7 +15,6 @@ import {
 import type { FocusClubMembershipSummary } from "@/services/org-membership-service";
 import type { CampusRole } from "@/config/roles";
 
-const passwordInitial: AdminUserActionState = {};
 const statusInitial: StudentAdminActionState = {};
 
 type StudentAdminRowProps = {
@@ -49,10 +43,6 @@ export function StudentAdminRow({
   memberships,
   passwordManagementEnabled,
 }: StudentAdminRowProps) {
-  const [passwordState, passwordAction, passwordPending] = useActionState(
-    resetUserPasswordAction,
-    passwordInitial,
-  );
   const [statusState, statusAction, statusPending] = useActionState(
     setStudentStatusAction,
     statusInitial,
@@ -101,47 +91,10 @@ export function StudentAdminRow({
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <form action={passwordAction} className="space-y-2">
-          <input type="hidden" name="userId" value={userId} />
-          <label
-            htmlFor={`pw-${userId}`}
-            className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-          >
-            Reset password
-          </label>
-          <Input
-            id={`pw-${userId}`}
-            name="password"
-            required
-            minLength={8}
-            {...AUTH_NEW_PASSWORD_INPUT_PROPS}
-            disabled={!passwordManagementEnabled || passwordPending}
-            placeholder="New temporary password"
-          />
-          <div className="flex gap-2">
-            <Input
-              name="confirmPassword"
-              required
-              minLength={8}
-              {...AUTH_NEW_PASSWORD_INPUT_PROPS}
-              disabled={!passwordManagementEnabled || passwordPending}
-              placeholder="Confirm"
-            />
-            <Button
-              type="submit"
-              size="sm"
-              disabled={!passwordManagementEnabled || passwordPending}
-            >
-              {passwordPending ? "Saving..." : "Update"}
-            </Button>
-          </div>
-          {passwordState.error ? (
-            <p className="text-xs text-destructive">{passwordState.error}</p>
-          ) : null}
-          {passwordState.success ? (
-            <p className="text-xs text-[#2E8B57]">{passwordState.success}</p>
-          ) : null}
-        </form>
+        <ResetPasswordFields
+          userId={userId}
+          enabled={passwordManagementEnabled}
+        />
 
         <form action={statusAction} className="space-y-2">
           <input type="hidden" name="userId" value={userId} />

@@ -8,6 +8,7 @@ import { LiveNowPanel } from "@/components/media/live-now-panel";
 import { VideoGrid } from "@/components/media/video-grid";
 import { VideoUploadForm } from "@/components/media/video-upload-form";
 import { SportsAudienceSections } from "@/components/sports/sports-sections";
+import { CAMPUS_MEDIA_MAX_LABEL } from "@/config/campus-video";
 import { CAMPUS_TEAM_NAME } from "@/config/sports-highlights";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { recentWindowStart } from "@/lib/media-recency";
@@ -131,9 +132,9 @@ export default async function MadonnaSportsPage({
           <p className="mt-3 text-xs text-muted-foreground">
             Tick{" "}
             <strong className="text-foreground">Feature in Highlight Reel</strong>{" "}
-            to also drop it into the reel. Files up to 50 MB upload directly;
-            longer game film is easier as an unlisted YouTube link pasted into the
-            URL field.
+            to also drop it into the reel. Files up to {CAMPUS_MEDIA_MAX_LABEL}{" "}
+            upload directly; longer game film is easier as an unlisted YouTube
+            link pasted into the URL field.
           </p>
         </DashboardCard>
       ) : null}

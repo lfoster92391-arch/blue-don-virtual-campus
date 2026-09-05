@@ -7,12 +7,13 @@
  */
 
 /**
- * Hard ceiling for a single campus video. Supabase enforces its own global file
- * size limit per project (50 MB on the current plan) and rejects anything
- * larger with `EntityTooLarge`, so this must stay at or below that number —
- * raising it here without raising it in Supabase only moves the failure later.
+ * Hard ceiling for a single campus video (Record, sports film, coach film).
+ * 150 MB is enough for a several-minute 1080p game clip without opening the
+ * door to full-game dumps. The campus-media bucket is updated to match in
+ * `ensureCampusMediaBucket`. The Supabase project file-size setting must be at
+ * least this high or storage still answers `EntityTooLarge`.
  */
-export const CAMPUS_MEDIA_MAX_BYTES = 50 * 1024 * 1024;
+export const CAMPUS_MEDIA_MAX_BYTES = 150 * 1024 * 1024;
 
 export const CAMPUS_MEDIA_MAX_LABEL = `${Math.round(
   CAMPUS_MEDIA_MAX_BYTES / (1024 * 1024),

@@ -12,8 +12,10 @@ import {
 
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { HighlightGrid } from "@/components/sports/highlight-grid";
+import { MatchupMarks } from "@/components/sports/matchup-marks";
 import { SportSwitcher } from "@/components/sports/sport-switcher";
 import { SportsBanner } from "@/components/sports/sports-banner";
+import { SportsGuide } from "@/components/sports/sports-guide";
 import {
   GameEditorPanel,
   HighlightReviewList,
@@ -60,22 +62,7 @@ function ScheduleList({
             href={`/sports/games/${game.id}`}
             className="flex flex-wrap items-center gap-3 rounded-lg border border-border px-3 py-2 transition-colors hover:bg-muted"
           >
-            {game.opponentLogoUrl ? (
-              // Opponent logos are uploaded by crew or pasted from school sites.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={game.opponentLogoUrl}
-                alt=""
-                className="size-8 shrink-0 rounded-md bg-white object-contain p-0.5 ring-1 ring-border"
-              />
-            ) : (
-              <span
-                className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold uppercase text-muted-foreground"
-                aria-hidden="true"
-              >
-                {game.opponentName.slice(0, 2)}
-              </span>
-            )}
+            <MatchupMarks game={game} size="sm" />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium">
                 {game.sportName} {game.site === "HOME" ? "vs" : "at"}{" "}
@@ -126,6 +113,8 @@ export function SportsAudienceSections({
 
   return (
     <div className="space-y-6">
+      <SportsGuide />
+
       <SportsBanner
         lastGame={data.lastGame}
         upcoming={data.upcoming}
@@ -166,7 +155,11 @@ export function SportsAudienceSections({
 
         <DashboardCard
           title="Upcoming schedule"
-          description="Who's next on the board."
+          description={
+            data.upcoming[0]
+              ? `Next: ${data.upcoming[0].site === "HOME" ? "vs" : "at"} ${data.upcoming[0].opponentName}`
+              : "Who's next on the board."
+          }
           icon={<CalendarDays className="size-5" />}
         >
           <ScheduleList

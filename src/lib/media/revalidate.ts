@@ -13,6 +13,7 @@ export function revalidateMediaPaths() {
   revalidatePath("/madonna/broadcast");
   revalidatePath("/madonna/sports");
   revalidatePath("/madonna/sports/reel");
+  revalidatePath("/coach");
   revalidatePath(PUBLIC_WATCH_PATH);
   revalidatePath(PHONE_LIVE_ROUTE);
 }

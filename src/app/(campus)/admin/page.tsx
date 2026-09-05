@@ -12,6 +12,7 @@ import {
   Gamepad2,
   GraduationCap,
   Handshake,
+  KeyRound,
   Layers,
   Scale,
   ShieldCheck,
@@ -84,6 +85,14 @@ export default async function AdminPage() {
                 "Create students, assign clubs and roles, preview the student or parent view",
               href: "/admin/students",
               icon: Users,
+              count: null,
+            },
+            {
+              title: "Reset passwords",
+              description:
+                "Look up students, staff, teachers, parents, and set a new password",
+              href: "/admin/passwords",
+              icon: KeyRound,
               count: null,
             },
           ]
@@ -180,6 +189,14 @@ export default async function AdminPage() {
               "Create students, assign clubs/roles, preview the student or parent view, reset passwords",
             href: "/admin/students",
             icon: Users,
+            count: null,
+          },
+          {
+            title: "Reset passwords",
+            description:
+              "Look up students, staff, teachers, parents, and set a new password",
+            href: "/admin/passwords",
+            icon: KeyRound,
             count: null,
           },
           {
