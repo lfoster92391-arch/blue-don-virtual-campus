@@ -58,6 +58,16 @@ export default async function ShopComingSoonPage() {
           fulfillment to <strong>Cricut Club</strong> and into{" "}
           <strong>club financials</strong> — not a separate store.
         </p>
+        <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
+          Every item can be personalized: pick a Madonna sport, the name to
+          print, a Canva web font (Bebas Neue, Oswald, Montserrat, or Playfair
+          Display), and upload your own design if you want something different.
+          Campus members already collect those details on the live catalog at{" "}
+          <Link href="/cricut/shop" className="font-medium underline">
+            /cricut/shop
+          </Link>
+          .
+        </p>
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Button

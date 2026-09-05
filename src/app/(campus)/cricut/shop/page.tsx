@@ -15,7 +15,10 @@ import {
   isCricutShopStorageConfigured,
   listCricutShopItems,
 } from "@/services/cricut-shop-service";
-import { toggleCricutItemSellableAction } from "@/features/cricut-shop/actions";
+import {
+  toggleCricutItemCustomizableAction,
+  toggleCricutItemSellableAction,
+} from "@/features/cricut-shop/actions";
 import { ShoppingBag } from "lucide-react";
 
 type PageProps = {
@@ -113,19 +116,34 @@ export default async function CricutShopPage({ searchParams }: PageProps) {
                     />
                   ) : null}
                   {canManage && !item.isSample ? (
-                    <form action={toggleCricutItemSellableAction}>
-                      <input type="hidden" name="itemId" value={item.id} />
-                      <input
-                        type="hidden"
-                        name="availableToSell"
-                        value={item.availableToSell ? "false" : "true"}
-                      />
-                      <Button type="submit" size="sm" variant="outline" className="w-full">
-                        {item.availableToSell
-                          ? "Mark showcase only"
-                          : "Make available to sell"}
-                      </Button>
-                    </form>
+                    <div className="grid gap-2">
+                      <form action={toggleCricutItemSellableAction}>
+                        <input type="hidden" name="itemId" value={item.id} />
+                        <input
+                          type="hidden"
+                          name="availableToSell"
+                          value={item.availableToSell ? "false" : "true"}
+                        />
+                        <Button type="submit" size="sm" variant="outline" className="w-full">
+                          {item.availableToSell
+                            ? "Mark showcase only"
+                            : "Make available to sell"}
+                        </Button>
+                      </form>
+                      <form action={toggleCricutItemCustomizableAction}>
+                        <input type="hidden" name="itemId" value={item.id} />
+                        <input
+                          type="hidden"
+                          name="customizable"
+                          value={item.customizable ? "false" : "true"}
+                        />
+                        <Button type="submit" size="sm" variant="outline" className="w-full">
+                          {item.customizable
+                            ? "Turn off customization"
+                            : "Allow customization"}
+                        </Button>
+                      </form>
+                    </div>
                   ) : null}
                 </li>
               ))}
@@ -140,7 +158,8 @@ export default async function CricutShopPage({ searchParams }: PageProps) {
               Add a product
             </h2>
             <p className="mt-1 mb-4 text-xs text-muted-foreground">
-              Members &amp; officers — photo, price, and sell toggle
+              Members &amp; officers — photo, price, sell toggle, and
+              customization
             </p>
             <CricutListingForm
               storageConfigured={isCricutShopStorageConfigured()}

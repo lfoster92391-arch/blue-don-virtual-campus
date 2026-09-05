@@ -26,6 +26,7 @@ export function CricutListingForm({
   );
   const [priceInput, setPriceInput] = useState("");
   const [availableToSell, setAvailableToSell] = useState(true);
+  const [customizable, setCustomizable] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoGuard = useUploadGuard({ inputRef: fileInputRef });
   const priceCents = Math.round((Number(priceInput) || 0) * 100);
@@ -167,6 +168,26 @@ export function CricutListingForm({
       </label>
       {!availableToSell ? (
         <input type="hidden" name="availableToSell" value="off" />
+      ) : null}
+
+      <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
+        <input
+          type="checkbox"
+          name="customizable"
+          value="on"
+          checked={customizable}
+          onChange={(e) => setCustomizable(e.target.checked)}
+          className="mt-1"
+        />
+        <span>
+          <span className="block text-sm font-medium">Customizable</span>
+          <span className="block text-xs text-muted-foreground">
+            On = shoppers pick sport, printed name, font, and their own design.
+          </span>
+        </span>
+      </label>
+      {!customizable ? (
+        <input type="hidden" name="customizable" value="off" />
       ) : null}
 
       <Button type="submit" disabled={busy}>

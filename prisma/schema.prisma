@@ -2772,6 +2772,8 @@ model CricutShopItem {
   status         CricutShopItemStatus @default(ACTIVE)
   /** When false, item is catalog showcase only (not purchasable). */
   availableToSell Boolean             @default(true) @map("available_to_sell")
+  /** When true, shoppers can pick sport, print name, font, and a custom design. */
+  customizable   Boolean              @default(true)
   sellerId       String               @map("seller_id") @db.Uuid
   organizationId String               @map("organization_id")
   inventoryQty   Int?                 @map("inventory_qty")
@@ -2923,15 +2925,20 @@ model CricutProjectBuild {
 }
 
 model CricutShopOrderLine {
-  id          String          @id @default(cuid())
-  orderId     String          @map("order_id")
-  itemId      String          @map("item_id")
-  title       String
-  unitPriceCents Int          @map("unit_price_cents")
-  quantity    Int
-  lineTotalCents Int          @map("line_total_cents")
-  order       CricutShopOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  item        CricutShopItem  @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  id                 String          @id @default(cuid())
+  orderId            String          @map("order_id")
+  itemId             String          @map("item_id")
+  title              String
+  unitPriceCents     Int             @map("unit_price_cents")
+  quantity           Int
+  lineTotalCents     Int             @map("line_total_cents")
+  sportSlug          String?         @map("sport_slug")
+  printName          String?         @map("print_name")
+  fontKey            String?         @map("font_key")
+  designImageUrl     String?         @map("design_image_url")
+  designStoragePath  String?         @map("design_storage_path")
+  order              CricutShopOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item               CricutShopItem  @relation(fields: [itemId], references: [id], onDelete: Restrict)
 
   @@index([orderId])
   @@index([itemId])

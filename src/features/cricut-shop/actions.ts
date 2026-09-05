@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import {
+  parseCricutPrintFontKey,
+  parseCricutSportSlug,
+  sanitizeCricutPrintName,
+} from "@/config/cricut-customization";
+import {
   CRICUT_CLUB_SLUG,
+  CRICUT_CUSTOM_DESIGN_STORAGE_PREFIX,
   CRICUT_ORDER_UPDATE_STATUSES,
   CRICUT_PRICE_MAX_CENTS,
 } from "@/config/cricut-shop";
@@ -25,6 +31,7 @@ import {
   isCricutShopStorageConfigured,
   placeCricutShopOrder,
   setCricutItemAvailableToSell,
+  setCricutItemCustomizable,
   updateCricutAmazonWishlistUrl,
   updateCricutOrderStatus,
   updateCricutShopItemImage,
@@ -38,6 +45,8 @@ export type CricutShopActionState = {
   itemId?: string;
   orderId?: string;
   designId?: string;
+  imageUrl?: string;
+  storagePath?: string;
 };
 
 function revalidateCricut() {
@@ -74,6 +83,7 @@ export async function createCricutListingAction(
       String(formData.get("description") ?? "").trim() || undefined;
     const price = Number(formData.get("price"));
     const availableToSell = formData.get("availableToSell") !== "off";
+    const customizable = formData.get("customizable") !== "off";
 
     if (title.length < 2) {
       return { error: "Title is required." };
@@ -111,6 +121,7 @@ export async function createCricutListingAction(
       imageUrl,
       storagePath,
       availableToSell,
+      customizable,
     });
 
     if (!itemId) {
@@ -146,6 +157,58 @@ export async function toggleCricutItemSellableAction(
   await setCricutItemAvailableToSell({ itemId, availableToSell });
   revalidateCricut();
   revalidatePath(`/cricut/shop/${itemId}`);
+}
+
+export async function toggleCricutItemCustomizableAction(
+  formData: FormData,
+): Promise<void> {
+  const user = await requireCompleteProfile();
+  const org = await getCricutOrganization();
+  if (!org) return;
+  if (!(await canManageCricutShop(user.id, user.role, org.id))) return;
+
+  const itemId = String(formData.get("itemId") ?? "");
+  const customizable = formData.get("customizable") === "true";
+  if (!itemId) return;
+
+  await setCricutItemCustomizable({ itemId, customizable });
+  revalidateCricut();
+  revalidatePath(`/cricut/shop/${itemId}`);
+}
+
+export async function uploadCricutCustomDesignAction(
+  _prev: CricutShopActionState,
+  formData: FormData,
+): Promise<CricutShopActionState> {
+  try {
+    const user = await requireCompleteProfile();
+    const file = formData.get("photo");
+    if (!(file instanceof File) || file.size <= 0) {
+      return { error: "Choose a design image to upload." };
+    }
+    if (!isCricutShopStorageConfigured()) {
+      return {
+        error:
+          "Photo storage isn’t configured. Ask an admin to set the campus media bucket.",
+      };
+    }
+
+    const uploaded = await uploadCricutShopImage(
+      file,
+      user.id,
+      CRICUT_CUSTOM_DESIGN_STORAGE_PREFIX,
+    );
+    return {
+      success: "Custom design uploaded.",
+      imageUrl: uploaded.publicUrl,
+      storagePath: uploaded.storagePath,
+    };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Unable to upload the design.",
+    };
+  }
 }
 
 export async function updateCricutListingPhotoAction(
@@ -250,7 +313,15 @@ export async function placeCricutOrderAction(
       return { error: parsed.error.issues[0]?.message ?? "Check order form fields." };
     }
 
-    let lines: { itemId: string; quantity: number }[];
+    let lines: {
+      itemId: string;
+      quantity: number;
+      sportSlug?: string | null;
+      printName?: string | null;
+      fontKey?: string | null;
+      designImageUrl?: string | null;
+      designStoragePath?: string | null;
+    }[];
     try {
       const raw = JSON.parse(parsed.data.cartJson) as unknown;
       if (!Array.isArray(raw)) {
@@ -262,6 +333,11 @@ export async function placeCricutOrderAction(
           return {
             itemId: String(r.itemId ?? ""),
             quantity: Number(r.quantity ?? 1),
+            sportSlug: parseCricutSportSlug(String(r.sportSlug ?? "")),
+            printName: sanitizeCricutPrintName(String(r.printName ?? "")),
+            fontKey: parseCricutPrintFontKey(String(r.fontKey ?? "")),
+            designImageUrl: String(r.designImageUrl ?? "").trim() || null,
+            designStoragePath: String(r.designStoragePath ?? "").trim() || null,
           };
         })
         .filter((l) => l.itemId && l.quantity > 0);

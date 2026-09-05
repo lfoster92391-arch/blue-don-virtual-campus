@@ -5,6 +5,10 @@ import { CricutOrderProgress } from "@/components/cricut/cricut-order-progress";
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
 import {
+  cricutFontFamily,
+  summarizeCricutCustomization,
+} from "@/config/cricut-customization";
+import {
   CRICUT_ORDER_UPDATE_STATUSES,
   CRICUT_ORDER_STATUS_LABELS,
   formatShopPrice,
@@ -71,14 +75,47 @@ export default async function CricutOrderDetailPage({ params }: PageProps) {
         <section className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-3">
           <h2 className="font-semibold">Items</h2>
           <ul className="space-y-2 text-sm">
-            {order.lines.map((line) => (
-              <li key={line.id} className="flex justify-between gap-2">
-                <span>
-                  {line.quantity}× {line.title}
-                </span>
-                <span>{formatShopPrice(line.lineTotalCents)}</span>
-              </li>
-            ))}
+            {order.lines.map((line) => {
+              const summary = summarizeCricutCustomization({
+                sportSlug: line.sportSlug,
+                printName: line.printName,
+                fontKey: line.fontKey,
+                hasDesign: Boolean(line.designImageUrl),
+              });
+              return (
+                <li key={line.id} className="flex justify-between gap-3">
+                  <div className="flex min-w-0 gap-3">
+                    {line.designImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={line.designImageUrl}
+                        alt=""
+                        className="size-12 rounded-md object-cover"
+                      />
+                    ) : null}
+                    <div className="min-w-0">
+                      <p>
+                        {line.quantity}× {line.title}
+                      </p>
+                      {line.printName ? (
+                        <p
+                          className="truncate text-lg leading-none text-[#0A2342] dark:text-white"
+                          style={{ fontFamily: cricutFontFamily(line.fontKey) }}
+                        >
+                          {line.printName}
+                        </p>
+                      ) : null}
+                      {summary ? (
+                        <p className="text-xs text-muted-foreground">{summary}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                  <span className="shrink-0">
+                    {formatShopPrice(line.lineTotalCents)}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
           <div className="border-t border-border pt-3 text-sm space-y-1">
             <div className="flex justify-between">

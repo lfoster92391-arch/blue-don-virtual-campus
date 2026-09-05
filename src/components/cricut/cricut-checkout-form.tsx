@@ -7,6 +7,10 @@ import { useRouter } from "next/navigation";
 import { useCricutCart } from "@/components/cricut/cricut-cart-context";
 import { Button } from "@/components/ui/button";
 import {
+  cricutFontFamily,
+  summarizeCricutCustomization,
+} from "@/config/cricut-customization";
+import {
   CRICUT_PICKUP,
   CRICUT_SHIPPING,
   CRICUT_SHIP_FROM,
@@ -65,9 +69,66 @@ export function CricutCheckoutForm({
         type="hidden"
         name="cartJson"
         value={JSON.stringify(
-          cart.lines.map((l) => ({ itemId: l.itemId, quantity: l.quantity })),
+          cart.lines.map((l) => ({
+            itemId: l.itemId,
+            quantity: l.quantity,
+            sportSlug: l.sportSlug,
+            printName: l.printName,
+            fontKey: l.fontKey,
+            designImageUrl: l.designImageUrl,
+            designStoragePath: l.designStoragePath,
+          })),
         )}
       />
+
+      <section className="space-y-2 rounded-xl border border-border bg-card p-4">
+        <h2 className="text-sm font-semibold">Items &amp; customization</h2>
+        <ul className="space-y-3 text-sm">
+          {cart.lines.map((line) => {
+            const summary = summarizeCricutCustomization({
+              sportSlug: line.sportSlug,
+              printName: line.printName,
+              fontKey: line.fontKey,
+              hasDesign: Boolean(line.designImageUrl),
+            });
+            return (
+              <li key={line.lineKey} className="flex gap-3">
+                {line.designImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={line.designImageUrl}
+                    alt=""
+                    className="size-12 rounded-md object-cover"
+                  />
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">
+                    {line.quantity}× {line.title}
+                  </p>
+                  {line.printName ? (
+                    <p
+                      className="truncate text-lg leading-none text-[#0A2342] dark:text-white"
+                      style={{ fontFamily: cricutFontFamily(line.fontKey) }}
+                    >
+                      {line.printName}
+                    </p>
+                  ) : null}
+                  {summary ? (
+                    <p className="text-xs text-muted-foreground">{summary}</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      No personalization on this line
+                    </p>
+                  )}
+                </div>
+                <span className="shrink-0">
+                  {formatShopPrice(line.priceCents * line.quantity)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
       <fieldset className="space-y-3">
         <legend className="text-sm font-semibold">Contact</legend>
@@ -215,12 +276,12 @@ export function CricutCheckoutForm({
       </label>
 
       <label className="grid gap-1 text-sm">
-        <span className="font-medium">Customization notes</span>
+        <span className="font-medium">Extra customization notes</span>
         <textarea
           name="customizationNotes"
           rows={3}
           className="rounded-md border border-border bg-background px-3 py-2"
-          placeholder="Colors, names, sizes, special requests…"
+          placeholder="Colors, sizes, or anything not covered above…"
         />
       </label>
 

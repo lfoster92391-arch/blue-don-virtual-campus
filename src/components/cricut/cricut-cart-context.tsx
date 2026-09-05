@@ -10,28 +10,75 @@ import {
   type ReactNode,
 } from "react";
 
+import {
+  CRICUT_DEFAULT_PRINT_FONT,
+  cricutCartLineKey,
+  parseCricutPrintFontKey,
+  parseCricutSportSlug,
+  sanitizeCricutPrintName,
+  type CricutPrintFontKey,
+} from "@/config/cricut-customization";
 import { CRICUT_CART_STORAGE_KEY } from "@/config/cricut-shop";
 
 export type CricutCartLine = {
+  lineKey: string;
   itemId: string;
   title: string;
   priceCents: number;
   imageUrl: string | null;
   quantity: number;
+  sportSlug: string | null;
+  printName: string;
+  fontKey: CricutPrintFontKey | null;
+  designImageUrl: string | null;
+  designStoragePath: string | null;
+};
+
+export type CricutCartItemInput = Omit<CricutCartLine, "quantity" | "lineKey"> & {
+  lineKey?: string;
 };
 
 type CricutCartContextValue = {
   lines: CricutCartLine[];
   count: number;
   subtotalCents: number;
-  addItem: (item: Omit<CricutCartLine, "quantity">, qty?: number) => void;
-  setQty: (itemId: string, quantity: number) => void;
-  removeItem: (itemId: string) => void;
+  addItem: (item: CricutCartItemInput, qty?: number) => void;
+  setQty: (lineKey: string, quantity: number) => void;
+  removeItem: (lineKey: string) => void;
   clear: () => void;
-  replaceWithBuyNow: (item: Omit<CricutCartLine, "quantity">, qty?: number) => void;
+  replaceWithBuyNow: (item: CricutCartItemInput, qty?: number) => void;
 };
 
 const CricutCartContext = createContext<CricutCartContextValue | null>(null);
+
+function normalizeLine(
+  raw: Partial<CricutCartLine> & { itemId?: string },
+): CricutCartLine | null {
+  const itemId = String(raw.itemId ?? "");
+  if (!itemId) return null;
+  const printName = sanitizeCricutPrintName(raw.printName);
+  const sportSlug = parseCricutSportSlug(raw.sportSlug);
+  const fontKey = parseCricutPrintFontKey(raw.fontKey ?? "") ??
+    (printName ? CRICUT_DEFAULT_PRINT_FONT : null);
+  const designImageUrl = raw.designImageUrl?.trim() || null;
+  const designStoragePath = raw.designStoragePath?.trim() || null;
+  const customization = {
+    sportSlug,
+    printName,
+    fontKey,
+    designImageUrl,
+    designStoragePath,
+  };
+  return {
+    lineKey: raw.lineKey || cricutCartLineKey(itemId, customization),
+    itemId,
+    title: String(raw.title ?? "Cricut item"),
+    priceCents: Number(raw.priceCents ?? 0),
+    imageUrl: raw.imageUrl ?? null,
+    quantity: Math.max(1, Math.min(99, Number(raw.quantity ?? 1) || 1)),
+    ...customization,
+  };
+}
 
 function readCart(): CricutCartLine[] {
   if (typeof window === "undefined") {
@@ -40,8 +87,11 @@ function readCart(): CricutCartLine[] {
   try {
     const raw = window.localStorage.getItem(CRICUT_CART_STORAGE_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw) as CricutCartLine[];
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((row) => normalizeLine(row as Partial<CricutCartLine>))
+      .filter((line): line is CricutCartLine => Boolean(line));
   } catch {
     return [];
   }
@@ -61,35 +111,33 @@ export function CricutCartProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem(CRICUT_CART_STORAGE_KEY, JSON.stringify(lines));
   }, [lines, hydrated]);
 
-  const addItem = useCallback(
-    (item: Omit<CricutCartLine, "quantity">, qty = 1) => {
-      setLines((prev) => {
-        const existing = prev.find((l) => l.itemId === item.itemId);
-        if (existing) {
-          return prev.map((l) =>
-            l.itemId === item.itemId
-              ? { ...l, quantity: Math.min(99, l.quantity + qty) }
-              : l,
-          );
-        }
-        return [...prev, { ...item, quantity: Math.min(99, qty) }];
-      });
-    },
-    [],
-  );
+  const addItem = useCallback((item: CricutCartItemInput, qty = 1) => {
+    const next = normalizeLine({ ...item, quantity: qty });
+    if (!next) return;
+    setLines((prev) => {
+      const existing = prev.find((l) => l.lineKey === next.lineKey);
+      if (existing) {
+        return prev.map((l) =>
+          l.lineKey === next.lineKey
+            ? { ...l, quantity: Math.min(99, l.quantity + qty) }
+            : l,
+        );
+      }
+      return [...prev, next];
+    });
+  }, []);
 
-  const replaceWithBuyNow = useCallback(
-    (item: Omit<CricutCartLine, "quantity">, qty = 1) => {
-      setLines([{ ...item, quantity: Math.min(99, qty) }]);
-    },
-    [],
-  );
+  const replaceWithBuyNow = useCallback((item: CricutCartItemInput, qty = 1) => {
+    const next = normalizeLine({ ...item, quantity: qty });
+    if (!next) return;
+    setLines([next]);
+  }, []);
 
-  const setQty = useCallback((itemId: string, quantity: number) => {
+  const setQty = useCallback((lineKey: string, quantity: number) => {
     setLines((prev) =>
       prev
         .map((l) =>
-          l.itemId === itemId
+          l.lineKey === lineKey
             ? { ...l, quantity: Math.max(0, Math.min(99, quantity)) }
             : l,
         )
@@ -97,8 +145,8 @@ export function CricutCartProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const removeItem = useCallback((itemId: string) => {
-    setLines((prev) => prev.filter((l) => l.itemId !== itemId));
+  const removeItem = useCallback((lineKey: string) => {
+    setLines((prev) => prev.filter((l) => l.lineKey !== lineKey));
   }, []);
 
   const clear = useCallback(() => setLines([]), []);

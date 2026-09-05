@@ -24,11 +24,18 @@ export function CricutProductCard({ item }: { item: CricutShopItemView }) {
             <ImageIcon className="size-10 opacity-40" aria-hidden="true" />
           </div>
         )}
-        {!item.availableToSell ? (
-          <span className="absolute left-2 top-2 rounded-md bg-[#0A2342]/85 px-2 py-0.5 text-xs font-medium text-white">
-            Showcase
-          </span>
-        ) : null}
+        <div className="absolute left-2 top-2 flex flex-wrap gap-1">
+          {!item.availableToSell ? (
+            <span className="rounded-md bg-[#0A2342]/85 px-2 py-0.5 text-xs font-medium text-white">
+              Showcase
+            </span>
+          ) : null}
+          {item.customizable ? (
+            <span className="rounded-md bg-[#1e56c8]/90 px-2 py-0.5 text-xs font-medium text-white">
+              Custom
+            </span>
+          ) : null}
+        </div>
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">
         <p className="text-lg font-bold text-[#0A2342] dark:text-white">

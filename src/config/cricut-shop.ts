@@ -22,6 +22,7 @@ export const CRICUT_SHOP_BUCKET =
 
 export const CRICUT_SHOP_STORAGE_PREFIX = "cricut-shop";
 export const CRICUT_DESIGN_STORAGE_PREFIX = "cricut-designs";
+export const CRICUT_CUSTOM_DESIGN_STORAGE_PREFIX = "cricut-shop/custom-designs";
 
 export const CRICUT_IMAGE_MAX_BYTES = IMAGE_UPLOAD_MAX_BYTES;
 
@@ -143,6 +144,7 @@ export type CricutSampleItem = {
   priceCents: number;
   imageUrl: string | null;
   availableToSell?: boolean;
+  customizable?: boolean;
 };
 
 const CRICUT_SAMPLE_ITEMS: CricutSampleItem[] = [
@@ -176,4 +178,4 @@ export function getCricutSampleItems(): CricutSampleItem[] {
   return sampleList(CRICUT_SAMPLE_ITEMS);
 }
 
-export const CRICUT_CART_STORAGE_KEY = "blue-don-cricut-cart-v1";
+export const CRICUT_CART_STORAGE_KEY = "blue-don-cricut-cart-v2";

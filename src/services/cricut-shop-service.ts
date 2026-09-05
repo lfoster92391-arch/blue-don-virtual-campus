@@ -1,4 +1,10 @@
 import {
+  parseCricutPrintFontKey,
+  parseCricutSportSlug,
+  sanitizeCricutPrintName,
+  summarizeCricutCustomization,
+} from "@/config/cricut-customization";
+import {
   CRICUT_CLUB_SLUG,
   CRICUT_IMAGE_MAX_BYTES,
   CRICUT_ORDER_STATUS_LABELS,
@@ -39,6 +45,7 @@ export type CricutShopItemView = {
   imageUrl: string | null;
   status: CricutShopItemStatus | "ACTIVE";
   availableToSell: boolean;
+  customizable: boolean;
   sellerName: string;
   organizationId: string;
   createdAt: Date;
@@ -52,6 +59,10 @@ export type CricutOrderLineView = {
   unitPriceCents: number;
   quantity: number;
   lineTotalCents: number;
+  sportSlug: string | null;
+  printName: string | null;
+  fontKey: string | null;
+  designImageUrl: string | null;
 };
 
 export type CricutOrderView = {
@@ -85,6 +96,11 @@ export type CricutOrderView = {
 export type CartLineInput = {
   itemId: string;
   quantity: number;
+  sportSlug?: string | null;
+  printName?: string | null;
+  fontKey?: string | null;
+  designImageUrl?: string | null;
+  designStoragePath?: string | null;
 };
 
 export type CricutProductionStats = {
@@ -145,6 +161,10 @@ function mapOrder(row: {
     unitPriceCents: number;
     quantity: number;
     lineTotalCents: number;
+    sportSlug?: string | null;
+    printName?: string | null;
+    fontKey?: string | null;
+    designImageUrl?: string | null;
   }[];
 }): CricutOrderView {
   return {
@@ -177,6 +197,10 @@ function mapOrder(row: {
       unitPriceCents: line.unitPriceCents,
       quantity: line.quantity,
       lineTotalCents: line.lineTotalCents,
+      sportSlug: line.sportSlug ?? null,
+      printName: line.printName ?? null,
+      fontKey: line.fontKey ?? null,
+      designImageUrl: line.designImageUrl ?? null,
     })),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -368,6 +392,7 @@ function sampleViews(organizationId = "sample"): CricutShopItemView[] {
     imageUrl: item.imageUrl,
     status: "ACTIVE" as const,
     availableToSell: item.availableToSell !== false,
+    customizable: item.customizable !== false,
     sellerName: "Cricut Club",
     organizationId,
     createdAt: new Date(),
@@ -418,6 +443,7 @@ export async function listCricutShopItems(options?: {
     imageUrl: row.imageUrl,
     status: row.status,
     availableToSell: row.availableToSell,
+    customizable: row.customizable,
     sellerName: displayName(row.seller),
     organizationId: row.organizationId,
     createdAt: row.createdAt,
@@ -438,6 +464,7 @@ export async function getCricutShopItem(
       imageUrl: sample.imageUrl,
       status: "ACTIVE",
       availableToSell: sample.availableToSell !== false,
+      customizable: sample.customizable !== false,
       sellerName: "Cricut Club",
       organizationId: "sample",
       createdAt: new Date(),
@@ -472,6 +499,7 @@ export async function getCricutShopItem(
     imageUrl: row.imageUrl,
     status: row.status,
     availableToSell: row.availableToSell,
+    customizable: row.customizable,
     sellerName: displayName(row.seller),
     organizationId: row.organizationId,
     createdAt: row.createdAt,
@@ -487,6 +515,7 @@ export async function createCricutShopItem(input: {
   imageUrl?: string;
   storagePath?: string;
   availableToSell?: boolean;
+  customizable?: boolean;
 }): Promise<string | null> {
   if (!isDatabaseConfigured() || !isPrismaReady()) {
     return null;
@@ -507,6 +536,7 @@ export async function createCricutShopItem(input: {
         storagePath: input.storagePath ?? null,
         status: "ACTIVE",
         availableToSell: input.availableToSell !== false,
+        customizable: input.customizable !== false,
       },
       select: { id: true },
     }),
@@ -546,6 +576,22 @@ export async function setCricutItemAvailableToSell(input: {
     prisma.cricutShopItem.updateMany({
       where: { id: input.itemId, status: { not: "REMOVED" } },
       data: { availableToSell: input.availableToSell },
+    }),
+  );
+  return (updated?.count ?? 0) > 0;
+}
+
+export async function setCricutItemCustomizable(input: {
+  itemId: string;
+  customizable: boolean;
+}): Promise<boolean> {
+  if (!isDatabaseConfigured() || !isPrismaReady()) {
+    return false;
+  }
+  const updated = await withDatabase((prisma) =>
+    prisma.cricutShopItem.updateMany({
+      where: { id: input.itemId, status: { not: "REMOVED" } },
+      data: { customizable: input.customizable },
     }),
   );
   return (updated?.count ?? 0) > 0;
@@ -645,12 +691,31 @@ export async function placeCricutShopOrder(input: {
   const orderLines = input.lines.map((line) => {
     const item = byId.get(line.itemId)!;
     const qty = Math.max(1, Math.min(99, Math.floor(line.quantity)));
+    const customizable = item.customizable !== false;
+    const sportSlug = customizable ? parseCricutSportSlug(line.sportSlug) : null;
+    const printName = customizable
+      ? sanitizeCricutPrintName(line.printName) || null
+      : null;
+    const fontKey = customizable
+      ? parseCricutPrintFontKey(line.fontKey)
+      : null;
+    const designImageUrl = customizable
+      ? line.designImageUrl?.trim() || null
+      : null;
+    const designStoragePath = customizable
+      ? line.designStoragePath?.trim() || null
+      : null;
     return {
       itemId: item.id,
       title: item.title,
       unitPriceCents: item.priceCents,
       quantity: qty,
       lineTotalCents: item.priceCents * qty,
+      sportSlug,
+      printName,
+      fontKey,
+      designImageUrl,
+      designStoragePath,
     };
   });
 
@@ -691,8 +756,23 @@ export async function placeCricutShopOrder(input: {
         contactName: input.contactName?.trim().slice(0, 120) || null,
         contactEmail: input.contactEmail?.trim().slice(0, 160) || null,
         contactPhone: input.contactPhone?.trim().slice(0, 40) || null,
-        customizationNotes:
-          input.customizationNotes?.trim().slice(0, 800) || null,
+        customizationNotes: (() => {
+          const extra = input.customizationNotes?.trim().slice(0, 800) || "";
+          const fromLines = orderLines
+            .map((line) =>
+              summarizeCricutCustomization({
+                title: line.title,
+                sportSlug: line.sportSlug,
+                printName: line.printName,
+                fontKey: line.fontKey,
+                hasDesign: Boolean(line.designImageUrl),
+              }),
+            )
+            .filter(Boolean)
+            .join("\n");
+          const combined = [fromLines, extra].filter(Boolean).join("\n\n");
+          return combined.slice(0, 800) || null;
+        })(),
         shipName: input.shipName?.trim() || null,
         shipLine1: input.shipLine1?.trim() || null,
         shipLine2: input.shipLine2?.trim() || null,
