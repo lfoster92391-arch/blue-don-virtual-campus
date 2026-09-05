@@ -1,0 +1,24 @@
+---
+description: After campus site work, commit and push origin/main so Vercel deploys production.
+alwaysApply: true
+---
+
+# Ship finished work to Vercel
+
+When you finish product, UI, feature, or bugfix work on this campus site, **commit (if there are changes) and `git push origin main`** so Vercel deploys to https://campus.assetpilotedu.com.
+
+Do **not** wait for the user to say “push to Vercel” unless they said not to ship yet (e.g. “don’t deploy”, “hold the push”, “local only”).
+
+## Git safety (always)
+
+- Never update git config
+- Never force push, `--no-verify`, amend (unless the user’s commit rules allow it), or `git -i`
+- Never commit `.env`, credentials, or secrets
+- If a hook fails, create a **new** commit — do not amend
+
+## How
+
+1. `git status`, `git diff`, `git log -8` in parallel
+2. Stage only the product files you changed (plus this rule if you edited it)
+3. Commit with a why-focused message (PowerShell here-string on Windows)
+4. `git push origin main` and confirm the production URL

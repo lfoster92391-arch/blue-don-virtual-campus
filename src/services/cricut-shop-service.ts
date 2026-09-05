@@ -5,6 +5,15 @@ import {
   summarizeCricutCustomization,
 } from "@/config/cricut-customization";
 import {
+  cricutKindShowsBuyerNote,
+  cricutKindShowsSize,
+  parseCricutQuantity,
+  parseCricutShirtSize,
+  parseCricutShopItemKind,
+  sanitizeCricutBuyerNote,
+  type CricutShopItemKind,
+} from "@/config/cricut-product-kinds";
+import {
   CRICUT_CLUB_SLUG,
   CRICUT_IMAGE_MAX_BYTES,
   CRICUT_ORDER_STATUS_LABELS,
@@ -46,6 +55,7 @@ export type CricutShopItemView = {
   status: CricutShopItemStatus | "ACTIVE";
   availableToSell: boolean;
   customizable: boolean;
+  kind: CricutShopItemKind;
   sellerName: string;
   organizationId: string;
   createdAt: Date;
@@ -63,6 +73,8 @@ export type CricutOrderLineView = {
   printName: string | null;
   fontKey: string | null;
   designImageUrl: string | null;
+  size: string | null;
+  buyerNote: string | null;
 };
 
 export type CricutOrderView = {
@@ -101,6 +113,8 @@ export type CartLineInput = {
   fontKey?: string | null;
   designImageUrl?: string | null;
   designStoragePath?: string | null;
+  size?: string | null;
+  buyerNote?: string | null;
 };
 
 export type CricutProductionStats = {
@@ -165,6 +179,8 @@ function mapOrder(row: {
     printName?: string | null;
     fontKey?: string | null;
     designImageUrl?: string | null;
+    size?: string | null;
+    buyerNote?: string | null;
   }[];
 }): CricutOrderView {
   return {
@@ -201,6 +217,8 @@ function mapOrder(row: {
       printName: line.printName ?? null,
       fontKey: line.fontKey ?? null,
       designImageUrl: line.designImageUrl ?? null,
+      size: line.size ?? null,
+      buyerNote: line.buyerNote ?? null,
     })),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -393,6 +411,7 @@ function sampleViews(organizationId = "sample"): CricutShopItemView[] {
     status: "ACTIVE" as const,
     availableToSell: item.availableToSell !== false,
     customizable: item.customizable !== false,
+    kind: parseCricutShopItemKind(item.kind),
     sellerName: "Cricut Club",
     organizationId,
     createdAt: new Date(),
@@ -444,6 +463,7 @@ export async function listCricutShopItems(options?: {
     status: row.status,
     availableToSell: row.availableToSell,
     customizable: row.customizable,
+    kind: parseCricutShopItemKind(row.kind),
     sellerName: displayName(row.seller),
     organizationId: row.organizationId,
     createdAt: row.createdAt,
@@ -465,6 +485,7 @@ export async function getCricutShopItem(
       status: "ACTIVE",
       availableToSell: sample.availableToSell !== false,
       customizable: sample.customizable !== false,
+      kind: parseCricutShopItemKind(sample.kind),
       sellerName: "Cricut Club",
       organizationId: "sample",
       createdAt: new Date(),
@@ -500,6 +521,7 @@ export async function getCricutShopItem(
     status: row.status,
     availableToSell: row.availableToSell,
     customizable: row.customizable,
+    kind: parseCricutShopItemKind(row.kind),
     sellerName: displayName(row.seller),
     organizationId: row.organizationId,
     createdAt: row.createdAt,
@@ -516,6 +538,7 @@ export async function createCricutShopItem(input: {
   storagePath?: string;
   availableToSell?: boolean;
   customizable?: boolean;
+  kind?: CricutShopItemKind;
 }): Promise<string | null> {
   if (!isDatabaseConfigured() || !isPrismaReady()) {
     return null;
@@ -537,6 +560,7 @@ export async function createCricutShopItem(input: {
         status: "ACTIVE",
         availableToSell: input.availableToSell !== false,
         customizable: input.customizable !== false,
+        kind: parseCricutShopItemKind(input.kind),
       },
       select: { id: true },
     }),
@@ -592,6 +616,22 @@ export async function setCricutItemCustomizable(input: {
     prisma.cricutShopItem.updateMany({
       where: { id: input.itemId, status: { not: "REMOVED" } },
       data: { customizable: input.customizable },
+    }),
+  );
+  return (updated?.count ?? 0) > 0;
+}
+
+export async function setCricutItemKind(input: {
+  itemId: string;
+  kind: CricutShopItemKind;
+}): Promise<boolean> {
+  if (!isDatabaseConfigured() || !isPrismaReady()) {
+    return false;
+  }
+  const updated = await withDatabase((prisma) =>
+    prisma.cricutShopItem.updateMany({
+      where: { id: input.itemId, status: { not: "REMOVED" } },
+      data: { kind: parseCricutShopItemKind(input.kind) },
     }),
   );
   return (updated?.count ?? 0) > 0;
@@ -688,9 +728,34 @@ export async function placeCricutShopOrder(input: {
   }
 
   const byId = new Map(items.map((i) => [i.id, i]));
-  const orderLines = input.lines.map((line) => {
+  const orderLines: {
+    itemId: string;
+    title: string;
+    unitPriceCents: number;
+    quantity: number;
+    lineTotalCents: number;
+    sportSlug: string | null;
+    printName: string | null;
+    fontKey: string | null;
+    designImageUrl: string | null;
+    designStoragePath: string | null;
+    size: string | null;
+    buyerNote: string | null;
+  }[] = [];
+
+  for (const line of input.lines) {
     const item = byId.get(line.itemId)!;
-    const qty = Math.max(1, Math.min(99, Math.floor(line.quantity)));
+    const qty = parseCricutQuantity(line.quantity);
+    const kind = parseCricutShopItemKind(item.kind);
+    const size = cricutKindShowsSize(kind)
+      ? parseCricutShirtSize(line.size)
+      : null;
+    if (cricutKindShowsSize(kind) && !size) {
+      return { error: `Pick a size for ${item.title}.` };
+    }
+    const buyerNote = cricutKindShowsBuyerNote(kind)
+      ? sanitizeCricutBuyerNote(line.buyerNote) || null
+      : null;
     const customizable = item.customizable !== false;
     const sportSlug = customizable ? parseCricutSportSlug(line.sportSlug) : null;
     const printName = customizable
@@ -705,7 +770,7 @@ export async function placeCricutShopOrder(input: {
     const designStoragePath = customizable
       ? line.designStoragePath?.trim() || null
       : null;
-    return {
+    orderLines.push({
       itemId: item.id,
       title: item.title,
       unitPriceCents: item.priceCents,
@@ -716,8 +781,10 @@ export async function placeCricutShopOrder(input: {
       fontKey,
       designImageUrl,
       designStoragePath,
-    };
-  });
+      size,
+      buyerNote,
+    });
+  }
 
   const subtotalCents = orderLines.reduce((s, l) => s + l.lineTotalCents, 0);
   const shippingCents = shippingCentsFor(input.fulfillment);
@@ -766,6 +833,8 @@ export async function placeCricutShopOrder(input: {
                 printName: line.printName,
                 fontKey: line.fontKey,
                 hasDesign: Boolean(line.designImageUrl),
+                size: line.size,
+                buyerNote: line.buyerNote,
               }),
             )
             .filter(Boolean)

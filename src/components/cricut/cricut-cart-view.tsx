@@ -39,6 +39,8 @@ export function CricutCartView() {
             printName: line.printName,
             fontKey: line.fontKey,
             hasDesign: Boolean(line.designImageUrl),
+            size: line.size,
+            buyerNote: line.buyerNote,
           });
           return (
             <li

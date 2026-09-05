@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ImageIcon } from "lucide-react";
 
+import { cricutShopItemKindLabel } from "@/config/cricut-product-kinds";
 import { formatShopPrice } from "@/config/cricut-shop";
 import type { CricutShopItemView } from "@/services/cricut-shop-service";
 
@@ -35,6 +36,9 @@ export function CricutProductCard({ item }: { item: CricutShopItemView }) {
               Custom
             </span>
           ) : null}
+          <span className="rounded-md bg-[#DB2777]/90 px-2 py-0.5 text-xs font-medium text-white">
+            {cricutShopItemKindLabel(item.kind)}
+          </span>
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">

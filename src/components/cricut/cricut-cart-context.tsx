@@ -18,6 +18,11 @@ import {
   sanitizeCricutPrintName,
   type CricutPrintFontKey,
 } from "@/config/cricut-customization";
+import {
+  parseCricutQuantity,
+  parseCricutShirtSize,
+  sanitizeCricutBuyerNote,
+} from "@/config/cricut-product-kinds";
 import { CRICUT_CART_STORAGE_KEY } from "@/config/cricut-shop";
 
 export type CricutCartLine = {
@@ -32,6 +37,8 @@ export type CricutCartLine = {
   fontKey: CricutPrintFontKey | null;
   designImageUrl: string | null;
   designStoragePath: string | null;
+  size: string | null;
+  buyerNote: string;
 };
 
 export type CricutCartItemInput = Omit<CricutCartLine, "quantity" | "lineKey"> & {
@@ -62,12 +69,16 @@ function normalizeLine(
     (printName ? CRICUT_DEFAULT_PRINT_FONT : null);
   const designImageUrl = raw.designImageUrl?.trim() || null;
   const designStoragePath = raw.designStoragePath?.trim() || null;
+  const size = parseCricutShirtSize(raw.size);
+  const buyerNote = sanitizeCricutBuyerNote(raw.buyerNote);
   const customization = {
     sportSlug,
     printName,
     fontKey,
     designImageUrl,
     designStoragePath,
+    size,
+    buyerNote,
   };
   return {
     lineKey: raw.lineKey || cricutCartLineKey(itemId, customization),
@@ -75,7 +86,7 @@ function normalizeLine(
     title: String(raw.title ?? "Cricut item"),
     priceCents: Number(raw.priceCents ?? 0),
     imageUrl: raw.imageUrl ?? null,
-    quantity: Math.max(1, Math.min(99, Number(raw.quantity ?? 1) || 1)),
+    quantity: parseCricutQuantity(raw.quantity),
     ...customization,
   };
 }

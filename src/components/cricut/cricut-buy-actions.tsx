@@ -14,6 +14,15 @@ import {
   CRICUT_DEFAULT_PRINT_FONT,
   sanitizeCricutPrintName,
 } from "@/config/cricut-customization";
+import {
+  CRICUT_BUYER_NOTE_MAX,
+  CRICUT_SHIRT_SIZES,
+  cricutKindShowsBuyerNote,
+  cricutKindShowsSize,
+  parseCricutQuantity,
+  parseCricutShirtSize,
+  sanitizeCricutBuyerNote,
+} from "@/config/cricut-product-kinds";
 import { formatShopPrice } from "@/config/cricut-shop";
 import { uploadCricutCustomDesignAction } from "@/features/cricut-shop/actions";
 import { useUploadGuard } from "@/lib/uploads/use-upload-guard";
@@ -31,6 +40,8 @@ export function CricutBuyActions({
   const sold = item.status === "SOLD";
   const showcaseOnly = !item.availableToSell;
   const canOrder = !sold && !showcaseOnly;
+  const showSize = cricutKindShowsSize(item.kind);
+  const showBuyerNote = cricutKindShowsBuyerNote(item.kind);
   const designInputRef = useRef<HTMLInputElement>(null);
   const photoGuard = useUploadGuard({ inputRef: designInputRef });
   const [custom, setCustom] = useState<CricutCustomizationDraft>({
@@ -38,11 +49,20 @@ export function CricutBuyActions({
     printName: "",
     fontKey: CRICUT_DEFAULT_PRINT_FONT,
   });
+  const [size, setSize] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [buyerNote, setBuyerNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const photosReady = storageConfigured ?? true;
 
   async function buildCartPayload() {
+    const qty = parseCricutQuantity(quantity);
+    const parsedSize = showSize ? parseCricutShirtSize(size) : null;
+    if (showSize && !parsedSize) {
+      throw new Error("Pick a shirt size.");
+    }
+
     const printName = sanitizeCricutPrintName(custom.printName);
     let designImageUrl: string | null = null;
     let designStoragePath: string | null = null;
@@ -62,15 +82,20 @@ export function CricutBuyActions({
     }
 
     return {
-      itemId: item.id,
-      title: item.title,
-      priceCents: item.priceCents,
-      imageUrl: item.imageUrl,
-      sportSlug: custom.sportSlug || null,
-      printName,
-      fontKey: item.customizable ? custom.fontKey : null,
-      designImageUrl,
-      designStoragePath,
+      qty,
+      item: {
+        itemId: item.id,
+        title: item.title,
+        priceCents: item.priceCents,
+        imageUrl: item.imageUrl,
+        sportSlug: item.customizable ? custom.sportSlug || null : null,
+        printName: item.customizable ? printName : "",
+        fontKey: item.customizable ? custom.fontKey : null,
+        designImageUrl: item.customizable ? designImageUrl : null,
+        designStoragePath: item.customizable ? designStoragePath : null,
+        size: parsedSize,
+        buyerNote: showBuyerNote ? sanitizeCricutBuyerNote(buyerNote) : "",
+      },
     };
   }
 
@@ -78,7 +103,8 @@ export function CricutBuyActions({
     setError(null);
     setBusy(true);
     try {
-      cart.addItem(await buildCartPayload(), 1);
+      const payload = await buildCartPayload();
+      cart.addItem(payload.item, payload.qty);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to add to cart.");
     } finally {
@@ -90,7 +116,8 @@ export function CricutBuyActions({
     setError(null);
     setBusy(true);
     try {
-      cart.replaceWithBuyNow(await buildCartPayload(), 1);
+      const payload = await buildCartPayload();
+      cart.replaceWithBuyNow(payload.item, payload.qty);
       router.push("/cricut/checkout?buyNow=1");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to start checkout.");
@@ -111,6 +138,50 @@ export function CricutBuyActions({
       <p className="text-2xl font-bold text-[#0A2342] dark:text-white">
         {formatShopPrice(item.priceCents)}
       </p>
+
+      {showSize ? (
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium">Size</span>
+          <select
+            value={size}
+            onChange={(e) => setSize(e.target.value)}
+            className="rounded-md border border-border bg-background px-3 py-2"
+          >
+            <option value="">Select size</option>
+            {CRICUT_SHIRT_SIZES.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
+      <label className="grid gap-1 text-sm">
+        <span className="font-medium">Quantity</span>
+        <input
+          type="number"
+          min={1}
+          max={99}
+          value={quantity}
+          onChange={(e) => setQuantity(parseCricutQuantity(e.target.value))}
+          className="w-24 rounded-md border border-border bg-background px-3 py-2"
+        />
+      </label>
+
+      {showBuyerNote ? (
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium">Note for Cricut Club (optional)</span>
+          <textarea
+            value={buyerNote}
+            maxLength={CRICUT_BUYER_NOTE_MAX}
+            onChange={(e) => setBuyerNote(e.target.value)}
+            rows={2}
+            className="rounded-md border border-border bg-background px-3 py-2"
+            placeholder="Anything the crew should know — not a shirt size."
+          />
+        </label>
+      ) : null}
 
       {item.customizable ? (
         <CricutCustomizationFields
@@ -165,9 +236,9 @@ export function CricutBuyActions({
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       {canOrder ? (
         <p className="text-xs text-muted-foreground">
-          Customization rides with the cart into checkout — Cricut crew sees
-          sport, name, font, and any uploaded design. Pickup at Madonna is
-          free · shipping from Weirton is extra.
+          Options ride with the cart into checkout — Cricut crew sees size,
+          quantity, and any customization. Pickup at Madonna is free · shipping
+          from Weirton is extra.
         </p>
       ) : null}
     </div>

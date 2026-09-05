@@ -105,7 +105,10 @@ export function cricutCartLineKey(
   customization: Pick<
     CricutCustomization,
     "sportSlug" | "printName" | "fontKey" | "designStoragePath" | "designImageUrl"
-  >,
+  > & {
+    size?: string | null;
+    buyerNote?: string | null;
+  },
 ): string {
   return [
     itemId,
@@ -113,6 +116,8 @@ export function cricutCartLineKey(
     customization.printName.trim().toLowerCase(),
     customization.fontKey ?? "",
     customization.designStoragePath ?? customization.designImageUrl ?? "",
+    (customization.size ?? "").trim().toUpperCase(),
+    (customization.buyerNote ?? "").trim().toLowerCase(),
   ].join("|");
 }
 
@@ -122,15 +127,21 @@ export function summarizeCricutCustomization(input: {
   printName?: string | null;
   fontKey?: string | null;
   hasDesign?: boolean;
+  size?: string | null;
+  buyerNote?: string | null;
 }): string | null {
   const bits: string[] = [];
   const sport = cricutSportLabel(input.sportSlug);
   const printName = sanitizeCricutPrintName(input.printName);
   const font = cricutFontLabel(input.fontKey);
+  const size = input.size?.trim();
+  const buyerNote = input.buyerNote?.trim();
+  if (size) bits.push(`Size: ${size}`);
   if (sport) bits.push(`Sport: ${sport}`);
   if (printName) bits.push(`Name: ${printName}`);
   if (font && printName) bits.push(`Font: ${font}`);
   if (input.hasDesign) bits.push("Custom design uploaded");
+  if (buyerNote) bits.push(`Note: ${buyerNote}`);
   if (bits.length === 0) return null;
   return input.title ? `${input.title} — ${bits.join(" · ")}` : bits.join(" · ");
 }

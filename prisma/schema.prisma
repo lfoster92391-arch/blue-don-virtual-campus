@@ -2749,6 +2749,13 @@ enum CricutShopItemStatus {
   REMOVED
 }
 
+enum CricutShopItemKind {
+  SHIRT
+  TUMBLER
+  OTHER
+  CUSTOM_BUILT
+}
+
 enum CricutFulfillmentMethod {
   PICKUP
   SHIP
@@ -2788,6 +2795,8 @@ model CricutShopItem {
   availableToSell Boolean             @default(true) @map("available_to_sell")
   /** When true, shoppers can pick sport, print name, font, and a custom design. */
   customizable   Boolean              @default(true)
+  /** Shirt / tumbler / other / custom-built — drives buyer option fields. */
+  kind           CricutShopItemKind   @default(OTHER)
   sellerId       String               @map("seller_id") @db.Uuid
   organizationId String               @map("organization_id")
   inventoryQty   Int?                 @map("inventory_qty")
@@ -2951,6 +2960,8 @@ model CricutShopOrderLine {
   fontKey            String?         @map("font_key")
   designImageUrl     String?         @map("design_image_url")
   designStoragePath  String?         @map("design_storage_path")
+  size               String?
+  buyerNote          String?         @map("buyer_note")
   order              CricutShopOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
   item               CricutShopItem  @relation(fields: [itemId], references: [id], onDelete: Restrict)
 

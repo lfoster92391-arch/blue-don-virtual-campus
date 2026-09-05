@@ -24,9 +24,10 @@ Project ideas feed the shop: **Sell this** on `/cricut/projects/[id]` creates a 
 
 ## Product catalog
 
-- Members & officers upload: photo, title, description, price
+- Members & officers upload: photo, title, description, price, **product type**
+- Types: **Shirt** (S–XXL + customization + qty), **Tumbler** (sport/name/font/design + qty), **Other** (customization + qty), **Custom built** (qty + optional note; customization off by default)
 - **Available to sell** toggle — on = purchasable; off = catalog showcase only
-- President / VP can flip sellability on existing listings from the shop page
+- President / VP can flip sellability, customization, and product type on existing listings
 
 ## Order flow → Command Center
 

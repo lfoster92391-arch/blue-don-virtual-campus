@@ -8,7 +8,14 @@ import { CricutProductPhotoForm } from "@/components/cricut/cricut-product-photo
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
 import { requireCompleteProfile } from "@/lib/auth/session";
-import { toggleCricutItemCustomizableAction } from "@/features/cricut-shop/actions";
+import {
+  CRICUT_SHOP_ITEM_KINDS,
+  cricutShopItemKindLabel,
+} from "@/config/cricut-product-kinds";
+import {
+  setCricutItemKindAction,
+  toggleCricutItemCustomizableAction,
+} from "@/features/cricut-shop/actions";
 import {
   canCreateCricutListing,
   canManageCricutShop,
@@ -91,33 +98,54 @@ export default async function CricutProductPage({ params }: PageProps) {
           ) : (
             <p className="text-sm text-muted-foreground">No description yet.</p>
           )}
-          <p className="text-sm text-muted-foreground">Listed by {item.sellerName}</p>
+          <p className="text-sm text-muted-foreground">
+            {cricutShopItemKindLabel(item.kind)} · Listed by {item.sellerName}
+          </p>
           <CricutBuyActions
             item={item}
             storageConfigured={isCricutShopStorageConfigured()}
           />
           {canManage ? (
-            <form
-              action={toggleCricutItemCustomizableAction}
-              className="rounded-xl border border-border p-4"
-            >
-              <input type="hidden" name="itemId" value={item.id} />
-              <input
-                type="hidden"
-                name="customizable"
-                value={item.customizable ? "false" : "true"}
-              />
-              <p className="text-sm font-medium">
-                {item.customizable
-                  ? "Shoppers can customize this item"
-                  : "Customization is off for this item"}
-              </p>
-              <Button type="submit" size="sm" className="mt-2">
-                {item.customizable
-                  ? "Turn off customization"
-                  : "Allow customization"}
-              </Button>
-            </form>
+            <div className="space-y-3 rounded-xl border border-border p-4">
+              <form action={setCricutItemKindAction} className="space-y-2">
+                <input type="hidden" name="itemId" value={item.id} />
+                <label className="grid gap-1 text-sm">
+                  <span className="font-medium">Product type</span>
+                  <select
+                    name="kind"
+                    defaultValue={item.kind}
+                    className="rounded-md border border-border bg-background px-3 py-2"
+                  >
+                    {CRICUT_SHOP_ITEM_KINDS.map((entry) => (
+                      <option key={entry.key} value={entry.key}>
+                        {entry.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <Button type="submit" size="sm" variant="outline">
+                  Save product type
+                </Button>
+              </form>
+              <form action={toggleCricutItemCustomizableAction}>
+                <input type="hidden" name="itemId" value={item.id} />
+                <input
+                  type="hidden"
+                  name="customizable"
+                  value={item.customizable ? "false" : "true"}
+                />
+                <p className="text-sm font-medium">
+                  {item.customizable
+                    ? "Shoppers can customize this item"
+                    : "Customization is off for this item"}
+                </p>
+                <Button type="submit" size="sm" className="mt-2">
+                  {item.customizable
+                    ? "Turn off customization"
+                    : "Allow customization"}
+                </Button>
+              </form>
+            </div>
           ) : null}
           {canUploadPhoto ? (
             <CricutProductPhotoForm

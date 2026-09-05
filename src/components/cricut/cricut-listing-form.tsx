@@ -5,6 +5,11 @@ import { Camera, ImageIcon, Upload, X } from "lucide-react";
 
 import { UploadGuardNotice } from "@/components/uploads/upload-guard-notice";
 import { Button } from "@/components/ui/button";
+import {
+  CRICUT_SHOP_ITEM_KINDS,
+  cricutKindDefaultCustomizable,
+  type CricutShopItemKind,
+} from "@/config/cricut-product-kinds";
 import { formatShopPrice } from "@/config/cricut-shop";
 import { CAMPUS_IMAGE_ACCEPT, IMAGE_UPLOAD_MAX_LABEL } from "@/config/uploads";
 import {
@@ -25,8 +30,10 @@ export function CricutListingForm({
     initialState,
   );
   const [priceInput, setPriceInput] = useState("");
+  const [kind, setKind] = useState<CricutShopItemKind>("TUMBLER");
   const [availableToSell, setAvailableToSell] = useState(true);
   const [customizable, setCustomizable] = useState(true);
+  const [customizableTouched, setCustomizableTouched] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoGuard = useUploadGuard({ inputRef: fileInputRef });
   const priceCents = Math.round((Number(priceInput) || 0) * 100);
@@ -150,6 +157,41 @@ export function CricutListingForm({
         />
       </label>
 
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">Product type</legend>
+        <p className="text-xs text-muted-foreground">
+          This changes the options shoppers see at checkout.
+        </p>
+        <div className="grid gap-2">
+          {CRICUT_SHOP_ITEM_KINDS.map((entry) => (
+            <label
+              key={entry.key}
+              className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3 has-[:checked]:border-[#DB2777] has-[:checked]:bg-[#DB2777]/5"
+            >
+              <input
+                type="radio"
+                name="kind"
+                value={entry.key}
+                checked={kind === entry.key}
+                onChange={() => {
+                  setKind(entry.key);
+                  if (!customizableTouched) {
+                    setCustomizable(cricutKindDefaultCustomizable(entry.key));
+                  }
+                }}
+                className="mt-1"
+              />
+              <span>
+                <span className="block text-sm font-medium">{entry.label}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {entry.blurb}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
         <input
           type="checkbox"
@@ -176,13 +218,18 @@ export function CricutListingForm({
           name="customizable"
           value="on"
           checked={customizable}
-          onChange={(e) => setCustomizable(e.target.checked)}
+          onChange={(e) => {
+            setCustomizableTouched(true);
+            setCustomizable(e.target.checked);
+          }}
           className="mt-1"
         />
         <span>
           <span className="block text-sm font-medium">Customizable</span>
           <span className="block text-xs text-muted-foreground">
-            On = shoppers pick sport, printed name, font, and their own design.
+            {kind === "CUSTOM_BUILT"
+              ? "Optional on custom-built items. On = sport, printed name, font, and design."
+              : "On = shoppers pick sport, printed name, font, and their own design."}
           </span>
         </span>
       </label>

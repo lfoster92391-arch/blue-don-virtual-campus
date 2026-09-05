@@ -73,9 +73,9 @@ export async function startParentPreviewAction(): Promise<void> {
 
   const jar = await cookies();
   jar.set(PREVIEW_PARENT_COOKIE, "1", previewCookieOptions());
+  jar.set(PREVIEW_ROLE_COOKIE, "parent", previewCookieOptions());
   jar.delete(previewCookieDeleteOptions(PREVIEW_AS_COOKIE));
   jar.delete(previewCookieDeleteOptions(PREVIEW_CLUB_COOKIE));
-  jar.delete(previewCookieDeleteOptions(PREVIEW_ROLE_COOKIE));
   redirect("/parent");
 }
 
@@ -101,7 +101,7 @@ export async function startViewAsAction(formData: FormData): Promise<void> {
 
   if (persona === "parent") {
     jar.set(PREVIEW_PARENT_COOKIE, "1", previewCookieOptions());
-    jar.delete(previewCookieDeleteOptions(PREVIEW_ROLE_COOKIE));
+    jar.set(PREVIEW_ROLE_COOKIE, persona, previewCookieOptions());
     redirect("/parent");
   }
 

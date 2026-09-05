@@ -62,7 +62,10 @@ export function homePathForViewAs(persona: ViewAsPersona): string {
     case "parent":
       return "/parent";
     case "guest":
-      return "/guest";
+      // Stay inside the signed-in campus shell. Public `/guest` is for
+      // visitors without a school session — sending an admin there looks
+      // like a logout (no campus header, sign-in CTA).
+      return "/home";
     case "admin":
       return "/admin";
     case "coach":

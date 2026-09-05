@@ -15,7 +15,9 @@ import {
   isCricutShopStorageConfigured,
   listCricutShopItems,
 } from "@/services/cricut-shop-service";
+import { CRICUT_SHOP_ITEM_KINDS } from "@/config/cricut-product-kinds";
 import {
+  setCricutItemKindAction,
   toggleCricutItemCustomizableAction,
   toggleCricutItemSellableAction,
 } from "@/features/cricut-shop/actions";
@@ -117,6 +119,23 @@ export default async function CricutShopPage({ searchParams }: PageProps) {
                   ) : null}
                   {canManage && !item.isSample ? (
                     <div className="grid gap-2">
+                      <form action={setCricutItemKindAction} className="grid gap-1">
+                        <input type="hidden" name="itemId" value={item.id} />
+                        <select
+                          name="kind"
+                          defaultValue={item.kind}
+                          className="rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                        >
+                          {CRICUT_SHOP_ITEM_KINDS.map((entry) => (
+                            <option key={entry.key} value={entry.key}>
+                              {entry.label}
+                            </option>
+                          ))}
+                        </select>
+                        <Button type="submit" size="sm" variant="outline" className="w-full">
+                          Save type
+                        </Button>
+                      </form>
                       <form action={toggleCricutItemSellableAction}>
                         <input type="hidden" name="itemId" value={item.id} />
                         <input
@@ -158,8 +177,8 @@ export default async function CricutShopPage({ searchParams }: PageProps) {
               Add a product
             </h2>
             <p className="mt-1 mb-4 text-xs text-muted-foreground">
-              Members &amp; officers — photo, price, sell toggle, and
-              customization
+              Members &amp; officers — product type, photo, price, sell
+              toggle, and customization
             </p>
             <CricutListingForm
               storageConfigured={isCricutShopStorageConfigured()}

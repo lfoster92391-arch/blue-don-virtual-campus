@@ -10,6 +10,7 @@
  */
 
 import { sampleList } from "@/config/app-mode";
+import type { CricutShopItemKind } from "@/config/cricut-product-kinds";
 import { IMAGE_UPLOAD_MAX_BYTES } from "@/config/uploads";
 
 export const CRICUT_CLUB_SLUG = "cricut-club" as const;
@@ -145,6 +146,7 @@ export type CricutSampleItem = {
   imageUrl: string | null;
   availableToSell?: boolean;
   customizable?: boolean;
+  kind?: CricutShopItemKind;
 };
 
 const CRICUT_SAMPLE_ITEMS: CricutSampleItem[] = [
@@ -155,6 +157,7 @@ const CRICUT_SAMPLE_ITEMS: CricutSampleItem[] = [
     priceCents: 800,
     imageUrl: null,
     availableToSell: true,
+    kind: "OTHER",
   },
   {
     id: "sample-cricut-tumbler",
@@ -163,6 +166,7 @@ const CRICUT_SAMPLE_ITEMS: CricutSampleItem[] = [
     priceCents: 1800,
     imageUrl: null,
     availableToSell: true,
+    kind: "TUMBLER",
   },
   {
     id: "sample-cricut-keychain",
@@ -171,6 +175,7 @@ const CRICUT_SAMPLE_ITEMS: CricutSampleItem[] = [
     priceCents: 1200,
     imageUrl: null,
     availableToSell: false,
+    kind: "OTHER",
   },
 ];
 

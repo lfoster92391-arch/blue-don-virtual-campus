@@ -16,11 +16,15 @@ export function previewCookieOptions(
 export function previewCookieDeleteOptions(name: string): {
   name: string;
   path: string;
+  httpOnly: boolean;
+  sameSite: "lax";
   secure?: boolean;
 } {
   return {
     name,
     path: "/",
+    httpOnly: true,
+    sameSite: "lax",
     ...(process.env.NODE_ENV === "production" ? { secure: true } : {}),
   };
 }

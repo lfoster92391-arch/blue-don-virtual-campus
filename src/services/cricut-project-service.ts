@@ -616,6 +616,8 @@ export async function listCricutProjectInShop(input: {
     priceCents: input.priceCents,
     availableToSell: input.availableToSell,
     imageUrl: idea.imageUrl ?? undefined,
+    kind: "CUSTOM_BUILT",
+    customizable: false,
   });
 
   if (!itemId) {

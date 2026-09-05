@@ -10,14 +10,15 @@ import { SchoolCommunityPanels } from "@/components/home/school-community-panels
 import { SchoolRoleExtras } from "@/components/home/school-role-extras";
 import { CricutAmazonWishlistBanner } from "@/components/cricut/cricut-amazon-wishlist";
 import { CampusVersionBanner } from "@/components/layout/campus-version-banner";
-import { GUEST_HOME_PATH, parseLoginIntent } from "@/config/login-audience";
+import { GuestHome } from "@/components/guest/guest-home";
+import { parseLoginIntent } from "@/config/login-audience";
 import { resolveAccessIdentity } from "@/lib/auth/preview";
+import { listPublicCampusCampaigns } from "@/services/club-finance-service";
 import type {
   ClubStudentTaskView,
   CommandCenterMeetingView,
   StudentMessageView,
 } from "@/lib/command-center";
-import { redirect } from "next/navigation";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import {
   getTodaysBroadcastAnnouncement,
@@ -41,6 +42,7 @@ import {
 } from "@/services/school-hub-service";
 import {
   getSportsBanner,
+  listGameReports,
   listHighlights,
   listPlayers,
 } from "@/services/sports-highlights-service";
@@ -86,7 +88,56 @@ export default async function HomePage({
   const user = await requireCompleteProfile();
   const identity = await resolveAccessIdentity(user);
   if (identity.previewPersona === "guest") {
-    redirect(GUEST_HOME_PATH);
+    const [hub, announcement, banner, highlights, reports, activeLive, schedule, campaigns] =
+      await Promise.all([
+        safeHomeData("hub", () => getTodayHubDigest(null), buildEmptyHubDigest()),
+        safeHomeData(
+          "broadcast-announcement",
+          () => getTodaysBroadcastAnnouncement(),
+          null as BroadcastAnnouncementView | null,
+        ),
+        safeHomeData("sports-banner", () => getSportsBanner(), {
+          lastGame: null,
+          upcoming: [],
+        }),
+        safeHomeData(
+          "highlights",
+          () => listHighlights({ publishedOnly: true, take: 8 }),
+          [],
+        ),
+        safeHomeData(
+          "game-reports",
+          () => listGameReports({ publishedOnly: true, take: 4 }),
+          [],
+        ),
+        safeHomeData("live", () => getActiveLiveStream(), null),
+        safeHomeData("broadcast-schedule", () => getBroadcastSchedule(), null),
+        safeHomeData(
+          "campaigns",
+          () => listPublicCampusCampaigns({ take: 3 }),
+          [],
+        ),
+      ]);
+
+    return (
+      <GuestHome
+        dateLabel={hub.dateLabel}
+        weather={hub.weather}
+        announcement={announcement}
+        reports={reports}
+        community={{
+          lastGame: banner.lastGame,
+          upcoming: banner.upcoming,
+          highlights,
+          players: [],
+          activeLive,
+          nextAirAt: schedule?.nextAirAt ?? null,
+        }}
+        campaigns={campaigns}
+        previewPersona="guest"
+        embedded
+      />
+    );
   }
   const viewRole = identity.navRole;
   const { intent: rawIntent } = await searchParams;

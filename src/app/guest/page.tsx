@@ -48,6 +48,11 @@ export default async function GuestHomePage() {
       safe(listPublicCampusCampaigns({ take: 3 }), []),
     ]);
 
+  const previewPersona =
+    user && canManageUsers(user.role)
+      ? (await resolveAccessIdentity(user)).previewPersona
+      : null;
+
   return (
     <GuestHome
       dateLabel={hub.dateLabel}
@@ -64,11 +69,7 @@ export default async function GuestHomePage() {
       }}
       campaigns={campaigns}
       signedInHomeHref={user ? SCHOOL_HOME_PATH : null}
-      previewPersona={
-        user && canManageUsers(user.role)
-          ? (await resolveAccessIdentity(user)).previewPersona
-          : null
-      }
+      previewPersona={previewPersona}
     />
   );
 }

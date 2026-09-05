@@ -81,6 +81,8 @@ export default async function CricutOrderDetailPage({ params }: PageProps) {
                 printName: line.printName,
                 fontKey: line.fontKey,
                 hasDesign: Boolean(line.designImageUrl),
+                size: line.size,
+                buyerNote: line.buyerNote,
               });
               return (
                 <li key={line.id} className="flex justify-between gap-3">

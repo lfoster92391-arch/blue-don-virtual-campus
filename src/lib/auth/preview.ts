@@ -58,7 +58,10 @@ export async function isParentPreviewActive(
   if (jar.get(PREVIEW_AS_COOKIE)?.value?.trim()) {
     return false;
   }
-  return jar.get(PREVIEW_PARENT_COOKIE)?.value === "1";
+  if (jar.get(PREVIEW_PARENT_COOKIE)?.value === "1") {
+    return true;
+  }
+  return parseViewAsPersona(jar.get(PREVIEW_ROLE_COOKIE)?.value) === "parent";
 }
 
 /**
@@ -129,9 +132,11 @@ export async function resolveAccessIdentity(
       actor,
       membershipUserId: actor.id,
       navRole: navRole ?? actor.role,
-      // Generic View as Student is chrome-only — no simulated club roster.
-      // Empty array (not null) so layout does not fall back to Lisa's seats.
-      forcedMembershipSlugs: persona === "student" ? [] : null,
+      // Generic View as Student / Fan & Family is chrome-only — no
+      // simulated club roster. Empty array (not null) so layout does not
+      // fall back to Lisa's seats.
+      forcedMembershipSlugs:
+        persona === "student" || persona === "guest" ? [] : null,
       isPreviewing: true,
       previewTarget: null,
       previewClubSlug: null,

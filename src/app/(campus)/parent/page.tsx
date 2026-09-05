@@ -50,7 +50,7 @@ export default async function ParentPortalPage() {
   const previewing = await isParentPreviewActive(user);
 
   if (!previewing && !(await userCanAccessParentPortal(user.id, user.role))) {
-    redirect("/dashboard");
+    redirect("/home");
   }
 
   // While previewing, agreements are read against the parent role so the admin

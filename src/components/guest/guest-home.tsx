@@ -32,6 +32,7 @@ export function GuestHome({
   campaigns = [],
   signedInHomeHref,
   previewPersona,
+  embedded = false,
 }: {
   dateLabel: string;
   weather: CampusWeather;
@@ -41,16 +42,20 @@ export function GuestHome({
   campaigns?: CampusCampaignBannerView[];
   signedInHomeHref?: string | null;
   previewPersona?: ViewAsPersona | null;
+  /** Render inside campus chrome (View as Fan & Family). No public header. */
+  embedded?: boolean;
 }) {
   const discovery = getDailyDiscovery();
   const byKey = Object.fromEntries(discovery.map((item) => [item.key, item]));
   const newsPosts = CAMPUS_FEED.slice(0, 4);
+  const campaignHrefBase = embedded ? "/fundraisers" : "/guest/fundraisers";
 
   return (
-    <div className="min-h-screen bg-background">
-      {previewPersona === "guest" ? (
+    <div className={embedded ? "bg-background" : "min-h-screen bg-background"}>
+      {!embedded && previewPersona === "guest" ? (
         <PreviewBanner persona="guest" />
       ) : null}
+      {embedded ? null : (
       <header className="border-b border-border bg-card px-4 py-4 sm:px-6">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -68,7 +73,7 @@ export function GuestHome({
             {previewPersona === "guest" ? <ViewAsHeaderControl /> : null}
             <CampusCampaignButton
               campaigns={campaigns}
-              hrefBase="/guest/fundraisers"
+              hrefBase={campaignHrefBase}
               size="lg"
               className="h-11 max-w-full"
             />
@@ -102,11 +107,25 @@ export function GuestHome({
           </div>
         </div>
       </header>
+      )}
 
-      <main className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6">
+      <main className={embedded ? "flex flex-col gap-8" : "mx-auto flex max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6"}>
+        {embedded ? (
+          <div className="flex flex-wrap gap-2">
+            <CampusCampaignButton
+              campaigns={campaigns}
+              hrefBase={campaignHrefBase}
+              size="lg"
+              className="h-11 max-w-full"
+            />
+            <ShopComingSoonButton size="lg" className="h-11" />
+          </div>
+        ) : null}
         <header className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-[#0A2342] via-[#0A2342] to-[#14365f] px-5 py-7 text-white shadow-sm sm:px-8 sm:py-9">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#C9A227]">
-            Fan & Family · no school login
+            {embedded
+              ? "Fan & Family home"
+              : "Fan & Family · no school login"}
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
             Watch Madonna

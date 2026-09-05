@@ -9,6 +9,12 @@ import {
   sanitizeCricutPrintName,
 } from "@/config/cricut-customization";
 import {
+  parseCricutQuantity,
+  parseCricutShirtSize,
+  parseCricutShopItemKind,
+  sanitizeCricutBuyerNote,
+} from "@/config/cricut-product-kinds";
+import {
   CRICUT_CLUB_SLUG,
   CRICUT_CUSTOM_DESIGN_STORAGE_PREFIX,
   CRICUT_ORDER_UPDATE_STATUSES,
@@ -32,6 +38,7 @@ import {
   placeCricutShopOrder,
   setCricutItemAvailableToSell,
   setCricutItemCustomizable,
+  setCricutItemKind,
   updateCricutAmazonWishlistUrl,
   updateCricutOrderStatus,
   updateCricutShopItemImage,
@@ -84,6 +91,7 @@ export async function createCricutListingAction(
     const price = Number(formData.get("price"));
     const availableToSell = formData.get("availableToSell") !== "off";
     const customizable = formData.get("customizable") !== "off";
+    const kind = parseCricutShopItemKind(String(formData.get("kind") ?? ""));
 
     if (title.length < 2) {
       return { error: "Title is required." };
@@ -122,6 +130,7 @@ export async function createCricutListingAction(
       storagePath,
       availableToSell,
       customizable,
+      kind,
     });
 
     if (!itemId) {
@@ -172,6 +181,23 @@ export async function toggleCricutItemCustomizableAction(
   if (!itemId) return;
 
   await setCricutItemCustomizable({ itemId, customizable });
+  revalidateCricut();
+  revalidatePath(`/cricut/shop/${itemId}`);
+}
+
+export async function setCricutItemKindAction(
+  formData: FormData,
+): Promise<void> {
+  const user = await requireCompleteProfile();
+  const org = await getCricutOrganization();
+  if (!org) return;
+  if (!(await canManageCricutShop(user.id, user.role, org.id))) return;
+
+  const itemId = String(formData.get("itemId") ?? "");
+  const kind = parseCricutShopItemKind(String(formData.get("kind") ?? ""));
+  if (!itemId) return;
+
+  await setCricutItemKind({ itemId, kind });
   revalidateCricut();
   revalidatePath(`/cricut/shop/${itemId}`);
 }
@@ -321,6 +347,8 @@ export async function placeCricutOrderAction(
       fontKey?: string | null;
       designImageUrl?: string | null;
       designStoragePath?: string | null;
+      size?: string | null;
+      buyerNote?: string | null;
     }[];
     try {
       const raw = JSON.parse(parsed.data.cartJson) as unknown;
@@ -332,12 +360,14 @@ export async function placeCricutOrderAction(
           const r = row as Record<string, unknown>;
           return {
             itemId: String(r.itemId ?? ""),
-            quantity: Number(r.quantity ?? 1),
+            quantity: parseCricutQuantity(r.quantity),
             sportSlug: parseCricutSportSlug(String(r.sportSlug ?? "")),
             printName: sanitizeCricutPrintName(String(r.printName ?? "")),
             fontKey: parseCricutPrintFontKey(String(r.fontKey ?? "")),
             designImageUrl: String(r.designImageUrl ?? "").trim() || null,
             designStoragePath: String(r.designStoragePath ?? "").trim() || null,
+            size: parseCricutShirtSize(String(r.size ?? "")),
+            buyerNote: sanitizeCricutBuyerNote(String(r.buyerNote ?? "")) || null,
           };
         })
         .filter((l) => l.itemId && l.quantity > 0);

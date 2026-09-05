@@ -28,6 +28,17 @@ const PUBLIC_ROUTES = [
 ];
 const AUTH_ROUTES = ["/login", "/register", "/forgot-password"];
 
+/** Copy session cookies onto a new response so redirects cannot drop the login. */
+function withSessionCookies(
+  target: NextResponse,
+  source: NextResponse,
+): NextResponse {
+  source.cookies.getAll().forEach((cookie) => {
+    target.cookies.set(cookie);
+  });
+  return target;
+}
+
 function applyFocusedClubsRedirect(
   request: NextRequest,
   baseResponse: NextResponse,
@@ -54,11 +65,7 @@ function applyFocusedClubsRedirect(
   redirectUrl.pathname = pathOnly;
   redirectUrl.search = queryIndex >= 0 ? destination.slice(queryIndex).split("#")[0] : "";
   // Hash fragments are client-only; home sections still work via id anchors when linked directly.
-  const response = NextResponse.redirect(redirectUrl);
-  baseResponse.cookies.getAll().forEach((cookie) => {
-    response.cookies.set(cookie.name, cookie.value);
-  });
-  return response;
+  return withSessionCookies(NextResponse.redirect(redirectUrl), baseResponse);
 }
 
 export async function updateSession(request: NextRequest) {
@@ -106,14 +113,14 @@ export async function updateSession(request: NextRequest) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     redirectUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(redirectUrl);
+    return withSessionCookies(NextResponse.redirect(redirectUrl), supabaseResponse);
   }
 
   if (user && isAuthRoute) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/home";
     redirectUrl.search = "";
-    return NextResponse.redirect(redirectUrl);
+    return withSessionCookies(NextResponse.redirect(redirectUrl), supabaseResponse);
   }
 
   const focused = applyFocusedClubsRedirect(request, supabaseResponse);

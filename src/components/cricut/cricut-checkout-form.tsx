@@ -77,6 +77,8 @@ export function CricutCheckoutForm({
             fontKey: l.fontKey,
             designImageUrl: l.designImageUrl,
             designStoragePath: l.designStoragePath,
+            size: l.size,
+            buyerNote: l.buyerNote,
           })),
         )}
       />
@@ -90,6 +92,8 @@ export function CricutCheckoutForm({
               printName: line.printName,
               fontKey: line.fontKey,
               hasDesign: Boolean(line.designImageUrl),
+              size: line.size,
+              buyerNote: line.buyerNote,
             });
             return (
               <li key={line.lineKey} className="flex gap-3">
@@ -281,7 +285,7 @@ export function CricutCheckoutForm({
           name="customizationNotes"
           rows={3}
           className="rounded-md border border-border bg-background px-3 py-2"
-          placeholder="Colors, sizes, or anything not covered above…"
+          placeholder="Anything not covered on the line — colors, wrap notes…"
         />
       </label>
 
