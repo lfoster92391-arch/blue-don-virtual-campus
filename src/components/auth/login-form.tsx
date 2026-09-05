@@ -214,7 +214,13 @@ export function LoginForm({
           </div>
         ) : null}
 
-        <Button type="submit" variant="action" className="w-full" disabled={loading}>
+        <Button
+          type="submit"
+          variant="action"
+          size="lg"
+          className="h-12 w-full"
+          disabled={loading}
+        >
           {loading ? "Signing in..." : "Sign in"}
         </Button>
       </form>

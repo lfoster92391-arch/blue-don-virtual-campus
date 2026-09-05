@@ -86,7 +86,6 @@ function focusedTabsForSlug(
       { id: "script", label: "Daily Rundown" },
       { id: "media", label: "Control Room" },
       { id: "sports", label: "Sports" },
-      { id: "sports-desk", label: "Sports desk" },
       { id: "bookings", label: "Bookings" },
       { id: "submissions", label: "Submissions" },
       { id: "equipment", label: "Equipment" },
