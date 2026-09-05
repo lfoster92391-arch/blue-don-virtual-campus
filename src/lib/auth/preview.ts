@@ -1,10 +1,6 @@
 import { cookies } from "next/headers";
 
-import {
-  FOCUS_CLUB_SLUGS,
-  isFocusClubSlug,
-  type FocusClubSlug,
-} from "@/config/focused-clubs";
+import { isFocusClubSlug, type FocusClubSlug } from "@/config/focused-clubs";
 import { canManageUsers } from "@/config/roles";
 import type { CampusRole } from "@/config/roles";
 import {
@@ -133,10 +129,9 @@ export async function resolveAccessIdentity(
       actor,
       membershipUserId: actor.id,
       navRole: navRole ?? actor.role,
-      // Persona preview has no real student memberships — show the three
-      // clubs so Lisa can judge student/faculty nav, not an empty sidebar.
-      forcedMembershipSlugs:
-        persona === "student" ? [...FOCUS_CLUB_SLUGS] : null,
+      // Generic View as Student is chrome-only — no simulated club roster.
+      // Empty array (not null) so layout does not fall back to Lisa's seats.
+      forcedMembershipSlugs: persona === "student" ? [] : null,
       isPreviewing: true,
       previewTarget: null,
       previewClubSlug: null,

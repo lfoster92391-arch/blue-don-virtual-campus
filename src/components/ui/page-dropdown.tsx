@@ -13,6 +13,8 @@ type PageDropdownProps = {
   actions?: ReactNode;
   children: ReactNode;
   defaultOpen?: boolean;
+  /** When false, render as an open section — not another collapsed accordion. */
+  collapsible?: boolean;
   className?: string;
 };
 
@@ -28,10 +30,46 @@ export function PageDropdown({
   actions,
   children,
   defaultOpen = false,
+  collapsible = true,
   className,
 }: PageDropdownProps) {
   const [open, setOpen] = useState(defaultOpen);
   const headingId = id ? `${id}-heading` : undefined;
+
+  if (!collapsible) {
+    return (
+      <section
+        id={id}
+        className={cn(
+          "scroll-mt-24 rounded-2xl border border-border bg-card/70 shadow-sm",
+          className,
+        )}
+      >
+        <div className="flex items-start justify-between gap-3 px-4 py-4 sm:items-center sm:px-5">
+          <div className="min-w-0 flex-1 space-y-1">
+            {eyebrow ? (
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#C9A227]">
+                {eyebrow}
+              </p>
+            ) : null}
+            <h2
+              id={headingId}
+              className="text-lg font-semibold tracking-tight text-[#0A2342] dark:text-white"
+            >
+              {title}
+            </h2>
+            {description ? (
+              <p className="max-w-2xl text-sm text-muted-foreground">
+                {description}
+              </p>
+            ) : null}
+          </div>
+          {actions ? <div className="shrink-0">{actions}</div> : null}
+        </div>
+        <div className="border-t border-border px-4 py-4 sm:px-5">{children}</div>
+      </section>
+    );
+  }
 
   return (
     <details

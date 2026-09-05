@@ -30,6 +30,13 @@ export function canStaffMessageFocusClubs(role: CampusRole): boolean {
   return isFacultyClubLookupRole(role);
 }
 
+/** An ACTIVE member or officer seat in any focus club (IT, Broadcasting, Cricut). */
+export function holdsFocusClubSeat(
+  memberships: readonly { slug: string; role?: string }[],
+): boolean {
+  return memberships.some((membership) => isFocusClubSlug(membership.slug));
+}
+
 /** An ACTIVE President / Vice President / Secretary seat in any focus club. */
 export function holdsFocusClubOffice(
   memberships: readonly { slug: string; role: string }[],

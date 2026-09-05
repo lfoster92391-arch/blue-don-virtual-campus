@@ -51,6 +51,7 @@ import {
 import { listStudentMessagesForUser } from "@/services/student-message-service";
 import { getCricutAmazonWishlistUrl } from "@/services/cricut-shop-service";
 import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
+import { holdsFocusClubSeat } from "@/config/focus-club-access";
 import { FOCUS_CLUBS } from "@/config/focused-clubs";
 
 const EMPTY_CONTEXT: StudentContext = { clubs: [], teams: [], classes: [] };
@@ -201,6 +202,18 @@ export default async function HomePage({
     safeHomeData("broadcast-schedule", () => getBroadcastSchedule(), null),
   ]);
 
+  const hasClubRole = holdsFocusClubSeat(context.clubs);
+  const isBroadcastCrew = context.clubs.some(
+    (club) => club.slug === "broadcasting",
+  );
+  const showYourTools =
+    hasClubRole || (viewRole !== "student" && viewRole !== "parent");
+  const showCricutBanner =
+    FOCUSED_CLUBS_MODE &&
+    Boolean(cricutWishlistUrl) &&
+    (viewRole !== "student" && viewRole !== "parent"
+      ? true
+      : context.clubs.some((club) => club.slug === "cricut-club"));
   const showAgreements = viewRole === "student" || viewRole === "parent";
   const showClubJoinRequests =
     !identity.isPreviewing &&
@@ -216,7 +229,7 @@ export default async function HomePage({
       )}
       {showAgreements ? <AgreementsWidget user={user} /> : null}
       {showClubJoinRequests ? <ClubJoinRequestsAlert user={user} /> : null}
-      {FOCUSED_CLUBS_MODE && cricutWishlistUrl ? (
+      {showCricutBanner && cricutWishlistUrl ? (
         <div className="mb-6">
           <CricutAmazonWishlistBanner url={cricutWishlistUrl} compact />
         </div>
@@ -234,6 +247,7 @@ export default async function HomePage({
         viewRole={viewRole}
         previewPersona={identity.previewPersona}
         previewName={identity.previewTarget?.displayName ?? null}
+        showClubSections={hasClubRole}
         afterHero={
           <section aria-labelledby="home-highlights">
             <div className="mb-3 flex items-end justify-between gap-3">
@@ -258,13 +272,19 @@ export default async function HomePage({
         }
       >
         <div className="space-y-3">
-          <PageDropdown
-            id="your-tools"
-            title="Your tools"
-            description="Shortcuts for your role on campus."
-          >
-            <SchoolRoleExtras user={user} context={context} viewRole={viewRole} />
-          </PageDropdown>
+          {showYourTools ? (
+            <PageDropdown
+              id="your-tools"
+              title="Your tools"
+              description="Shortcuts for your role on campus."
+            >
+              <SchoolRoleExtras
+                user={user}
+                context={context}
+                viewRole={viewRole}
+              />
+            </PageDropdown>
+          ) : null}
           <SchoolCommunityPanels
             data={{
               lastGame: banner.lastGame,
@@ -275,6 +295,8 @@ export default async function HomePage({
               nextAirAt: schedule?.nextAirAt ?? null,
             }}
             showHighlights={false}
+            showRequests={isBroadcastCrew}
+            collapsible={false}
           />
         </div>
       </BlueDonOS>

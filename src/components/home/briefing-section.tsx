@@ -10,6 +10,7 @@ type BriefingSectionProps = {
   children: ReactNode;
   className?: string;
   defaultOpen?: boolean;
+  collapsible?: boolean;
 };
 
 /** Labeled daily-briefing dropdown — one job per section, opened in place. */
@@ -22,6 +23,7 @@ export function BriefingSection({
   children,
   className,
   defaultOpen,
+  collapsible,
 }: BriefingSectionProps) {
   return (
     <PageDropdown
@@ -31,6 +33,7 @@ export function BriefingSection({
       description={description}
       actions={actions}
       defaultOpen={defaultOpen}
+      collapsible={collapsible}
       className={className}
     >
       {children}

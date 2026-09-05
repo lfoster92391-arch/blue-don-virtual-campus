@@ -39,6 +39,7 @@ type BlueDonOSProps = {
   viewRole?: CampusRole;
   previewPersona?: ViewAsPersona | null;
   previewName?: string | null;
+  showClubSections?: boolean;
 };
 
 export function BlueDonOS({
@@ -56,6 +57,7 @@ export function BlueDonOS({
   viewRole,
   previewPersona,
   previewName,
+  showClubSections = false,
 }: BlueDonOSProps) {
   if (FOCUSED_CLUBS_MODE) {
     return (
@@ -70,6 +72,7 @@ export function BlueDonOS({
         viewRole={viewRole}
         previewPersona={previewPersona}
         previewName={previewName}
+        showClubSections={showClubSections}
         afterHero={afterHero}
       >
         {children}

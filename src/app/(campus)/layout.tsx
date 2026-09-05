@@ -18,6 +18,8 @@ export default async function CampusRouteLayout({
 
   let context;
   try {
+    // Empty array = preview with no club roster (View as Student). Do not
+    // fall through to Lisa's real memberships.
     if (identity.forcedMembershipSlugs) {
       context = {
         clubs: identity.forcedMembershipSlugs.map((slug) => {

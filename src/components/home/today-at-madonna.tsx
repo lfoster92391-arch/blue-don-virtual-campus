@@ -49,6 +49,8 @@ type TodayAtMadonnaProps = {
   viewRole?: CampusRole;
   previewPersona?: ViewAsPersona | null;
   previewName?: string | null;
+  /** Focus-club member / officer home widgets — not for regular students. */
+  showClubSections?: boolean;
 };
 
 function getGreeting(hour: number) {
@@ -220,10 +222,12 @@ function MadonnaHistoryBriefing({ date }: { date: Date }) {
 }
 
 /** Focused-mode home — Command Center + “Today at Madonna” campus briefing. */
-function homeBlurb(role: CampusRole): string {
+function homeBlurb(role: CampusRole, showClubSections: boolean): string {
   switch (role) {
     case "student":
-      return "Advisor messages, club meetings, tasks, and the daily campus briefing.";
+      return showClubSections
+        ? "Advisor messages, club meetings, tasks, and the daily campus briefing."
+        : "Blue Don news, highlights, and the daily campus briefing.";
     case "coach":
       return "Teams, film, and the daily campus briefing — open Coach from Your tools.";
     case "teacher":
@@ -233,7 +237,9 @@ function homeBlurb(role: CampusRole): string {
     case "admin":
       return "Office tools, student accounts, and the daily campus briefing.";
     default:
-      return "Your hub for advisor messages, club meetings, tasks, and the daily campus briefing.";
+      return showClubSections
+        ? "Your hub for advisor messages, club meetings, tasks, and the daily campus briefing."
+        : "Blue Don news, highlights, and the daily campus briefing.";
   }
 }
 
@@ -250,6 +256,7 @@ export function TodayAtMadonna({
   viewRole,
   previewPersona,
   previewName,
+  showClubSections = false,
 }: TodayAtMadonnaProps) {
   const role = viewRole ?? user.role;
   const preferredName = previewName
@@ -279,7 +286,7 @@ export function TodayAtMadonna({
             Today at Madonna
           </h1>
           <p className="text-sm text-[#C6CCD6] sm:text-base">
-            {greeting} {homeBlurb(role)}
+            {greeting} {homeBlurb(role, showClubSections)}
           </p>
           <p className="text-sm text-[#C6CCD6]/80">{hub.dateLabel}</p>
           <CampusHeroWeather weather={hub.weather} />
@@ -296,38 +303,44 @@ export function TodayAtMadonna({
 
       {afterHero ? <div className="mt-6">{afterHero}</div> : null}
 
-      <div className="mt-6 space-y-3">
-        {opsPulse ? (
-          <PageDropdown
-            id="club-ops"
-            title="Club operations"
-            description="What each club is doing right now."
-          >
-            <ClubOpsPulsePanel pulse={opsPulse} />
-          </PageDropdown>
-        ) : null}
-        <PageDropdown
-          id="messages"
-          title="Messages & advisor requests"
-          description="Requests from your advisor and club officers."
-        >
-          <AdvisorMessagesPanel messages={messages} />
-        </PageDropdown>
-        <PageDropdown
-          id="meetings"
-          title="Club meetings"
-          description="What's on your club calendar."
-        >
-          <CommandCenterMeetings meetings={meetings} />
-        </PageDropdown>
-        <PageDropdown
-          id="tasks"
-          title="Club tasks"
-          description="Work assigned to you."
-        >
-          <CommandCenterTasks tasks={tasks} />
-        </PageDropdown>
-      </div>
+      {showClubSections || opsPulse ? (
+        <div className="mt-6 space-y-3">
+          {opsPulse ? (
+            <PageDropdown
+              id="club-ops"
+              title="Club operations"
+              description="What each club is doing right now."
+            >
+              <ClubOpsPulsePanel pulse={opsPulse} />
+            </PageDropdown>
+          ) : null}
+          {showClubSections ? (
+            <>
+              <PageDropdown
+                id="messages"
+                title="Messages & advisor requests"
+                description="Requests from your advisor and club officers."
+              >
+                <AdvisorMessagesPanel messages={messages} />
+              </PageDropdown>
+              <PageDropdown
+                id="meetings"
+                title="Club meetings"
+                description="What's on your club calendar."
+              >
+                <CommandCenterMeetings meetings={meetings} />
+              </PageDropdown>
+              <PageDropdown
+                id="tasks"
+                title="Club tasks"
+                description="Work assigned to you."
+              >
+                <CommandCenterTasks tasks={tasks} />
+              </PageDropdown>
+            </>
+          ) : null}
+        </div>
+      ) : null}
 
       {children ? <div className="mt-8">{children}</div> : null}
 

@@ -13,11 +13,14 @@ export function CampusCampaignButton({
   hrefBase = "/fundraisers",
   size = "sm",
   className,
+  compactTitle = false,
 }: {
   campaigns: CampaignButtonItem[];
   hrefBase?: string;
   size?: "sm" | "lg";
   className?: string;
+  /** Hide the featured campaign title on narrow screens so the pill stays short. */
+  compactTitle?: boolean;
 }) {
   const featured = campaigns[0];
   const href =
@@ -35,7 +38,11 @@ export function CampusCampaignButton({
           <Megaphone className="size-4" aria-hidden="true" />
           <span className="truncate">
             Fundraisers
-            {featured?.title ? ` · ${featured.title}` : ""}
+            {featured?.title ? (
+              <span className={compactTitle ? "hidden sm:inline" : undefined}>
+                {` · ${featured.title}`}
+              </span>
+            ) : null}
           </span>
         </Link>
       }

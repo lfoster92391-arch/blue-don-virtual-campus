@@ -64,21 +64,25 @@ export function SchoolCommunityPanels({
   showPlayers = true,
   showHighlights = true,
   linkGames = true,
+  collapsible = true,
 }: {
   data: SchoolCommunityData;
   showRequests?: boolean;
   showPlayers?: boolean;
   showHighlights?: boolean;
   linkGames?: boolean;
+  /** Open sports news on student home; keep dropdowns on denser admin pages. */
+  collapsible?: boolean;
 }) {
   return (
-    <div className="space-y-0">
+    <div className="space-y-3">
       {showHighlights ? (
         <BriefingSection
           id="highlights"
           eyebrow="Highlights"
           title="Highlights"
           description="Clips and photos the sports desk has published."
+          collapsible={collapsible}
           actions={
             linkGames ? (
               <Link
@@ -111,6 +115,7 @@ export function SchoolCommunityPanels({
           eyebrow="Players"
           title="Players"
           description={`A snapshot of ${CAMPUS_TEAM_NAME} athletes.`}
+          collapsible={collapsible}
         >
           <PlayerSnapshot players={data.players} />
         </BriefingSection>
@@ -121,6 +126,7 @@ export function SchoolCommunityPanels({
         eyebrow="Games"
         title="Games"
         description="Latest result and what is coming up."
+        collapsible={collapsible}
       >
         <SportsBanner
           lastGame={data.lastGame}
@@ -135,6 +141,7 @@ export function SchoolCommunityPanels({
         eyebrow="Live"
         title="LIVE broadcast / game"
         description="The stream when Broadcasting is on air."
+        collapsible={collapsible}
       >
         <LiveNowPanel
           activeLive={data.activeLive}
