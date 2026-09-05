@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { redirectToClubTab } from "@/lib/club-tab-path";
 import {
   canEditClubDocuments,
   createClubDocument,
@@ -61,8 +62,9 @@ export async function createClubDocumentAction(
     return { error: "Could not save the document." };
   }
 
-  revalidateOrg(organizationSlug || "it-club");
-  return { success: "Document saved." };
+  const slug = organizationSlug || "it-club";
+  revalidateOrg(slug);
+  redirectToClubTab(slug, "documents");
 }
 
 export async function updateClubDocumentAction(
@@ -106,8 +108,9 @@ export async function updateClubDocumentAction(
     return { error: "Could not update the document." };
   }
 
-  revalidateOrg(organizationSlug || "it-club");
-  return { success: "Document updated." };
+  const slug = organizationSlug || "it-club";
+  revalidateOrg(slug);
+  redirectToClubTab(slug, "documents");
 }
 
 export async function deleteClubDocumentAction(
@@ -132,5 +135,7 @@ export async function deleteClubDocumentAction(
   }
 
   await deleteClubDocument({ documentId, organizationId });
-  revalidateOrg(organizationSlug || "it-club");
+  const slug = organizationSlug || "it-club";
+  revalidateOrg(slug);
+  redirectToClubTab(slug, "documents");
 }

@@ -15,6 +15,7 @@ import { ClubTasksPanel } from "@/components/organizations/club-tasks-panel";
 import { ComposeStudentMessageForm } from "@/components/organizations/compose-student-message-form";
 import { ClubFinancesPanel } from "@/components/organizations/club-finances-panel";
 import { ClubInvoicesPanel } from "@/components/organizations/club-invoices-panel";
+import { SendClubInvoiceForm } from "@/components/organizations/send-club-invoice-form";
 import type {
   ClubStudentTaskView,
   StudentMessageView,
@@ -895,16 +896,30 @@ function FinancesPanel(props: ClubTabPanelsProps) {
 }
 
 function InvoicesPanel(props: ClubTabPanelsProps) {
+  const canSend =
+    (props.canRequestInvoiceReceipt ?? false) ||
+    (props.canReviewInvoices ?? false);
+
   return (
-    <ClubInvoicesPanel
-      organizationId={props.organizationId}
-      organizationSlug={props.organizationSlug}
-      organizationName={props.card.name}
-      invoices={props.clubInvoices ?? []}
-      canSubmit={props.canSubmitInvoices ?? false}
-      canReview={props.canReviewInvoices ?? false}
-      storageConfigured={props.invoiceStorageConfigured ?? false}
-    />
+    <div className="space-y-6">
+      {canSend ? (
+        <SendClubInvoiceForm
+          organizationId={props.organizationId}
+          organizationSlug={props.organizationSlug}
+          organizationName={props.card.name}
+          members={props.clubMemberOptions ?? []}
+        />
+      ) : null}
+      <ClubInvoicesPanel
+        organizationId={props.organizationId}
+        organizationSlug={props.organizationSlug}
+        organizationName={props.card.name}
+        invoices={props.clubInvoices ?? []}
+        canSubmit={props.canSubmitInvoices ?? false}
+        canReview={props.canReviewInvoices ?? false}
+        storageConfigured={props.invoiceStorageConfigured ?? false}
+      />
+    </div>
   );
 }
 

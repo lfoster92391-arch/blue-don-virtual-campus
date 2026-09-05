@@ -4,12 +4,16 @@ import { ImageIcon } from "lucide-react";
 
 import { CricutAmazonWishlistBanner } from "@/components/cricut/cricut-amazon-wishlist";
 import { CricutBuyActions } from "@/components/cricut/cricut-buy-actions";
+import { CricutProductPhotoForm } from "@/components/cricut/cricut-product-photo-form";
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import {
+  canCreateCricutListing,
   getCricutAmazonWishlistUrl,
+  getCricutOrganization,
   getCricutShopItem,
+  isCricutShopStorageConfigured,
 } from "@/services/cricut-shop-service";
 
 type PageProps = {
@@ -17,16 +21,22 @@ type PageProps = {
 };
 
 export default async function CricutProductPage({ params }: PageProps) {
-  await requireCompleteProfile();
+  const user = await requireCompleteProfile();
   const { id } = await params;
-  const [item, wishlistUrl] = await Promise.all([
+  const [item, wishlistUrl, org] = await Promise.all([
     getCricutShopItem(id),
     getCricutAmazonWishlistUrl(),
+    getCricutOrganization(),
   ]);
 
   if (!item) {
     notFound();
   }
+
+  const canUploadPhoto =
+    org && !item.isSample
+      ? await canCreateCricutListing(user.id, user.role, org.id)
+      : false;
 
   return (
     <ShellPage
@@ -77,6 +87,13 @@ export default async function CricutProductPage({ params }: PageProps) {
           )}
           <p className="text-sm text-muted-foreground">Listed by {item.sellerName}</p>
           <CricutBuyActions item={item} />
+          {canUploadPhoto ? (
+            <CricutProductPhotoForm
+              itemId={item.id}
+              hasImage={Boolean(item.imageUrl)}
+              storageConfigured={isCricutShopStorageConfigured()}
+            />
+          ) : null}
         </div>
       </div>
     </ShellPage>

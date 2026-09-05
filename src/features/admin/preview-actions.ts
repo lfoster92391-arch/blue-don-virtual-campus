@@ -7,10 +7,12 @@ import { z } from "zod";
 import { FOCUS_CLUB_SLUGS, FOCUS_CLUBS } from "@/config/focused-clubs";
 import { firstFocusClubHref } from "@/config/focus-club-access";
 import { canManageUsers } from "@/config/roles";
+import { homePathForViewAs, parseViewAsPersona } from "@/config/view-as";
 import {
   PREVIEW_AS_COOKIE,
   PREVIEW_CLUB_COOKIE,
   PREVIEW_PARENT_COOKIE,
+  PREVIEW_ROLE_COOKIE,
 } from "@/lib/auth/preview";
 import {
   previewCookieDeleteOptions,
@@ -52,6 +54,7 @@ export async function startStudentPreviewAction(
   jar.set(PREVIEW_AS_COOKIE, target.id, previewCookieOptions());
   jar.delete(previewCookieDeleteOptions(PREVIEW_CLUB_COOKIE));
   jar.delete(previewCookieDeleteOptions(PREVIEW_PARENT_COOKIE));
+  jar.delete(previewCookieDeleteOptions(PREVIEW_ROLE_COOKIE));
 
   const slugs = await listActiveFocusClubSlugsForUser(target.id);
   redirect(firstFocusClubHref(slugs) ?? "/home");
@@ -72,7 +75,39 @@ export async function startParentPreviewAction(): Promise<void> {
   jar.set(PREVIEW_PARENT_COOKIE, "1", previewCookieOptions());
   jar.delete(previewCookieDeleteOptions(PREVIEW_AS_COOKIE));
   jar.delete(previewCookieDeleteOptions(PREVIEW_CLUB_COOKIE));
+  jar.delete(previewCookieDeleteOptions(PREVIEW_ROLE_COOKIE));
   redirect("/parent");
+}
+
+/**
+ * Preview a persona home. Cookie only — does not change the admin's real role
+ * or grant coach/faculty/admin tools from the login chooser.
+ */
+export async function startViewAsAction(formData: FormData): Promise<void> {
+  const admin = await requireCompleteProfile();
+  if (!canManageUsers(admin.role)) {
+    redirect("/admin");
+  }
+
+  const persona = parseViewAsPersona(String(formData.get("persona") ?? ""));
+  if (!persona || persona === "admin") {
+    await exitPreviewAction();
+    return;
+  }
+
+  const jar = await cookies();
+  jar.delete(previewCookieDeleteOptions(PREVIEW_AS_COOKIE));
+  jar.delete(previewCookieDeleteOptions(PREVIEW_CLUB_COOKIE));
+
+  if (persona === "parent") {
+    jar.set(PREVIEW_PARENT_COOKIE, "1", previewCookieOptions());
+    jar.delete(previewCookieDeleteOptions(PREVIEW_ROLE_COOKIE));
+    redirect("/parent");
+  }
+
+  jar.set(PREVIEW_ROLE_COOKIE, persona, previewCookieOptions());
+  jar.delete(previewCookieDeleteOptions(PREVIEW_PARENT_COOKIE));
+  redirect(homePathForViewAs(persona));
 }
 
 export async function startClubPreviewAction(
@@ -99,6 +134,7 @@ export async function startClubPreviewAction(
   jar.set(PREVIEW_CLUB_COOKIE, club.slug, previewCookieOptions());
   jar.delete(previewCookieDeleteOptions(PREVIEW_AS_COOKIE));
   jar.delete(previewCookieDeleteOptions(PREVIEW_PARENT_COOKIE));
+  jar.delete(previewCookieDeleteOptions(PREVIEW_ROLE_COOKIE));
   redirect(club.href);
 }
 
@@ -112,5 +148,6 @@ export async function exitPreviewAction(): Promise<void> {
   jar.delete(previewCookieDeleteOptions(PREVIEW_AS_COOKIE));
   jar.delete(previewCookieDeleteOptions(PREVIEW_CLUB_COOKIE));
   jar.delete(previewCookieDeleteOptions(PREVIEW_PARENT_COOKIE));
+  jar.delete(previewCookieDeleteOptions(PREVIEW_ROLE_COOKIE));
   redirect("/admin/students");
 }

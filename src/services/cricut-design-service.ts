@@ -170,9 +170,11 @@ export async function reviewCricutDesign(input: {
 export async function uploadCricutDesignImage(
   file: File,
   userId: string,
-): Promise<{ storagePath: string; publicUrl: string } | null> {
+): Promise<{ storagePath: string; publicUrl: string }> {
   if (!isCricutShopStorageConfigured()) {
-    return null;
+    throw new Error(
+      "Photo storage isn’t configured — submit without a reference image, or ask an admin.",
+    );
   }
   return uploadCricutShopImage(file, userId, CRICUT_DESIGN_STORAGE_PREFIX);
 }

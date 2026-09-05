@@ -1,18 +1,25 @@
 import { AgreementsWidget } from "@/components/home/agreements-widget";
 import { ClubJoinRequestsAlert } from "@/components/home/club-join-requests-alert";
 import { BlueDonOS } from "@/components/home/blue-don-os";
+import { IntentMismatchNotice } from "@/components/home/intent-mismatch-notice";
+import { SchoolCommunityPanels } from "@/components/home/school-community-panels";
+import { SchoolRoleExtras } from "@/components/home/school-role-extras";
 import { CricutAmazonWishlistBanner } from "@/components/cricut/cricut-amazon-wishlist";
 import { CampusVersionBanner } from "@/components/layout/campus-version-banner";
+import { GUEST_HOME_PATH, parseLoginIntent } from "@/config/login-audience";
+import { resolveAccessIdentity } from "@/lib/auth/preview";
 import type {
   ClubStudentTaskView,
   CommandCenterMeetingView,
   StudentMessageView,
 } from "@/lib/command-center";
+import { redirect } from "next/navigation";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import {
   getTodaysBroadcastAnnouncement,
   type BroadcastAnnouncementView,
 } from "@/services/broadcast-announcement-service";
+import { getBroadcastSchedule } from "@/services/broadcast-production-service";
 import {
   getTodayDigest,
   type BlueDonOSViewModel,
@@ -23,10 +30,16 @@ import {
 } from "@/services/club-ops-pulse-service";
 import { listMeetingsForStudent } from "@/services/club-calendar-service";
 import { listTasksForStudent } from "@/services/club-student-task-service";
+import { getActiveLiveStream } from "@/services/media-service";
 import {
   buildEmptyHubDigest,
   getTodayHubDigest,
 } from "@/services/school-hub-service";
+import {
+  getSportsBanner,
+  listHighlights,
+  listPlayers,
+} from "@/services/sports-highlights-service";
 import {
   getStudentContext,
   type StudentContext,
@@ -59,8 +72,19 @@ async function safeHomeData<T>(
   }
 }
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ intent?: string }>;
+}) {
   const user = await requireCompleteProfile();
+  const identity = await resolveAccessIdentity(user);
+  if (identity.previewPersona === "guest") {
+    redirect(GUEST_HOME_PATH);
+  }
+  const viewRole = identity.navRole;
+  const { intent: rawIntent } = await searchParams;
+  const intent = parseLoginIntent(rawIntent);
   const [
     digest,
     context,
@@ -71,6 +95,11 @@ export default async function HomePage() {
     tasks,
     cricutWishlistUrl,
     opsPulse,
+    banner,
+    highlights,
+    players,
+    activeLive,
+    schedule,
   ] = await Promise.all([
     safeHomeData("digest", () => getTodayDigest(user.id), emptyDigest()),
     safeHomeData("context", () => getStudentContext(user.id), EMPTY_CONTEXT),
@@ -105,17 +134,31 @@ export default async function HomePage() {
       () => getClubOpsPulse({ id: user.id, role: user.role }),
       null as ClubOpsPulse | null,
     ),
+    safeHomeData("sports-banner", () => getSportsBanner(), {
+      lastGame: null,
+      upcoming: [],
+    }),
+    safeHomeData(
+      "highlights",
+      () => listHighlights({ publishedOnly: true, take: 8 }),
+      [],
+    ),
+    safeHomeData("players", () => listPlayers(), []),
+    safeHomeData("live", () => getActiveLiveStream(), null),
+    safeHomeData("broadcast-schedule", () => getBroadcastSchedule(), null),
   ]);
 
-  const showAgreements = user.role === "student" || user.role === "parent";
+  const showAgreements = viewRole === "student" || viewRole === "parent";
   const showClubJoinRequests =
-    user.role === "teacher" ||
-    user.role === "advisor" ||
-    user.role === "admin";
+    !identity.isPreviewing &&
+    (viewRole === "teacher" ||
+      viewRole === "advisor" ||
+      viewRole === "admin");
 
   return (
     <>
       <CampusVersionBanner />
+      <IntentMismatchNotice intent={intent} role={user.role} />
       {showAgreements ? <AgreementsWidget user={user} /> : null}
       {showClubJoinRequests ? <ClubJoinRequestsAlert user={user} /> : null}
       {FOCUSED_CLUBS_MODE && cricutWishlistUrl ? (
@@ -133,7 +176,21 @@ export default async function HomePage() {
         meetings={meetings}
         tasks={tasks}
         opsPulse={opsPulse}
-      />
+      >
+        <div className="space-y-6">
+          <SchoolRoleExtras user={user} context={context} viewRole={viewRole} />
+          <SchoolCommunityPanels
+            data={{
+              lastGame: banner.lastGame,
+              upcoming: banner.upcoming,
+              highlights,
+              players,
+              activeLive,
+              nextAirAt: schedule?.nextAirAt ?? null,
+            }}
+          />
+        </div>
+      </BlueDonOS>
     </>
   );
 }

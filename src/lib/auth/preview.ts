@@ -6,6 +6,11 @@ import {
 } from "@/config/focused-clubs";
 import { canManageUsers } from "@/config/roles";
 import type { CampusRole } from "@/config/roles";
+import {
+  navRoleForViewAs,
+  parseViewAsPersona,
+  type ViewAsPersona,
+} from "@/config/view-as";
 import { previewCookieDeleteOptions } from "@/lib/auth/preview-cookies";
 import type { CampusUser } from "@/types/auth";
 import { getUserById } from "@/services/user-service";
@@ -16,6 +21,8 @@ export const PREVIEW_AS_COOKIE = "bd_preview_as";
 export const PREVIEW_CLUB_COOKIE = "bd_preview_club";
 /** HttpOnly cookie — preview the parent experience (no linked student needed). */
 export const PREVIEW_PARENT_COOKIE = "bd_preview_parent";
+/** HttpOnly cookie — preview a persona home (student / guest / coach / faculty). */
+export const PREVIEW_ROLE_COOKIE = "bd_preview_role";
 
 export type AccessIdentity = {
   actor: CampusUser;
@@ -35,6 +42,7 @@ export type AccessIdentity = {
    */
   isParentPreview: boolean;
   previewLabel: string | null;
+  previewPersona: ViewAsPersona | null;
 };
 
 /**
@@ -73,6 +81,7 @@ export async function resolveAccessIdentity(
     previewClubSlug: null,
     isParentPreview: false,
     previewLabel: null,
+    previewPersona: null,
   };
 
   if (!canManageUsers(actor.role)) {
@@ -94,6 +103,7 @@ export async function resolveAccessIdentity(
         previewClubSlug: null,
         isParentPreview: false,
         previewLabel: target.displayName,
+        previewPersona: "student",
       };
     }
     // Stale / inactive preview cookie — clear so UI does not look "broken".
@@ -111,6 +121,24 @@ export async function resolveAccessIdentity(
       previewClubSlug: null,
       isParentPreview: true,
       previewLabel: null,
+      previewPersona: "parent",
+    };
+  }
+
+  const persona = parseViewAsPersona(jar.get(PREVIEW_ROLE_COOKIE)?.value);
+  if (persona && persona !== "admin") {
+    const navRole = navRoleForViewAs(persona);
+    return {
+      actor,
+      membershipUserId: actor.id,
+      navRole: navRole ?? actor.role,
+      forcedMembershipSlugs: null,
+      isPreviewing: true,
+      previewTarget: null,
+      previewClubSlug: null,
+      isParentPreview: persona === "parent",
+      previewLabel: null,
+      previewPersona: persona,
     };
   }
 
@@ -126,6 +154,7 @@ export async function resolveAccessIdentity(
       previewClubSlug: clubSlug,
       isParentPreview: false,
       previewLabel: null,
+      previewPersona: "student",
     };
   }
 

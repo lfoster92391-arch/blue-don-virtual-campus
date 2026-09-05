@@ -26,6 +26,9 @@ export const FOCUSED_MODE_ALLOWED_PREFIXES = [
   "/weather",
   "/history",
   "/calendar",
+  // Create / view campus events. Calendar "Add event" goes to /events/new;
+  // without this prefix, focused-mode middleware bounces to /home (feels like Back).
+  "/events",
   "/clubs",
   "/finances",
   "/profile",
@@ -58,6 +61,8 @@ export const FOCUSED_MODE_ALLOWED_PREFIXES = [
   "/icons",
   "/watch",
   "/live",
+  "/guest",
+  "/shop",
 ] as const;
 
 /**

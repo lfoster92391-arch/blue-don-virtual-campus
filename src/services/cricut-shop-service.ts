@@ -1,7 +1,6 @@
 import {
   CRICUT_CLUB_SLUG,
   CRICUT_IMAGE_MAX_BYTES,
-  CRICUT_IMAGE_TYPES,
   CRICUT_ORDER_STATUS_LABELS,
   CRICUT_PRICE_MAX_CENTS,
   CRICUT_SHOP_BUCKET,
@@ -10,7 +9,12 @@ import {
   getCricutSampleItems,
   shippingCentsFor,
 } from "@/config/cricut-shop";
+import { CAMPUS_MEDIA_BUCKET } from "@/config/broadcast-media";
 import { isDatabaseConfigured, isSupabaseAdminConfigured } from "@/config/env";
+import {
+  IMAGE_UPLOAD_MAX_LABEL,
+  resolveCampusImageType,
+} from "@/config/uploads";
 import type { CampusRole } from "@/config/roles";
 import { canManageAcademy, hasPermission, normalizeOrgRole } from "@/config/roles";
 import type {
@@ -21,6 +25,7 @@ import type {
 import { hasOrgPermission, getUserOrgMembership } from "@/lib/auth/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isPrismaReady, withDatabase } from "@/lib/prisma";
+import { ensureCampusMediaBucket } from "@/services/media-service";
 import {
   buildDefaultAdvisorActions,
   sendSystemStudentMessages,
@@ -308,17 +313,30 @@ export async function uploadCricutShopImage(
   file: File,
   userId: string,
   prefix: string = CRICUT_SHOP_STORAGE_PREFIX,
-): Promise<{ storagePath: string; publicUrl: string } | null> {
-  if (file.size <= 0 || file.size > CRICUT_IMAGE_MAX_BYTES) {
-    return null;
+): Promise<{ storagePath: string; publicUrl: string }> {
+  if (file.size <= 0) {
+    throw new Error("That photo is empty. Pick the file again and retry.");
   }
-  if (!(CRICUT_IMAGE_TYPES as readonly string[]).includes(file.type)) {
-    return null;
+  if (file.size > CRICUT_IMAGE_MAX_BYTES) {
+    throw new Error(`Photo must be ${IMAGE_UPLOAD_MAX_LABEL} or smaller.`);
+  }
+
+  const imageType = resolveCampusImageType(file);
+  if (!imageType) {
+    throw new Error(
+      "Use a JPG, PNG, WebP, GIF, or HEIC photo of the product.",
+    );
   }
 
   const admin = createAdminClient();
   if (!admin) {
-    return null;
+    throw new Error(
+      "Photo storage isn’t configured. Ask an admin to set the campus media bucket.",
+    );
+  }
+
+  if (CRICUT_SHOP_BUCKET === CAMPUS_MEDIA_BUCKET) {
+    await ensureCampusMediaBucket(admin);
   }
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
@@ -327,10 +345,11 @@ export async function uploadCricutShopImage(
 
   const { error } = await admin.storage
     .from(CRICUT_SHOP_BUCKET)
-    .upload(storagePath, buffer, { contentType: file.type, upsert: false });
+    .upload(storagePath, buffer, { contentType: imageType, upsert: false });
 
   if (error) {
-    return null;
+    console.error("[cricut-shop] Photo upload failed:", error.message);
+    throw new Error(`Unable to store the photo (${error.message}).`);
   }
 
   const { data } = admin.storage
@@ -494,6 +513,26 @@ export async function createCricutShopItem(input: {
   );
 
   return created?.id ?? null;
+}
+
+export async function updateCricutShopItemImage(input: {
+  itemId: string;
+  imageUrl: string;
+  storagePath: string;
+}): Promise<boolean> {
+  if (!isDatabaseConfigured() || !isPrismaReady()) {
+    return false;
+  }
+  const updated = await withDatabase((prisma) =>
+    prisma.cricutShopItem.updateMany({
+      where: { id: input.itemId, status: { not: "REMOVED" } },
+      data: {
+        imageUrl: input.imageUrl,
+        storagePath: input.storagePath,
+      },
+    }),
+  );
+  return (updated?.count ?? 0) > 0;
 }
 
 export async function setCricutItemAvailableToSell(input: {

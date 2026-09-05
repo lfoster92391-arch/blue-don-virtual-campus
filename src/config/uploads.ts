@@ -43,6 +43,36 @@ export const CAMPUS_IMAGE_TYPES = [
 
 export type CampusImageType = (typeof CAMPUS_IMAGE_TYPES)[number];
 
+const IMAGE_TYPE_BY_EXTENSION: Record<string, CampusImageType> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+  heic: "image/heic",
+  heif: "image/heif",
+};
+
+/**
+ * MIME the server should store. Android / Windows pickers often send an empty
+ * `type` (or `application/octet-stream`) for HEIC and WebP — those still count
+ * when the filename extension is a known photo type.
+ */
+export function resolveCampusImageType(file: {
+  name: string;
+  type: string;
+}): CampusImageType | null {
+  const reported = file.type.trim().toLowerCase().split(";")[0];
+  if ((CAMPUS_IMAGE_TYPES as readonly string[]).includes(reported)) {
+    return reported as CampusImageType;
+  }
+  if (reported && reported !== "application/octet-stream") {
+    return null;
+  }
+  const extension = file.name.toLowerCase().split(".").pop() ?? "";
+  return IMAGE_TYPE_BY_EXTENSION[extension] ?? null;
+}
+
 const IMAGE_EXTENSIONS = [
   ".jpg",
   ".jpeg",

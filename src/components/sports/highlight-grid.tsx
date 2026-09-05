@@ -11,10 +11,12 @@ export function HighlightGrid({
   highlights,
   emptyLabel = "No highlights posted yet.",
   showStatus = false,
+  linkGames = true,
 }: {
   highlights: SportsHighlightView[];
   emptyLabel?: string;
   showStatus?: boolean;
+  linkGames?: boolean;
 }) {
   if (highlights.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;
@@ -73,12 +75,16 @@ export function HighlightGrid({
 
             <div className="mt-auto flex flex-wrap items-center gap-3 pt-2 text-xs text-muted-foreground">
               {highlight.gameId && highlight.gameLabel ? (
-                <Link
-                  href={`/sports/games/${highlight.gameId}`}
-                  className="font-medium text-[#2F80ED] hover:underline"
-                >
-                  {highlight.gameLabel}
-                </Link>
+                linkGames ? (
+                  <Link
+                    href={`/sports/games/${highlight.gameId}`}
+                    className="font-medium text-[#2F80ED] hover:underline"
+                  >
+                    {highlight.gameLabel}
+                  </Link>
+                ) : (
+                  <span>{highlight.gameLabel}</span>
+                )
               ) : null}
               {highlight.videoUrl ? (
                 <a

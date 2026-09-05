@@ -68,6 +68,7 @@ export function ComposeStudentMessageForm({
           name="actionPreset"
           value={isInvoice ? "invoice_receipt" : "link"}
         />
+        <input type="hidden" name="returnTab" value="messages" />
 
         <label className="grid gap-1 text-sm">
           <span className="font-medium">Title</span>

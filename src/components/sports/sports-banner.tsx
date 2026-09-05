@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CalendarDays, Radio, Trophy } from "lucide-react";
+import type { ReactNode } from "react";
 
 import {
   CampusMark,
@@ -13,6 +14,26 @@ import {
   GAME_STATUS_LABELS,
 } from "@/config/sports-highlights";
 import type { SportsGameView } from "@/services/sports-highlights-service";
+
+function GameSurface({
+  href,
+  className,
+  children,
+}: {
+  href: string | null;
+  className?: string;
+  children: ReactNode;
+}) {
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {children}
+      </Link>
+    );
+  }
+
+  return <div className={className}>{children}</div>;
+}
 
 function ResultPill({ game }: { game: SportsGameView }) {
   if (game.status === "LIVE") {
@@ -55,11 +76,14 @@ export function SportsBanner({
   upcoming,
   sportLabel,
   canManage = false,
+  linkGames = true,
 }: {
   lastGame: SportsGameView | null;
   upcoming: SportsGameView[];
   sportLabel: string;
   canManage?: boolean;
+  /** Guest home shows scores without sending people into school-only game pages. */
+  linkGames?: boolean;
 }) {
   if (!lastGame && upcoming.length === 0) {
     return (
@@ -95,8 +119,8 @@ export function SportsBanner({
           </p>
 
           {lastGame ? (
-            <Link
-              href={`/sports/games/${lastGame.id}`}
+            <GameSurface
+              href={linkGames ? `/sports/games/${lastGame.id}` : null}
               className="mt-4 block rounded-lg transition-colors hover:bg-white/5"
             >
               <div className="flex flex-wrap items-center gap-4">
@@ -126,7 +150,7 @@ export function SportsBanner({
               {lastGame.headline ? (
                 <p className="mt-3 text-sm text-white/85">{lastGame.headline}</p>
               ) : null}
-            </Link>
+            </GameSurface>
           ) : (
             <p className="mt-4 text-sm text-white/75">
               No finished games yet this season.
@@ -147,8 +171,8 @@ export function SportsBanner({
             <ul className="mt-4 space-y-3">
               {upcoming.map((game) => (
                 <li key={game.id}>
-                  <Link
-                    href={`/sports/games/${game.id}`}
+                  <GameSurface
+                    href={linkGames ? `/sports/games/${game.id}` : null}
                     className="flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/5"
                   >
                     <MatchupMarks game={game} size="sm" tone="dark" />
@@ -161,7 +185,7 @@ export function SportsBanner({
                         {GAME_SITE_LABELS[game.site]}
                       </span>
                     </span>
-                  </Link>
+                  </GameSurface>
                 </li>
               ))}
             </ul>

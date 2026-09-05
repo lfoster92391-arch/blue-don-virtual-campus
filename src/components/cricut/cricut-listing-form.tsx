@@ -1,12 +1,12 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
-import { ImageIcon, X } from "lucide-react";
+import { Camera, ImageIcon, Upload, X } from "lucide-react";
 
 import { UploadGuardNotice } from "@/components/uploads/upload-guard-notice";
 import { Button } from "@/components/ui/button";
 import { formatShopPrice } from "@/config/cricut-shop";
-import { CAMPUS_IMAGE_ACCEPT } from "@/config/uploads";
+import { CAMPUS_IMAGE_ACCEPT, IMAGE_UPLOAD_MAX_LABEL } from "@/config/uploads";
 import {
   createCricutListingAction,
   type CricutShopActionState,
@@ -29,6 +29,21 @@ export function CricutListingForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoGuard = useUploadGuard({ inputRef: fileInputRef });
   const priceCents = Math.round((Number(priceInput) || 0) * 100);
+  const busy = pending || photoGuard.preparing;
+
+  function openPhotoPicker(useCamera: boolean) {
+    const input = fileInputRef.current;
+    if (!input) return;
+    if (useCamera) {
+      input.setAttribute("capture", "environment");
+    } else {
+      input.removeAttribute("capture");
+    }
+    input.click();
+    if (useCamera) {
+      window.setTimeout(() => input.removeAttribute("capture"), 0);
+    }
+  }
 
   return (
     <form action={formAction} className="space-y-4">
@@ -67,19 +82,40 @@ export function CricutListingForm({
 
       <input
         ref={fileInputRef}
+        id="cricut-listing-photo"
         name="photo"
         type="file"
         accept={CAMPUS_IMAGE_ACCEPT}
-        capture="environment"
-        className="text-sm"
+        className="sr-only"
         onChange={photoGuard.onFileChange}
       />
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          disabled={busy}
+          onClick={() => openPhotoPicker(false)}
+        >
+          <Upload className="size-4" />
+          {photoGuard.preview ? "Change photo" : "Upload photo"}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy}
+          onClick={() => openPhotoPicker(true)}
+        >
+          <Camera className="size-4" />
+          Take photo
+        </Button>
+      </div>
       <UploadGuardNotice guard={photoGuard} />
-      {!storageConfigured ? (
-        <p className="text-xs text-muted-foreground">
-          Photo storage isn’t configured — you can still list without an image.
-        </p>
-      ) : null}
+      <p className="text-xs text-muted-foreground">
+        JPG, PNG, WebP, GIF, or HEIC — up to {IMAGE_UPLOAD_MAX_LABEL}. Phone
+        photos are resized automatically.
+        {!storageConfigured
+          ? " Photo storage isn’t configured — you can still list without an image."
+          : ""}
+      </p>
 
       <label className="grid gap-1 text-sm">
         <span className="font-medium">Title</span>
@@ -133,7 +169,7 @@ export function CricutListingForm({
         <input type="hidden" name="availableToSell" value="off" />
       ) : null}
 
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={busy}>
         {pending ? "Publishing…" : "Add to catalog"}
       </Button>
       {state.error ? (

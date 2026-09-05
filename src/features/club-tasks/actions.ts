@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { redirectToClubTab, rethrowIfRedirect } from "@/lib/club-tab-path";
 import { parseCampusFormDateTime } from "@/lib/datetime/campus-local";
 import {
   assignClubTasks,
@@ -32,10 +33,10 @@ export async function assignClubTaskAction(
   _prev: ClubTaskActionState,
   formData: FormData,
 ): Promise<ClubTaskActionState> {
+  const organizationSlug = String(formData.get("organizationSlug") ?? "");
   try {
     const user = await requireCompleteProfile();
     const organizationId = String(formData.get("organizationId") ?? "");
-    const organizationSlug = String(formData.get("organizationSlug") ?? "");
     const title = String(formData.get("title") ?? "").trim();
     const description = String(formData.get("description") ?? "").trim();
     const dueAtRaw = String(formData.get("dueAt") ?? "").trim();
@@ -79,14 +80,14 @@ export async function assignClubTaskAction(
     }
 
     revalidateTaskPaths(organizationSlug);
-    return {
-      success: `Assigned to ${result.count} student${result.count === 1 ? "" : "s"}.`,
-    };
   } catch (error) {
+    rethrowIfRedirect(error);
     return {
       error: error instanceof Error ? error.message : "Unable to assign task.",
     };
   }
+
+  redirectToClubTab(organizationSlug, "tasks");
 }
 
 export async function updateClubTaskStatusAction(
@@ -107,7 +108,9 @@ export async function updateClubTaskStatusAction(
     role: user.role,
     status: parsed.data,
   });
-  revalidateTaskPaths(organizationSlug || "it-club");
+  const slug = organizationSlug || "it-club";
+  revalidateTaskPaths(slug);
+  redirectToClubTab(slug, "tasks");
 }
 
 export async function deleteClubTaskAction(formData: FormData): Promise<void> {
@@ -122,5 +125,7 @@ export async function deleteClubTaskAction(formData: FormData): Promise<void> {
     userId: user.id,
     role: user.role,
   });
-  revalidateTaskPaths(organizationSlug || "it-club");
+  const slug = organizationSlug || "it-club";
+  revalidateTaskPaths(slug);
+  redirectToClubTab(slug, "tasks");
 }

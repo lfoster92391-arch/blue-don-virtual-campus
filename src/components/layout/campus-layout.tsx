@@ -1,11 +1,11 @@
 import { PreviewBanner } from "@/components/admin/preview-banner";
 import { Header } from "@/components/layout/header";
-import { MobileNav } from "@/components/layout/mobile-nav";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
 import { PageFooter } from "@/components/layout/page-footer";
 import { Sidebar } from "@/components/layout/sidebar";
 import type { CampusRole } from "@/config/roles";
 import type { FocusClubSlug } from "@/config/focused-clubs";
+import type { ViewAsPersona } from "@/config/view-as";
 import type { StudentContext } from "@/services/student-context-service";
 import type { CampusUser } from "@/types/auth";
 
@@ -29,6 +29,7 @@ export function CampusLayout({
     clubSlug?: FocusClubSlug | null;
     /** Previewing the parent experience against a synthetic child. */
     parent?: boolean;
+    persona?: ViewAsPersona | null;
   };
 }) {
   const effectiveRole = navRole ?? user.role;
@@ -54,16 +55,16 @@ export function CampusLayout({
             studentName={preview.studentName}
             clubSlug={preview.clubSlug}
             parent={preview.parent}
+            persona={preview.persona}
           />
         ) : null}
         <Header user={user} />
-        <main className="flex flex-1 flex-col pb-24 lg:pb-0">
+        <main className="flex flex-1 flex-col">
           <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-4 py-6 lg:px-6">
             {children}
           </div>
           <PageFooter />
         </main>
-        <MobileNav user={user} membershipSlugs={membershipSlugs} navRole={effectiveRole} />
       </div>
     </div>
   );

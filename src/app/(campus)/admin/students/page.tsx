@@ -8,6 +8,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { ViewAsPanel } from "@/components/admin/view-as-panel";
 import { AdminComposeStudentMessage } from "@/components/admin/admin-compose-student-message";
 import { CreateStudentForm } from "@/components/admin/create-student-form";
 import { StudentAdminRow } from "@/components/admin/student-admin-row";
@@ -108,6 +109,8 @@ export default async function AdminStudentsPage() {
           </p>
         </div>
       ) : null}
+
+      <ViewAsPanel />
 
       <CreateStudentForm />
 

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { redirect } from "next/navigation";
 
+import { ViewAsPanel } from "@/components/admin/view-as-panel";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
@@ -104,6 +105,11 @@ export default async function AdminPage() {
         title="Admin"
         description="Students and leadership tools for Blue Don clubs."
       >
+        {canManageAccounts ? (
+          <div className="mb-6">
+            <ViewAsPanel />
+          </div>
+        ) : null}
         <div className="grid gap-4 md:grid-cols-2">
           {focusedSections.map((section) => {
             const Icon = section.icon;
@@ -327,6 +333,11 @@ export default async function AdminPage() {
       title="Governance Center"
       description="Operate Blue Don programs — forms, approvals, compliance, and campus policy."
     >
+      {canManageAccounts ? (
+        <div className="mb-6">
+          <ViewAsPanel />
+        </div>
+      ) : null}
       <div className="grid gap-4 md:grid-cols-2">
         {sections.map((section) => {
           const Icon = section.icon;

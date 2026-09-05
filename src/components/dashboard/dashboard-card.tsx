@@ -81,6 +81,7 @@ export function DashboardCard({
           {actions}
           {expandable ? (
             <Button
+              type="button"
               variant="ghost"
               size="icon-sm"
               onClick={() => setExpanded((value) => !value)}

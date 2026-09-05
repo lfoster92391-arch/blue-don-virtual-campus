@@ -104,6 +104,14 @@ export default async function CricutShopPage({ searchParams }: PageProps) {
               {catalogItems.map((item) => (
                 <li key={item.id} className="space-y-2">
                   <CricutProductCard item={item} />
+                  {canSell && !item.isSample && !item.imageUrl ? (
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      nativeButton={false}
+                      render={<Link href={`/cricut/shop/${item.id}`}>Add photo</Link>}
+                    />
+                  ) : null}
                   {canManage && !item.isSample ? (
                     <form action={toggleCricutItemSellableAction}>
                       <input type="hidden" name="itemId" value={item.id} />

@@ -23,6 +23,8 @@ const PUBLIC_ROUTES = [
   "/broadcast/overlay/",
   "/watch",
   "/live",
+  "/guest",
+  "/shop",
 ];
 const AUTH_ROUTES = ["/login", "/register", "/forgot-password"];
 

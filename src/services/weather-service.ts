@@ -228,8 +228,17 @@ function deriveRecessRecommendation(input: {
   return "caution";
 }
 
-async function fetchOpenMeteoForecast(): Promise<OpenMeteoForecastResponse> {
-  const { latitude, longitude, timezone } = CAMPUS_WEATHER_LOCATION;
+type WeatherQueryLocation = {
+  name: string;
+  latitude: number;
+  longitude: number;
+  timezone: string;
+};
+
+async function fetchOpenMeteoForecast(
+  location: WeatherQueryLocation = CAMPUS_WEATHER_LOCATION,
+): Promise<OpenMeteoForecastResponse> {
+  const { latitude, longitude, timezone } = location;
   const params = new URLSearchParams({
     latitude: String(latitude),
     longitude: String(longitude),
@@ -258,8 +267,10 @@ async function fetchOpenMeteoForecast(): Promise<OpenMeteoForecastResponse> {
   return response.json() as Promise<OpenMeteoForecastResponse>;
 }
 
-async function fetchOpenMeteoAirQuality(): Promise<OpenMeteoAirQualityResponse> {
-  const { latitude, longitude, timezone } = CAMPUS_WEATHER_LOCATION;
+async function fetchOpenMeteoAirQuality(
+  location: WeatherQueryLocation = CAMPUS_WEATHER_LOCATION,
+): Promise<OpenMeteoAirQualityResponse> {
+  const { latitude, longitude, timezone } = location;
   const params = new URLSearchParams({
     latitude: String(latitude),
     longitude: String(longitude),
@@ -284,6 +295,7 @@ async function fetchOpenMeteoAirQuality(): Promise<OpenMeteoAirQualityResponse> 
 function buildSnapshot(
   forecast: OpenMeteoForecastResponse,
   airQuality: OpenMeteoAirQualityResponse,
+  locationName: string = CAMPUS_WEATHER_LOCATION.name,
 ): CampusWeatherSnapshot {
   const current = forecast.current ?? {};
   const referenceTime = current.time ?? new Date().toISOString();
@@ -324,7 +336,7 @@ function buildSnapshot(
   const sunsetIso = forecast.daily?.sunset?.[0] ?? referenceTime;
 
   return {
-    locationName: CAMPUS_WEATHER_LOCATION.name,
+    locationName,
     temperatureF,
     humidityPercent,
     windSpeedMph,
@@ -385,6 +397,49 @@ export async function getCampusWeather(): Promise<CampusWeather> {
       lastKnown: lastKnownSnapshot,
       fetchedAt: new Date().toISOString(),
     };
+  }
+}
+
+function isValidCoordinate(latitude: number, longitude: number): boolean {
+  return (
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180
+  );
+}
+
+/**
+ * Live conditions for an arbitrary point (guest “weather for their area”).
+ * Invalid coordinates fall back to the Weirton / Madonna station.
+ */
+export async function getWeatherForCoordinates(
+  latitude: number,
+  longitude: number,
+  locationName = "Your area",
+): Promise<CampusWeather> {
+  if (!isValidCoordinate(latitude, longitude)) {
+    return getCampusWeather();
+  }
+
+  const location: WeatherQueryLocation = {
+    name: locationName,
+    latitude,
+    longitude,
+    timezone: "auto",
+  };
+
+  try {
+    const [forecast, airQuality] = await Promise.all([
+      fetchOpenMeteoForecast(location),
+      fetchOpenMeteoAirQuality(location),
+    ]);
+    return buildSnapshot(forecast, airQuality, locationName);
+  } catch (error) {
+    console.error("[weather] getWeatherForCoordinates failed:", error);
+    return getCampusWeather();
   }
 }
 

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { redirectToClubTab } from "@/lib/club-tab-path";
 import {
   addClubChecklistItem,
   canCompleteClubChecklistItems,
@@ -71,8 +72,9 @@ export async function createClubProjectAction(
     return { error: "Could not create the project." };
   }
 
-  revalidateOrg(organizationSlug || "cricut-club");
-  return { success: "Project created." };
+  const slug = organizationSlug || "cricut-club";
+  revalidateOrg(slug);
+  redirectToClubTab(slug, "projects");
 }
 
 export async function updateClubProjectAction(
@@ -115,8 +117,9 @@ export async function updateClubProjectAction(
     return { error: "Could not update the project." };
   }
 
-  revalidateOrg(organizationSlug || "cricut-club");
-  return { success: "Project updated." };
+  const slug = organizationSlug || "cricut-club";
+  revalidateOrg(slug);
+  redirectToClubTab(slug, "projects");
 }
 
 export async function deleteClubProjectAction(
@@ -138,7 +141,9 @@ export async function deleteClubProjectAction(
     return;
   }
   await deleteClubProject({ projectId, organizationId });
-  revalidateOrg(organizationSlug || "cricut-club");
+  const slug = organizationSlug || "cricut-club";
+  revalidateOrg(slug);
+  redirectToClubTab(slug, "projects");
 }
 
 export async function createClubChecklistAction(
@@ -182,8 +187,9 @@ export async function createClubChecklistAction(
     return { error: "Could not create the checklist." };
   }
 
-  revalidateOrg(organizationSlug || "cricut-club");
-  return { success: "Checklist created." };
+  const slug = organizationSlug || "cricut-club";
+  revalidateOrg(slug);
+  redirectToClubTab(slug, "checklists");
 }
 
 export async function addClubChecklistItemAction(
@@ -218,8 +224,9 @@ export async function addClubChecklistItemAction(
     return { error: "Could not add the item." };
   }
 
-  revalidateOrg(organizationSlug || "cricut-club");
-  return { success: "Item added." };
+  const slug = organizationSlug || "cricut-club";
+  revalidateOrg(slug);
+  redirectToClubTab(slug, "checklists");
 }
 
 export async function toggleClubChecklistItemAction(
@@ -250,7 +257,9 @@ export async function toggleClubChecklistItemAction(
     done,
     userId: user.id,
   });
-  revalidateOrg(organizationSlug || "cricut-club");
+  const slug = organizationSlug || "cricut-club";
+  revalidateOrg(slug);
+  redirectToClubTab(slug, "checklists");
 }
 
 export async function deleteClubChecklistAction(
@@ -272,5 +281,7 @@ export async function deleteClubChecklistAction(
     return;
   }
   await deleteClubChecklist({ checklistId, organizationId });
-  revalidateOrg(organizationSlug || "cricut-club");
+  const slug = organizationSlug || "cricut-club";
+  revalidateOrg(slug);
+  redirectToClubTab(slug, "checklists");
 }

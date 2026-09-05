@@ -8,6 +8,7 @@ import type {
   StudentMessageKind,
 } from "@/lib/command-center";
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { redirectToClubTab, rethrowIfRedirect } from "@/lib/club-tab-path";
 import { parseCampusFormDateTime } from "@/lib/datetime/campus-local";
 import { sendClubAudienceMessage } from "@/services/club-audience-message-service";
 import {
@@ -145,10 +146,15 @@ export async function sendStudentMessageAction(
     }
 
     revalidateMessagePaths(organizationSlug);
+    const returnTab = String(formData.get("returnTab") ?? "").trim();
+    if (returnTab && organizationSlug) {
+      redirectToClubTab(organizationSlug, returnTab);
+    }
     return {
       success: `Sent to ${result.count} student${result.count === 1 ? "" : "s"}.`,
     };
   } catch (error) {
+    rethrowIfRedirect(error);
     return {
       error:
         error instanceof Error ? error.message : "Unable to send message.",

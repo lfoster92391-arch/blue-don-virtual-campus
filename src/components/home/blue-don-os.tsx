@@ -20,6 +20,7 @@ import type { ClubOpsPulse } from "@/services/club-ops-pulse-service";
 import type { HubDigest } from "@/services/school-hub-service";
 import type { StudentContext } from "@/services/student-context-service";
 import type { CampusUser } from "@/types/auth";
+import type { ReactNode } from "react";
 
 type BlueDonOSProps = {
   user: CampusUser;
@@ -31,6 +32,7 @@ type BlueDonOSProps = {
   meetings?: CommandCenterMeetingView[];
   tasks?: ClubStudentTaskView[];
   opsPulse?: ClubOpsPulse | null;
+  children?: ReactNode;
 };
 
 export function BlueDonOS({
@@ -43,6 +45,7 @@ export function BlueDonOS({
   meetings = [],
   tasks = [],
   opsPulse = null,
+  children,
 }: BlueDonOSProps) {
   if (FOCUSED_CLUBS_MODE) {
     return (
@@ -54,7 +57,9 @@ export function BlueDonOS({
         meetings={meetings}
         tasks={tasks}
         opsPulse={opsPulse}
-      />
+      >
+        {children}
+      </TodayAtMadonna>
     );
   }
 
@@ -69,6 +74,7 @@ export function BlueDonOS({
       />
 
       {opsPulse ? <ClubOpsPulsePanel pulse={opsPulse} /> : null}
+      {children}
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="space-y-8 xl:col-span-2">

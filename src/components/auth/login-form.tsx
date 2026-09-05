@@ -13,13 +13,24 @@ import {
   AUTH_EMAIL_INPUT_PROPS,
 } from "@/components/auth/auth-input-props";
 import {
+  LoginAudienceChooser,
+  LoginRoleChooser,
+} from "@/components/auth/login-audience-chooser";
+import {
   PhoneAccessHint,
   type PhoneAccessHintData,
 } from "@/components/auth/phone-access-hint";
 import { SupabaseSetupNotice } from "@/components/auth/supabase-setup-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  GUEST_HOME_PATH,
+  LOGIN_COPY,
+  parseLoginAudience,
+  parseLoginIntent,
+} from "@/config/login-audience";
 import { normalizeAuthEmail } from "@/lib/auth/email-domain";
+import { destinationFromLoginSearch } from "@/lib/auth/home-path";
 import { createClient } from "@/lib/supabase/client";
 
 const loginSchema = z.object({
@@ -105,8 +116,7 @@ export function LoginForm({
       return;
     }
 
-    const next = searchParams.get("next") ?? "/home";
-    router.push(next);
+    router.push(destinationFromLoginSearch(searchParams));
     router.refresh();
   }
 
@@ -122,7 +132,7 @@ export function LoginForm({
       return;
     }
 
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(searchParams.get("next") ?? "/home")}`;
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(destinationFromLoginSearch(searchParams))}`;
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },
@@ -145,12 +155,86 @@ export function LoginForm({
     );
   }
 
+  const next = searchParams.get("next");
+  const audience =
+    parseLoginAudience(searchParams.get("audience")) ??
+    (parseLoginIntent(searchParams.get("role")) ? "school" : null);
+  const intent = parseLoginIntent(
+    searchParams.get("role") ?? searchParams.get("intent"),
+  );
+
+  if (audience === "guest") {
+    return (
+      <AuthShell
+        title={LOGIN_COPY.guestLabel}
+        description={LOGIN_COPY.guestBlurb}
+      >
+        <Button
+          variant="action"
+          size="lg"
+          className="h-12 w-full"
+          nativeButton={false}
+          render={<Link href={GUEST_HOME_PATH}>Continue to Fan & Family</Link>}
+        />
+      </AuthShell>
+    );
+  }
+
+  if (!audience) {
+    return (
+      <AuthShell
+        title={LOGIN_COPY.welcomeTitle}
+        description={LOGIN_COPY.welcomeDescription}
+      >
+        {phoneAccessHint ? <PhoneAccessHint hint={phoneAccessHint} /> : null}
+        <LoginAudienceChooser next={next} />
+        <p className="text-center text-sm text-muted-foreground">
+          Need an account?{" "}
+          <Link href="/register" className="font-medium text-[#0A2342] hover:underline dark:text-white">
+            Create one
+          </Link>
+          {" · "}
+          <Link
+            href="/register?role=parent"
+            className="font-medium text-[#0A2342] hover:underline dark:text-white"
+          >
+            Parent registration
+          </Link>
+        </p>
+      </AuthShell>
+    );
+  }
+
+  if (audience === "school" && !intent) {
+    return (
+      <AuthShell
+        title={LOGIN_COPY.schoolRolesTitle}
+        description={LOGIN_COPY.schoolRolesDescription}
+      >
+        <LoginRoleChooser next={next} />
+      </AuthShell>
+    );
+  }
+
+  const roleLabel = intent ? LOGIN_COPY.roles[intent].label : "school";
+  const changeRoleHref = next
+    ? `/login?audience=school&next=${encodeURIComponent(next)}`
+    : "/login?audience=school";
+
   return (
     <AuthShell
-      title="Sign in"
-      description="Enter your campus credentials to access Blue Don Virtual Campus."
+      title={`Sign in as ${roleLabel}`}
+      description="Enter your campus credentials. Your home page follows your real account, not this button."
     >
       {phoneAccessHint ? <PhoneAccessHint hint={phoneAccessHint} /> : null}
+
+      <p className="text-sm text-muted-foreground">
+        Signing in as <span className="font-medium text-[#0A2342] dark:text-white">{roleLabel}</span>
+        {" · "}
+        <Link href={changeRoleHref} className="font-medium text-[#0A2342] hover:underline dark:text-white">
+          Change
+        </Link>
+      </p>
 
       <form
         className="space-y-4"
@@ -255,6 +339,10 @@ export function LoginForm({
         {" · "}
         <Link href="/watch" className="font-medium text-[#0A2342] hover:underline dark:text-white">
           Watch Broadcasting LIVE
+        </Link>
+        {" · "}
+        <Link href={GUEST_HOME_PATH} className="font-medium text-[#0A2342] hover:underline dark:text-white">
+          Fan & Family
         </Link>
       </p>
     </AuthShell>

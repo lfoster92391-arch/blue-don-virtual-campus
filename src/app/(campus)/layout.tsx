@@ -63,6 +63,7 @@ export default async function CampusRouteLayout({
         studentName: identity.previewTarget?.displayName ?? null,
         clubSlug: identity.previewClubSlug,
         parent: identity.isParentPreview,
+        persona: identity.previewPersona,
       }}
     >
       {children}

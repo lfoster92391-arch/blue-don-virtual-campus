@@ -49,6 +49,7 @@ type TodayAtMadonnaProps = {
   meetings?: CommandCenterMeetingView[];
   tasks?: ClubStudentTaskView[];
   opsPulse?: ClubOpsPulse | null;
+  children?: ReactNode;
 };
 
 function getGreeting(hour: number) {
@@ -295,6 +296,7 @@ export function TodayAtMadonna({
   meetings = [],
   tasks = [],
   opsPulse = null,
+  children,
 }: TodayAtMadonnaProps) {
   const preferredName =
     user.firstName ?? user.displayName.split(" ")[0] ?? user.displayName;
@@ -340,6 +342,8 @@ export function TodayAtMadonna({
           <CommandCenterTasks tasks={tasks} />
         </div>
       </div>
+
+      {children ? <div className="mt-8">{children}</div> : null}
 
       <div className="mt-8 space-y-0 rounded-2xl border border-border bg-card/40 px-4 py-6 sm:px-6 sm:py-8">
         <BriefingSection

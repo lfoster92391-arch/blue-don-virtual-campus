@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireCompleteProfile } from "@/lib/auth/session";
+import { redirectToClubTab, rethrowIfRedirect } from "@/lib/club-tab-path";
 import type { ClubFundraiserStatus, ClubLedgerEntryType } from "@/generated/prisma/client";
 import {
   addClubLedgerEntry,
@@ -73,10 +74,11 @@ export async function addClubLedgerEntryAction(
   _prev: ClubFinanceActionState,
   formData: FormData,
 ): Promise<ClubFinanceActionState> {
+  const organizationSlug = String(formData.get("organizationSlug") ?? "");
   try {
     const parsed = moneySchema.safeParse({
       organizationId: formData.get("organizationId"),
-      organizationSlug: formData.get("organizationSlug"),
+      organizationSlug,
       amount: formData.get("amount"),
       memo: formData.get("memo") || undefined,
       fundraiserId: formData.get("fundraiserId") || undefined,
@@ -105,27 +107,25 @@ export async function addClubLedgerEntryAction(
     }
 
     revalidateFinancePaths(parsed.data.organizationSlug);
-    return {
-      success:
-        parsed.data.type === "DEPOSIT"
-          ? "Deposit recorded."
-          : "Withdrawal recorded.",
-    };
   } catch (error) {
+    rethrowIfRedirect(error);
     return {
       error: error instanceof Error ? error.message : "Unable to save ledger entry.",
     };
   }
+
+  redirectToClubTab(organizationSlug, "finances");
 }
 
 export async function createClubFundraiserAction(
   _prev: ClubFinanceActionState,
   formData: FormData,
 ): Promise<ClubFinanceActionState> {
+  const organizationSlug = String(formData.get("organizationSlug") ?? "");
   try {
     const parsed = fundraiserSchema.safeParse({
       organizationId: formData.get("organizationId"),
-      organizationSlug: formData.get("organizationSlug"),
+      organizationSlug,
       title: formData.get("title"),
       description: formData.get("description") || undefined,
       goalAmount: formData.get("goalAmount"),
@@ -149,12 +149,14 @@ export async function createClubFundraiserAction(
     }
 
     revalidateFinancePaths(parsed.data.organizationSlug);
-    return { success: "Fundraiser created." };
   } catch (error) {
+    rethrowIfRedirect(error);
     return {
       error: error instanceof Error ? error.message : "Unable to create fundraiser.",
     };
   }
+
+  redirectToClubTab(organizationSlug, "finances");
 }
 
 export async function updateClubFundraiserStatusAction(
@@ -176,10 +178,12 @@ export async function updateClubFundraiserStatusAction(
     }
 
     revalidateFinancePaths(organizationSlug);
-    return { success: `Fundraiser marked ${status.toLowerCase()}.` };
   } catch (error) {
+    rethrowIfRedirect(error);
     return {
       error: error instanceof Error ? error.message : "Unable to update fundraiser.",
     };
   }
+
+  redirectToClubTab(organizationSlug, "finances");
 }

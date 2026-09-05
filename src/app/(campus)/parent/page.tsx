@@ -13,6 +13,7 @@ import { FuelTheDonsRow } from "@/components/lunch/fuel-the-dons-link";
 import { ChildClubApprovals } from "@/components/forms/child-club-approvals";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { ShellPage } from "@/components/layout/shell-page";
+import { ShopComingSoonButton } from "@/components/shop/shop-coming-soon-button";
 import { Button } from "@/components/ui/button";
 import { FACTS_SYNC_FIELDS, FACTS_SYNC_SUMMARY } from "@/config/facts-sync";
 import { getCurrentSchoolYear } from "@/config/school-year";
@@ -82,6 +83,7 @@ export default async function ParentPortalPage() {
       }
       actions={
         <>
+          <ShopComingSoonButton size="sm" />
           <Button
             size="sm"
             nativeButton={false}

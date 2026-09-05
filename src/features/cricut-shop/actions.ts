@@ -21,11 +21,13 @@ import {
   canManageCricutShop,
   createCricutShopItem,
   getCricutOrganization,
+  getCricutShopItem,
   isCricutShopStorageConfigured,
   placeCricutShopOrder,
   setCricutItemAvailableToSell,
   updateCricutAmazonWishlistUrl,
   updateCricutOrderStatus,
+  updateCricutShopItemImage,
   uploadCricutShopImage,
 } from "@/services/cricut-shop-service";
 import type { CricutFulfillmentMethod } from "@/generated/prisma/client";
@@ -96,9 +98,6 @@ export async function createCricutListingAction(
         };
       }
       const uploaded = await uploadCricutShopImage(file, user.id);
-      if (!uploaded) {
-        return { error: "Unable to upload the photo." };
-      }
       imageUrl = uploaded.publicUrl;
       storagePath = uploaded.storagePath;
     }
@@ -147,6 +146,66 @@ export async function toggleCricutItemSellableAction(
   await setCricutItemAvailableToSell({ itemId, availableToSell });
   revalidateCricut();
   revalidatePath(`/cricut/shop/${itemId}`);
+}
+
+export async function updateCricutListingPhotoAction(
+  _prev: CricutShopActionState,
+  formData: FormData,
+): Promise<CricutShopActionState> {
+  try {
+    const user = await requireCompleteProfile();
+    const org = await getCricutOrganization();
+    if (!org) {
+      return { error: "Cricut Club is not seeded yet. Run db:seed." };
+    }
+
+    const allowed = await canCreateCricutListing(user.id, user.role, org.id);
+    if (!allowed) {
+      return {
+        error: "Join Cricut Club to add product photos to the shop catalog.",
+      };
+    }
+
+    const itemId = String(formData.get("itemId") ?? "").trim();
+    if (!itemId) {
+      return { error: "Missing product." };
+    }
+
+    const item = await getCricutShopItem(itemId);
+    if (!item || item.isSample) {
+      return { error: "That product is not in the live catalog yet." };
+    }
+
+    const file = formData.get("photo");
+    if (!(file instanceof File) || file.size <= 0) {
+      return { error: "Choose a product photo to upload." };
+    }
+    if (!isCricutShopStorageConfigured()) {
+      return {
+        error:
+          "Photo storage isn’t configured. Ask an admin to set the campus media bucket.",
+      };
+    }
+
+    const uploaded = await uploadCricutShopImage(file, user.id);
+    const saved = await updateCricutShopItemImage({
+      itemId,
+      imageUrl: uploaded.publicUrl,
+      storagePath: uploaded.storagePath,
+    });
+    if (!saved) {
+      return { error: "Unable to save the product photo." };
+    }
+
+    revalidateCricut();
+    revalidatePath(`/cricut/shop/${itemId}`);
+    return { success: "Product photo saved.", itemId };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Unable to upload the photo.",
+    };
+  }
 }
 
 const checkoutSchema = z.object({
@@ -313,9 +372,6 @@ export async function submitCricutDesignAction(
         };
       }
       const uploaded = await uploadCricutDesignImage(file, user.id);
-      if (!uploaded) {
-        return { error: "Unable to upload the reference image." };
-      }
       imageUrl = uploaded.publicUrl;
       storagePath = uploaded.storagePath;
     }
