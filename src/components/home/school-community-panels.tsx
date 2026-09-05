@@ -22,43 +22,6 @@ export type SchoolCommunityData = {
   nextAirAt: Date | null;
 };
 
-function StatusStrip({
-  lastGame,
-  isLive,
-}: {
-  lastGame: SportsGameView | null;
-  isLive: boolean;
-}) {
-  const gameStatus = lastGame
-    ? lastGame.status === "LIVE"
-      ? "A game is live"
-      : lastGame.status === "FINAL"
-        ? "Latest game is final"
-        : "Game on the board"
-    : "No game status yet";
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      <span
-        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-          isLive
-            ? "bg-red-600 text-white"
-            : "bg-muted text-muted-foreground"
-        }`}
-      >
-        <span
-          className={`size-1.5 rounded-full ${isLive ? "animate-pulse bg-white" : "bg-muted-foreground/50"}`}
-          aria-hidden="true"
-        />
-        {isLive ? "Broadcasting is live" : "Broadcasting offline"}
-      </span>
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
-        {gameStatus}
-      </span>
-    </div>
-  );
-}
-
 function PlayerSnapshot({ players }: { players: SportsPlayerView[] }) {
   if (players.length === 0) {
     return (
@@ -99,53 +62,48 @@ export function SchoolCommunityPanels({
   data,
   showRequests = true,
   showPlayers = true,
+  showHighlights = true,
   linkGames = true,
 }: {
   data: SchoolCommunityData;
   showRequests?: boolean;
   showPlayers?: boolean;
+  showHighlights?: boolean;
   linkGames?: boolean;
 }) {
   return (
     <div className="space-y-0">
-      <BriefingSection
-        id="highlights"
-        eyebrow="Highlights"
-        title="Highlights"
-        description="Clips and photos the sports desk has published."
-        actions={
-          linkGames ? (
-            <Link
-              href="/madonna/sports"
-              className="text-sm font-medium text-[#2F80ED] hover:underline"
-            >
-              All sports
-            </Link>
-          ) : (
-            <Link
-              href="/watch"
-              className="text-sm font-medium text-[#2F80ED] hover:underline"
-            >
-              Watch live
-            </Link>
-          )
-        }
-      >
-        <HighlightGrid
-          highlights={data.highlights}
-          emptyLabel="No highlights posted yet."
-          linkGames={linkGames}
-        />
-      </BriefingSection>
-
-      <BriefingSection
-        id="status"
-        eyebrow="Status"
-        title="Campus status"
-        description="Whether a broadcast or game is on right now."
-      >
-        <StatusStrip lastGame={data.lastGame} isLive={Boolean(data.activeLive)} />
-      </BriefingSection>
+      {showHighlights ? (
+        <BriefingSection
+          id="highlights"
+          eyebrow="Highlights"
+          title="Highlights"
+          description="Clips and photos the sports desk has published."
+          actions={
+            linkGames ? (
+              <Link
+                href="/madonna/sports"
+                className="text-sm font-medium text-[#2F80ED] hover:underline"
+              >
+                All sports
+              </Link>
+            ) : (
+              <Link
+                href="/watch"
+                className="text-sm font-medium text-[#2F80ED] hover:underline"
+              >
+                Watch live
+              </Link>
+            )
+          }
+        >
+          <HighlightGrid
+            highlights={data.highlights}
+            emptyLabel="No highlights posted yet."
+            linkGames={linkGames}
+          />
+        </BriefingSection>
+      ) : null}
 
       {showPlayers ? (
         <BriefingSection

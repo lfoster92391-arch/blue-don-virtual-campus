@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useActionState, useRef, useState } from "react";
 import { Camera, ImageIcon, Upload, X } from "lucide-react";
 
 import { UploadGuardNotice } from "@/components/uploads/upload-guard-notice";
@@ -8,14 +8,20 @@ import { Button } from "@/components/ui/button";
 import { CAMPUS_IMAGE_ACCEPT, IMAGE_UPLOAD_MAX_LABEL } from "@/config/uploads";
 import {
   createClubFundraiserAction,
+  updateClubFundraiserAction,
   type ClubFinanceActionState,
 } from "@/features/club-finance/actions";
 import {
   CAMPUS_CAMPAIGN_KIND_LABELS,
   CAMPUS_CAMPAIGN_KINDS,
   defaultCampaignKind,
+  type CampusCampaignFormValues,
   type CampusCampaignKind,
 } from "@/lib/club-finance";
+import {
+  campusDateKey,
+  utcToCampusDateTimeLocal,
+} from "@/lib/datetime/campus-local";
 import { useUploadGuard } from "@/lib/uploads/use-upload-guard";
 
 const initialState: ClubFinanceActionState = {};
@@ -27,6 +33,28 @@ export type CampaignHostOption = {
   type: string;
 };
 
+function toDateTimeLocalValue(value: Date | string | null | undefined): string {
+  if (!value) {
+    return "";
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return utcToCampusDateTimeLocal(date);
+}
+
+function toDateInputValue(value: Date | string | null | undefined): string {
+  if (!value) {
+    return "";
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return campusDateKey(date);
+}
+
 export function CampusCampaignForm({
   organizationId,
   organizationSlug,
@@ -34,6 +62,7 @@ export function CampusCampaignForm({
   hosts,
   returnTo = "finances",
   storageConfigured,
+  campaign,
 }: {
   organizationId?: string;
   organizationSlug?: string;
@@ -41,18 +70,24 @@ export function CampusCampaignForm({
   hosts?: CampaignHostOption[];
   returnTo?: "finances" | "fundraisers" | "campus";
   storageConfigured: boolean;
+  campaign?: CampusCampaignFormValues;
 }) {
+  const editing = Boolean(campaign);
   const [state, formAction, pending] = useActionState(
-    createClubFundraiserAction,
+    editing ? updateClubFundraiserAction : createClubFundraiserAction,
     initialState,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const flyerGuard = useUploadGuard({ inputRef: fileInputRef });
+  const [removeExistingFlyer, setRemoveExistingFlyer] = useState(false);
   const busy = pending || flyerGuard.preparing;
-  const defaultKind: CampusCampaignKind = defaultCampaignKind(
-    organizationType ?? hosts?.[0]?.type ?? "CLUB",
-  );
-  const pickHost = Boolean(hosts && hosts.length > 0 && !organizationId);
+  const defaultKind: CampusCampaignKind =
+    campaign?.kind ??
+    defaultCampaignKind(organizationType ?? hosts?.[0]?.type ?? "CLUB");
+  const pickHost = Boolean(hosts && hosts.length > 0 && !organizationId && !editing);
+  const existingFlyer =
+    campaign?.flyerUrl && !removeExistingFlyer ? campaign.flyerUrl : null;
+  const shownFlyer = flyerGuard.preview ?? existingFlyer;
 
   function openPhotoPicker(useCamera: boolean) {
     const input = fileInputRef.current;
@@ -68,8 +103,18 @@ export function CampusCampaignForm({
     }
   }
 
+  function clearFlyerPreview() {
+    flyerGuard.clear();
+    if (campaign?.flyerUrl) {
+      setRemoveExistingFlyer(true);
+    }
+  }
+
   return (
     <form action={formAction} className="grid gap-3 sm:grid-cols-2">
+      {campaign ? (
+        <input type="hidden" name="fundraiserId" value={campaign.id} />
+      ) : null}
       {organizationId ? (
         <input type="hidden" name="organizationId" value={organizationId} />
       ) : null}
@@ -77,6 +122,9 @@ export function CampusCampaignForm({
         <input type="hidden" name="organizationSlug" value={organizationSlug} />
       ) : null}
       <input type="hidden" name="returnTo" value={returnTo} />
+      {removeExistingFlyer && !flyerGuard.preview ? (
+        <input type="hidden" name="clearFlyer" value="1" />
+      ) : null}
 
       {pickHost ? (
         <label className="grid gap-1 text-sm sm:col-span-2">
@@ -132,6 +180,7 @@ export function CampusCampaignForm({
           required
           className="rounded-md border border-border bg-background px-3 py-2"
           placeholder="Cookie dough sale"
+          defaultValue={campaign?.title}
         />
       </label>
 
@@ -139,17 +188,17 @@ export function CampusCampaignForm({
         <span className="text-sm font-medium">Flyer</span>
         <div className="overflow-hidden rounded-xl border border-border">
           <div className="relative flex aspect-[16/9] w-full items-center justify-center bg-muted/40">
-            {flyerGuard.preview ? (
+            {shownFlyer ? (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={flyerGuard.preview}
+                  src={shownFlyer}
                   alt="Flyer preview"
                   className="h-full w-full object-cover"
                 />
                 <button
                   type="button"
-                  onClick={flyerGuard.clear}
+                  onClick={clearFlyerPreview}
                   className="absolute right-2 top-2 rounded-full bg-black/60 p-1.5 text-white"
                   aria-label="Remove flyer"
                 >
@@ -170,7 +219,10 @@ export function CampusCampaignForm({
           type="file"
           accept={CAMPUS_IMAGE_ACCEPT}
           className="sr-only"
-          onChange={flyerGuard.onFileChange}
+          onChange={(event) => {
+            setRemoveExistingFlyer(false);
+            flyerGuard.onFileChange(event);
+          }}
         />
         <div className="flex flex-wrap gap-2">
           <Button
@@ -179,7 +231,7 @@ export function CampusCampaignForm({
             onClick={() => openPhotoPicker(false)}
           >
             <Upload className="size-4" />
-            {flyerGuard.preview ? "Change flyer" : "Upload from library"}
+            {shownFlyer ? "Change flyer" : "Upload from library"}
           </Button>
           <Button
             type="button"
@@ -208,6 +260,7 @@ export function CampusCampaignForm({
           rows={3}
           className="rounded-md border border-border bg-background px-3 py-2"
           placeholder="What families should know"
+          defaultValue={campaign?.description ?? undefined}
         />
       </label>
 
@@ -217,6 +270,7 @@ export function CampusCampaignForm({
           name="raisingFor"
           className="rounded-md border border-border bg-background px-3 py-2"
           placeholder="State tournament travel, classroom supplies, …"
+          defaultValue={campaign?.raisingFor ?? undefined}
         />
       </label>
 
@@ -226,6 +280,7 @@ export function CampusCampaignForm({
           name="pricesText"
           className="rounded-md border border-border bg-background px-3 py-2"
           placeholder="$12 cookie tub · $20 T-shirt"
+          defaultValue={campaign?.pricesText ?? undefined}
         />
       </label>
 
@@ -236,6 +291,7 @@ export function CampusCampaignForm({
           type="url"
           className="rounded-md border border-border bg-background px-3 py-2"
           placeholder="https://"
+          defaultValue={campaign?.linkUrl ?? undefined}
         />
       </label>
 
@@ -245,6 +301,7 @@ export function CampusCampaignForm({
           name="orderOpensAt"
           type="datetime-local"
           className="rounded-md border border-border bg-background px-3 py-2"
+          defaultValue={toDateTimeLocalValue(campaign?.startsAt)}
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -253,6 +310,7 @@ export function CampusCampaignForm({
           name="orderClosesAt"
           type="datetime-local"
           className="rounded-md border border-border bg-background px-3 py-2"
+          defaultValue={toDateTimeLocalValue(campaign?.endsAt)}
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -261,6 +319,7 @@ export function CampusCampaignForm({
           name="arrivesOn"
           type="date"
           className="rounded-md border border-border bg-background px-3 py-2"
+          defaultValue={toDateInputValue(campaign?.arrivesAt)}
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -272,6 +331,11 @@ export function CampusCampaignForm({
           step="0.01"
           className="rounded-md border border-border bg-background px-3 py-2"
           placeholder="500"
+          defaultValue={
+            campaign && campaign.goalCents > 0
+              ? (campaign.goalCents / 100).toFixed(2)
+              : undefined
+          }
         />
       </label>
 
@@ -281,6 +345,7 @@ export function CampusCampaignForm({
           name="pickupLocation"
           className="rounded-md border border-border bg-background px-3 py-2"
           placeholder="Main office, after school"
+          defaultValue={campaign?.pickupLocation ?? undefined}
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -288,6 +353,7 @@ export function CampusCampaignForm({
         <input
           name="contactName"
           className="rounded-md border border-border bg-background px-3 py-2"
+          defaultValue={campaign?.contactName ?? undefined}
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -296,6 +362,7 @@ export function CampusCampaignForm({
           name="contactEmail"
           type="email"
           className="rounded-md border border-border bg-background px-3 py-2"
+          defaultValue={campaign?.contactEmail ?? undefined}
         />
       </label>
       <label className="grid gap-1 text-sm sm:col-span-2">
@@ -304,6 +371,7 @@ export function CampusCampaignForm({
           name="contactPhone"
           type="tel"
           className="rounded-md border border-border bg-background px-3 py-2"
+          defaultValue={campaign?.contactPhone ?? undefined}
         />
       </label>
 
@@ -312,7 +380,7 @@ export function CampusCampaignForm({
           type="checkbox"
           name="isPublic"
           value="on"
-          defaultChecked
+          defaultChecked={campaign ? campaign.isPublic : true}
           className="mt-1"
         />
         <span>
@@ -327,7 +395,13 @@ export function CampusCampaignForm({
 
       <div className="sm:col-span-2">
         <Button type="submit" disabled={busy}>
-          {busy ? "Posting…" : "Post to campus"}
+          {busy
+            ? editing
+              ? "Saving…"
+              : "Posting…"
+            : editing
+              ? "Save campaign"
+              : "Post to campus"}
         </Button>
         {state.error ? (
           <p className="mt-2 text-sm text-destructive">{state.error}</p>

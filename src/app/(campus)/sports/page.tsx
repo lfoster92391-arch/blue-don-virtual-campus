@@ -10,6 +10,7 @@ import {
   getSportsHubData,
   isSportsImageStorageConfigured,
 } from "@/services/sports-highlights-service";
+import { getCampusWeather } from "@/services/weather-service";
 
 type SportsPageProps = {
   searchParams: Promise<{ sport?: string }>;
@@ -20,9 +21,10 @@ export default async function SportsPage({ searchParams }: SportsPageProps) {
   const user = await requireCompleteProfile();
   const { sport } = await searchParams;
 
-  const [data, canManage] = await Promise.all([
+  const [data, canManage, weather] = await Promise.all([
     getSportsHubData(sport ?? null, { viewerId: user.id }),
     canManageSportsDesk(user.id, user.role),
+    getCampusWeather(),
   ]);
 
   return (
@@ -55,6 +57,7 @@ export default async function SportsPage({ searchParams }: SportsPageProps) {
         storageConfigured={isSportsImageStorageConfigured()}
         canManage={canManage}
         viewerId={user.id}
+        weather={weather}
       />
     </ShellPage>
   );

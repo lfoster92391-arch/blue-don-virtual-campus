@@ -23,8 +23,10 @@ function formatWhen(iso: string | null, withTime = false): string | null {
 
 export function CampusCampaignDetails({
   campaign,
+  guest = false,
 }: {
   campaign: CampusCampaignBannerView;
+  guest?: boolean;
 }) {
   const opens = formatWhen(campaign.orderOpensAt, true);
   const closes = formatWhen(campaign.orderClosesAt, true);
@@ -50,12 +52,16 @@ export function CampusCampaignDetails({
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Hosted by{" "}
-          <Link
-            href={`/organizations/${campaign.organizationSlug}`}
-            className="font-medium text-[#2F80ED] hover:underline"
-          >
-            {campaign.organizationName}
-          </Link>
+          {guest ? (
+            <span className="font-medium">{campaign.organizationName}</span>
+          ) : (
+            <Link
+              href={`/organizations/${campaign.organizationSlug}`}
+              className="font-medium text-[#2F80ED] hover:underline"
+            >
+              {campaign.organizationName}
+            </Link>
+          )}
         </p>
       </div>
 

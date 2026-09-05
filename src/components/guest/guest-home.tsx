@@ -2,9 +2,10 @@ import Link from "next/link";
 import { BookOpen, Cross, Lightbulb, Megaphone, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { CampusCampaignBanner } from "@/components/fundraisers/campus-campaign-banner";
+import { CampusCampaignButton } from "@/components/fundraisers/campus-campaign-button";
 import { BriefingSection } from "@/components/home/briefing-section";
 import { SchoolCommunityPanels } from "@/components/home/school-community-panels";
+import { HighlightGrid } from "@/components/sports/highlight-grid";
 import { AreaWeatherCard } from "@/components/weather/area-weather-card";
 import { PreviewBanner } from "@/components/admin/preview-banner";
 import { ViewAsHeaderControl } from "@/components/admin/view-as-header";
@@ -65,6 +66,12 @@ export function GuestHome({
           </div>
           <div className="flex flex-wrap gap-2">
             {previewPersona === "guest" ? <ViewAsHeaderControl /> : null}
+            <CampusCampaignButton
+              campaigns={campaigns}
+              hrefBase="/guest/fundraisers"
+              size="lg"
+              className="h-11 max-w-full"
+            />
             <Button
               variant="action"
               size="lg"
@@ -109,14 +116,36 @@ export function GuestHome({
             campus news. School tools stay with Madonna School accounts.
           </p>
           <p className="mt-2 text-sm text-[#C6CCD6]/80">{dateLabel}</p>
+          <AreaWeatherCard fallback={weather} variant="hero" />
         </header>
 
-        <CampusCampaignBanner campaigns={campaigns} guest />
+        <section aria-labelledby="guest-highlights">
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <h2
+              id="guest-highlights"
+              className="text-lg font-semibold text-[#0A2342] dark:text-white"
+            >
+              Highlights
+            </h2>
+            <Link
+              href="/watch"
+              className="text-sm font-medium text-[#2F80ED] hover:underline"
+            >
+              Watch live
+            </Link>
+          </div>
+          <HighlightGrid
+            highlights={community.highlights}
+            emptyLabel="No highlights posted yet."
+            linkGames={false}
+          />
+        </section>
 
         <SchoolCommunityPanels
           data={community}
           showRequests={false}
           showPlayers={false}
+          showHighlights={false}
           linkGames={false}
         />
 
@@ -131,8 +160,6 @@ export function GuestHome({
             icon={<Lightbulb className="size-5" aria-hidden="true" />}
           />
         </BriefingSection>
-
-        <AreaWeatherCard fallback={weather} />
 
         <BriefingSection
           id="daily-discovery"

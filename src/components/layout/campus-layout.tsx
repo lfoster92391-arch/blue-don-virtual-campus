@@ -1,5 +1,6 @@
 import { PreviewBanner } from "@/components/admin/preview-banner";
 import { Header } from "@/components/layout/header";
+import { listPublicCampusCampaigns } from "@/services/club-finance-service";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
 import { PageFooter } from "@/components/layout/page-footer";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -12,7 +13,7 @@ import type { CampusUser } from "@/types/auth";
 
 const EMPTY_CONTEXT: StudentContext = { clubs: [], teams: [], classes: [] };
 
-export function CampusLayout({
+export async function CampusLayout({
   children,
   user,
   context = EMPTY_CONTEXT,
@@ -35,6 +36,7 @@ export function CampusLayout({
 }) {
   const effectiveRole = navRole ?? user.role;
   const membershipSlugs = context.clubs.map((club) => club.slug);
+  const campaigns = await listPublicCampusCampaigns({ take: 3 }).catch(() => []);
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -59,7 +61,14 @@ export function CampusLayout({
             persona={preview.persona}
           />
         ) : null}
-        <Header user={user} showViewAs={canManageUsers(user.role)} />
+        <Header
+          user={user}
+          showViewAs={canManageUsers(user.role)}
+          campaigns={campaigns.map((campaign) => ({
+            id: campaign.id,
+            title: campaign.title,
+          }))}
+        />
         <main className="flex flex-1 flex-col">
           <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-4 py-6 lg:px-6">
             {children}

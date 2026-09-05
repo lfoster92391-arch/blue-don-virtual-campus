@@ -9,6 +9,7 @@ import {
   isCampusCampaignKind,
 } from "@/lib/club-finance";
 import { redirectToClubTab, rethrowIfRedirect } from "@/lib/club-tab-path";
+import { parseCampusFormDateTime } from "@/lib/datetime/campus-local";
 import type { ClubFundraiserStatus, ClubLedgerEntryType } from "@/generated/prisma/client";
 import { redirect } from "next/navigation";
 import {
@@ -16,7 +17,10 @@ import {
   canManageClubFinances,
   canPostCampusCampaign,
   createClubFundraiser,
+  deleteClubFundraiser,
+  getClubFundraiserRecord,
   isClubFundraiserStorageConfigured,
+  updateClubFundraiser,
   updateClubFundraiserStatus,
   uploadClubFundraiserFlyer,
 } from "@/services/club-finance-service";
@@ -82,14 +86,16 @@ function parseDateTimeLocal(value: string | undefined): Date | undefined {
     return undefined;
   }
 
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    const [year, month, day] = trimmed.split("-").map(Number);
-    const parsed = new Date(year, month - 1, day, 12, 0, 0, 0);
-    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  return parseCampusFormDateTime(trimmed) ?? undefined;
+}
+
+function parseOptionalCampusDate(value: string | undefined): Date | null {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
   }
 
-  const parsed = new Date(trimmed);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  return parseCampusFormDateTime(trimmed);
 }
 
 function normalizeLinkUrl(value: string | undefined): string | undefined {
@@ -107,6 +113,7 @@ function revalidateFinancePaths(slug: string) {
   revalidatePath(`/organizations/${slug}`);
   revalidatePath("/finances");
   revalidatePath("/fundraisers");
+  revalidatePath("/guest/fundraisers");
   revalidatePath("/home");
   revalidatePath("/guest");
   revalidatePath("/parent");
@@ -275,6 +282,146 @@ export async function createClubFundraiserAction(
   }
 
   redirectToClubTab(organizationSlug, "finances");
+}
+
+export async function updateClubFundraiserAction(
+  _prev: ClubFinanceActionState,
+  formData: FormData,
+): Promise<ClubFinanceActionState> {
+  try {
+    const parsed = fundraiserSchema.extend({
+      fundraiserId: z.string().min(1),
+    }).safeParse({
+      fundraiserId: formData.get("fundraiserId"),
+      organizationId: formData.get("organizationId"),
+      organizationSlug: formData.get("organizationSlug"),
+      title: formData.get("title"),
+      description: formData.get("description") || undefined,
+      goalAmount: formData.get("goalAmount") || undefined,
+      kind: formData.get("kind") || undefined,
+      linkUrl: formData.get("linkUrl") || undefined,
+      pricesText: formData.get("pricesText") || undefined,
+      orderOpensAt: formData.get("orderOpensAt") || undefined,
+      orderClosesAt: formData.get("orderClosesAt") || undefined,
+      arrivesOn: formData.get("arrivesOn") || undefined,
+      pickupLocation: formData.get("pickupLocation") || undefined,
+      contactName: formData.get("contactName") || undefined,
+      contactEmail: formData.get("contactEmail") || undefined,
+      contactPhone: formData.get("contactPhone") || undefined,
+      raisingFor: formData.get("raisingFor") || undefined,
+      isPublic: formData.get("isPublic") === "on",
+      returnTo: formData.get("returnTo") || undefined,
+    });
+
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message ?? "Invalid fundraiser." };
+    }
+
+    const existing = await getClubFundraiserRecord(parsed.data.fundraiserId);
+    if (!existing) {
+      return { error: "That campaign is gone." };
+    }
+
+    const user = await requireCampaignPoster(existing.organizationId);
+    const kind = parsed.data.kind && isCampusCampaignKind(parsed.data.kind)
+      ? parsed.data.kind
+      : undefined;
+
+    let flyer:
+      | { url: string | null; storagePath: string | null }
+      | undefined;
+    const flyerFile = formData.get("flyer");
+    if (flyerFile instanceof File && flyerFile.size > 0) {
+      if (!isClubFundraiserStorageConfigured()) {
+        return {
+          error:
+            "Photo storage isn’t configured. Ask an admin to set the campus media bucket, or keep the current flyer.",
+        };
+      }
+      const uploaded = await uploadClubFundraiserFlyer(flyerFile, user.id);
+      flyer = { url: uploaded.publicUrl, storagePath: uploaded.storagePath };
+    } else if (formData.get("clearFlyer") === "1") {
+      flyer = { url: null, storagePath: null };
+    }
+
+    const goalAmount = parsed.data.goalAmount ?? 0;
+    const ok = await updateClubFundraiser({
+      fundraiserId: existing.id,
+      organizationId: existing.organizationId,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      goalCents: Math.round(goalAmount * 100),
+      kind,
+      flyer,
+      linkUrl: parsed.data.linkUrl
+        ? normalizeLinkUrl(parsed.data.linkUrl)
+        : null,
+      pricesText: parsed.data.pricesText ?? null,
+      startsAt: parseOptionalCampusDate(parsed.data.orderOpensAt),
+      endsAt: parseOptionalCampusDate(parsed.data.orderClosesAt),
+      arrivesAt: parseOptionalCampusDate(parsed.data.arrivesOn),
+      pickupLocation: parsed.data.pickupLocation ?? null,
+      contactName: parsed.data.contactName ?? null,
+      contactEmail: parsed.data.contactEmail ?? null,
+      contactPhone: parsed.data.contactPhone ?? null,
+      raisingFor: parsed.data.raisingFor ?? null,
+      isPublic: parsed.data.isPublic ?? true,
+    });
+
+    if (!ok) {
+      return { error: "Unable to update this campaign." };
+    }
+
+    revalidateFinancePaths(existing.organizationSlug);
+    revalidatePath(`/fundraisers/${existing.id}`);
+    return { success: "Campaign updated." };
+  } catch (error) {
+    rethrowIfRedirect(error);
+    return {
+      error: error instanceof Error ? error.message : "Unable to update campaign.",
+    };
+  }
+}
+
+export async function deleteClubFundraiserAction(
+  fundraiserId: string,
+  returnTo: "finances" | "fundraisers" | "campus" = "campus",
+): Promise<ClubFinanceActionState> {
+  let organizationSlug = "";
+  try {
+    const existing = await getClubFundraiserRecord(fundraiserId);
+    if (!existing) {
+      return { error: "That campaign is already gone." };
+    }
+
+    await requireCampaignPoster(existing.organizationId);
+    organizationSlug = existing.organizationSlug;
+
+    const ok = await deleteClubFundraiser({
+      fundraiserId: existing.id,
+      organizationId: existing.organizationId,
+    });
+
+    if (!ok) {
+      return { error: "Unable to delete this campaign." };
+    }
+
+    revalidateFinancePaths(existing.organizationSlug);
+    revalidatePath(`/fundraisers/${existing.id}`);
+  } catch (error) {
+    rethrowIfRedirect(error);
+    return {
+      error: error instanceof Error ? error.message : "Unable to delete campaign.",
+    };
+  }
+
+  if (returnTo === "finances") {
+    redirectToClubTab(organizationSlug, "finances");
+  }
+  if (returnTo === "fundraisers") {
+    redirectToClubTab(organizationSlug, "fundraisers");
+  }
+  redirect("/fundraisers");
 }
 
 export async function updateClubFundraiserStatusAction(

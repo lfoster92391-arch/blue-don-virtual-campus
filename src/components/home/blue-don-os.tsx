@@ -35,6 +35,7 @@ type BlueDonOSProps = {
   tasks?: ClubStudentTaskView[];
   opsPulse?: ClubOpsPulse | null;
   children?: ReactNode;
+  afterHero?: ReactNode;
   viewRole?: CampusRole;
   previewPersona?: ViewAsPersona | null;
   previewName?: string | null;
@@ -51,6 +52,7 @@ export function BlueDonOS({
   tasks = [],
   opsPulse = null,
   children,
+  afterHero,
   viewRole,
   previewPersona,
   previewName,
@@ -68,6 +70,7 @@ export function BlueDonOS({
         viewRole={viewRole}
         previewPersona={previewPersona}
         previewName={previewName}
+        afterHero={afterHero}
       >
         {children}
       </TodayAtMadonna>
@@ -77,6 +80,7 @@ export function BlueDonOS({
   return (
     <div className="flex flex-1 flex-col gap-6">
       <DashboardHero user={user} />
+      {afterHero}
 
       <CommandStrip
         digest={digest}

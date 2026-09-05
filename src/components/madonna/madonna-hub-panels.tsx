@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  Cloud,
   Megaphone,
   Radio,
   Trophy,
@@ -18,6 +17,7 @@ import {
   CAMPUS_TEAM_NAME,
   GAME_SITE_LABELS,
 } from "@/config/sports-highlights";
+import { CampusHeroWeather } from "@/components/weather/campus-hero-weather";
 import { formatCampusDateTime } from "@/lib/datetime/campus-local";
 import { cn } from "@/lib/utils";
 import type { BroadcastAnnouncementView } from "@/services/broadcast-announcement-service";
@@ -48,10 +48,6 @@ export function MadonnaHubHeader({
   isLive?: boolean;
   subtitle: string;
 }) {
-  const snapshot = weather
-    ? (weather.available ? weather : weather.lastKnown)
-    : null;
-
   return (
     <header className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-[#0A2342] via-[#0A2342] to-[#14365f] px-5 py-7 text-white shadow-sm sm:px-8 sm:py-9">
       <div className="relative z-10 flex flex-wrap items-start justify-between gap-6">
@@ -85,20 +81,9 @@ export function MadonnaHubHeader({
               On air now
             </span>
           ) : null}
-          {snapshot ? (
-            <Link
-              href="/weather"
-              className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-sm text-white ring-1 ring-white/20 transition-colors hover:bg-white/15"
-            >
-              <Cloud className="size-4 text-[#9FB3CE]" aria-hidden="true" />
-              <span className="font-semibold tabular-nums">
-                {snapshot.temperatureF}°F
-              </span>
-              <span className="text-[#C6CCD6]">{snapshot.conditionLabel}</span>
-            </Link>
-          ) : null}
         </div>
       </div>
+      {weather ? <CampusHeroWeather weather={weather} /> : null}
 
       <div
         className="pointer-events-none absolute -right-10 -top-10 size-48 rounded-full bg-[#C9A227]/15 blur-3xl"

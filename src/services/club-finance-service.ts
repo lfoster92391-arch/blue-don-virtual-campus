@@ -211,6 +211,7 @@ export async function getClubFinanceSnapshot(
 
     return {
       id: f.id,
+      organizationId: org.id,
       title: f.title,
       description: f.description,
       goalCents: f.goalCents,
@@ -375,6 +376,165 @@ export async function createClubFundraiser(input: {
   return created?.id ?? null;
 }
 
+export async function getClubFundraiserRecord(id: string): Promise<{
+  id: string;
+  organizationId: string;
+  organizationSlug: string;
+  title: string;
+  flyerStoragePath: string | null;
+} | null> {
+  if (!isDatabaseConfigured() || !isPrismaReady()) {
+    return null;
+  }
+
+  const row = await withDatabase((prisma) =>
+    prisma.clubFundraiser.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        organizationId: true,
+        title: true,
+        flyerStoragePath: true,
+        organization: { select: { slug: true } },
+      },
+    }),
+  );
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    organizationId: row.organizationId,
+    organizationSlug: row.organization.slug,
+    title: row.title,
+    flyerStoragePath: row.flyerStoragePath,
+  };
+}
+
+export async function updateClubFundraiser(input: {
+  fundraiserId: string;
+  organizationId: string;
+  title: string;
+  description?: string | null;
+  goalCents: number;
+  kind?: CampusCampaignKind;
+  linkUrl?: string | null;
+  pricesText?: string | null;
+  startsAt?: Date | null;
+  endsAt?: Date | null;
+  arrivesAt?: Date | null;
+  pickupLocation?: string | null;
+  contactName?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  raisingFor?: string | null;
+  isPublic: boolean;
+  /** `undefined` keeps the current flyer; `null` clears; otherwise replace. */
+  flyer?: { url: string | null; storagePath: string | null };
+}): Promise<boolean> {
+  if (!isDatabaseConfigured() || !isPrismaReady()) {
+    return false;
+  }
+
+  if (input.goalCents < 0) {
+    return false;
+  }
+
+  const existing = input.flyer
+    ? await withDatabase((prisma) =>
+        prisma.clubFundraiser.findFirst({
+          where: {
+            id: input.fundraiserId,
+            organizationId: input.organizationId,
+          },
+          select: { flyerStoragePath: true },
+        }),
+      )
+    : null;
+
+  const updated = await withDatabase((prisma) =>
+    prisma.clubFundraiser.updateMany({
+      where: {
+        id: input.fundraiserId,
+        organizationId: input.organizationId,
+      },
+      data: {
+        title: input.title.trim(),
+        description: input.description?.trim() || null,
+        goalCents: input.goalCents,
+        kind: (input.kind ?? "CLUB_FUNDRAISER") as PrismaCampaignKind,
+        linkUrl: input.linkUrl?.trim() || null,
+        pricesText: input.pricesText?.trim() || null,
+        startsAt: input.startsAt ?? null,
+        endsAt: input.endsAt ?? null,
+        arrivesAt: input.arrivesAt ?? null,
+        pickupLocation: input.pickupLocation?.trim() || null,
+        contactName: input.contactName?.trim() || null,
+        contactEmail: input.contactEmail?.trim() || null,
+        contactPhone: input.contactPhone?.trim() || null,
+        raisingFor: input.raisingFor?.trim() || null,
+        isPublic: input.isPublic,
+        ...(input.flyer
+          ? {
+              flyerUrl: input.flyer.url?.trim() || null,
+              flyerStoragePath: input.flyer.storagePath?.trim() || null,
+            }
+          : {}),
+      },
+    }),
+  );
+
+  if (
+    (updated?.count ?? 0) > 0 &&
+    existing?.flyerStoragePath &&
+    existing.flyerStoragePath !== (input.flyer?.storagePath ?? null)
+  ) {
+    await removeClubFundraiserFlyer(existing.flyerStoragePath);
+  }
+
+  return (updated?.count ?? 0) > 0;
+}
+
+export async function deleteClubFundraiser(input: {
+  fundraiserId: string;
+  organizationId: string;
+}): Promise<boolean> {
+  if (!isDatabaseConfigured() || !isPrismaReady()) {
+    return false;
+  }
+
+  const existing = await withDatabase((prisma) =>
+    prisma.clubFundraiser.findFirst({
+      where: {
+        id: input.fundraiserId,
+        organizationId: input.organizationId,
+      },
+      select: { id: true, flyerStoragePath: true },
+    }),
+  );
+
+  if (!existing) {
+    return false;
+  }
+
+  const deleted = await withDatabase((prisma) =>
+    prisma.clubFundraiser.deleteMany({
+      where: {
+        id: input.fundraiserId,
+        organizationId: input.organizationId,
+      },
+    }),
+  );
+
+  if ((deleted?.count ?? 0) > 0 && existing.flyerStoragePath) {
+    await removeClubFundraiserFlyer(existing.flyerStoragePath);
+  }
+
+  return (deleted?.count ?? 0) > 0;
+}
+
 export async function updateClubFundraiserStatus(input: {
   fundraiserId: string;
   organizationId: string;
@@ -442,14 +602,36 @@ export async function uploadClubFundraiserFlyer(
   return { storagePath, publicUrl: data.publicUrl };
 }
 
+async function removeClubFundraiserFlyer(storagePath: string): Promise<void> {
+  const trimmed = storagePath.trim();
+  if (!trimmed || !trimmed.startsWith(`${FUNDRAISER_FLYER_PREFIX}/`)) {
+    return;
+  }
+
+  const admin = createAdminClient();
+  if (!admin) {
+    return;
+  }
+
+  const { error } = await admin.storage
+    .from(CAMPUS_MEDIA_BUCKET)
+    .remove([trimmed]);
+
+  if (error) {
+    console.error("[club-fundraiser] Flyer remove failed:", error.message);
+  }
+}
+
 function toIso(value: Date | null | undefined): string | null {
   return value ? value.toISOString() : null;
 }
 
 function toBannerView(row: {
   id: string;
+  organizationId: string;
   title: string;
   description: string | null;
+  goalCents: number;
   kind: string;
   flyerUrl: string | null;
   linkUrl: string | null;
@@ -462,15 +644,19 @@ function toBannerView(row: {
   contactEmail: string | null;
   contactPhone: string | null;
   raisingFor: string | null;
+  isPublic: boolean;
   organization: { name: string; slug: string };
 }): CampusCampaignBannerView {
   const kind = isCampusCampaignKind(row.kind) ? row.kind : "CLUB_FUNDRAISER";
   return {
     id: row.id,
+    organizationId: row.organizationId,
     headline: campusCampaignHeadline(kind, row.title),
     title: row.title,
+    kind,
     kindLabel: CAMPUS_CAMPAIGN_KIND_LABELS[kind],
     description: row.description,
+    goalCents: row.goalCents,
     flyerUrl: row.flyerUrl,
     linkUrl: row.linkUrl,
     pricesText: row.pricesText,
@@ -482,6 +668,7 @@ function toBannerView(row: {
     contactEmail: row.contactEmail,
     contactPhone: row.contactPhone,
     raisingFor: row.raisingFor,
+    isPublic: row.isPublic,
     organizationName: row.organization.name,
     organizationSlug: row.organization.slug,
     href: `/fundraisers/${row.id}`,
@@ -532,6 +719,7 @@ export async function listPublicCampusCampaigns(options?: {
 
 export async function getCampusCampaign(
   id: string,
+  options?: { publicOnly?: boolean },
 ): Promise<CampusCampaignBannerView | null> {
   if (!isDatabaseConfigured() || !isPrismaReady()) {
     return null;
@@ -545,6 +733,10 @@ export async function getCampusCampaign(
   );
 
   if (!row) {
+    return null;
+  }
+
+  if (options?.publicOnly && (row.status !== "ACTIVE" || !row.isPublic)) {
     return null;
   }
 

@@ -1,7 +1,6 @@
-import Link from "next/link";
-import { CalendarDays, Cloud, Sun } from "lucide-react";
+import { CalendarDays, Sun } from "lucide-react";
 
-import { CAMPUS_WEATHER_LOCATION } from "@/config/campus-weather";
+import { CampusHeroWeather } from "@/components/weather/campus-hero-weather";
 import { ROLE_LABELS } from "@/config/roles";
 import { getCampusWeather } from "@/services/weather-service";
 import type { CampusUser } from "@/types/auth";
@@ -36,7 +35,6 @@ export async function DashboardHero({ user }: DashboardHeroProps) {
   const preferredName = user.firstName ?? user.displayName.split(" ")[0] ?? user.displayName;
 
   const weather = await getCampusWeather();
-  const snapshot = weather.available ? weather : weather.lastKnown;
 
   return (
     <section className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-[#0A2342] to-[#0A2342]/90 px-5 py-6 text-white shadow-sm sm:px-8 sm:py-8">
@@ -53,18 +51,7 @@ export async function DashboardHero({ user }: DashboardHeroProps) {
             {ROLE_LABELS[user.role]} · Your daily command center for classes,
             deadlines, events, and progress at Madonna High School.
           </p>
-          {snapshot ? (
-            <Link
-              href="/weather"
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-sm text-[#C6CCD6] backdrop-blur-sm transition-colors hover:bg-white/20 hover:text-white"
-            >
-              <Cloud className="size-3.5 shrink-0" aria-hidden="true" />
-              <span>
-                {snapshot.temperatureF}°F · {snapshot.conditionLabel} ·{" "}
-                {CAMPUS_WEATHER_LOCATION.city}, {CAMPUS_WEATHER_LOCATION.state}
-              </span>
-            </Link>
-          ) : null}
+          <CampusHeroWeather weather={weather} />
         </div>
         <div className="flex items-center gap-2 rounded-xl bg-white/10 px-4 py-3 text-sm backdrop-blur-sm">
           <CalendarDays className="size-4 shrink-0 text-[#C6CCD6]" aria-hidden="true" />

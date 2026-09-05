@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CampusCampaignBanner } from "@/components/fundraisers/campus-campaign-banner";
 import {
   BookOpen,
   CheckCircle2,
@@ -33,7 +32,6 @@ import {
   getAgreementStatusesForUser,
   listChildClubRequests,
 } from "@/services/digital-forms-service";
-import { listPublicCampusCampaigns } from "@/services/club-finance-service";
 import {
   listLinkedStudents,
   userCanAccessParentPortal,
@@ -59,13 +57,12 @@ export default async function ParentPortalPage() {
   // sees the family agreement list rather than their own staff one.
   const agreementUser = previewing ? { ...user, role: "parent" as const } : user;
 
-  const [summary, realLinkedStudents, agreementStatuses, childClubRequests, campaigns] =
+  const [summary, realLinkedStudents, agreementStatuses, childClubRequests] =
     await Promise.all([
       getParentFormSummary(user.id),
       previewing ? Promise.resolve([]) : listLinkedStudents(user.id),
       getAgreementStatusesForUser(agreementUser),
       previewing ? Promise.resolve([]) : listChildClubRequests(user.id),
-      listPublicCampusCampaigns({ take: 3 }).catch(() => []),
     ]);
 
   const linkedStudents = previewing ? [PREVIEW_STUDENT] : realLinkedStudents;
@@ -107,8 +104,6 @@ export default async function ParentPortalPage() {
         </>
       }
     >
-      <CampusCampaignBanner campaigns={campaigns} />
-
       <DashboardCard
         title="New here? Start with the parent guide"
         description="Step-by-step: setting up your account, what a parent account can do, and how the school reaches you."

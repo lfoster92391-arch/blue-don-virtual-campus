@@ -2,9 +2,11 @@ import Link from "next/link";
 import { Megaphone } from "lucide-react";
 
 import { CampusCampaignForm } from "@/components/fundraisers/campus-campaign-form";
+import { CampusCampaignManageActions } from "@/components/fundraisers/campus-campaign-manage-actions";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { ShellPage } from "@/components/layout/shell-page";
 import { Button } from "@/components/ui/button";
+import { bannerToFormValues } from "@/lib/club-finance";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import {
   canPostCampusCampaign,
@@ -29,6 +31,8 @@ export default async function FundraisersPage() {
   const canPost =
     hosts.length > 0 &&
     (await canPostCampusCampaign(user.id, user.role, hosts[0].id));
+  const manageableOrgIds = new Set(hosts.map((host) => host.id));
+  const storageConfigured = isClubFundraiserStorageConfigured();
 
   return (
     <ShellPage
@@ -42,7 +46,7 @@ export default async function FundraisersPage() {
       ) : (
         <ul className="grid gap-3">
           {campaigns.map((campaign) => (
-            <li key={campaign.id}>
+            <li key={campaign.id} className="space-y-3">
               <Link
                 href={campaign.href}
                 className="flex gap-4 rounded-xl border border-border bg-card p-4 transition-colors hover:border-[#2F80ED]/40"
@@ -72,6 +76,13 @@ export default async function FundraisersPage() {
                   </p>
                 </div>
               </Link>
+              {manageableOrgIds.has(campaign.organizationId) ? (
+                <CampusCampaignManageActions
+                  campaign={bannerToFormValues(campaign)}
+                  storageConfigured={storageConfigured}
+                  returnTo="campus"
+                />
+              ) : null}
             </li>
           ))}
         </ul>
@@ -85,7 +96,7 @@ export default async function FundraisersPage() {
           <CampusCampaignForm
             hosts={hosts}
             returnTo="campus"
-            storageConfigured={isClubFundraiserStorageConfigured()}
+            storageConfigured={storageConfigured}
           />
         </DashboardCard>
       ) : null}

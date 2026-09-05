@@ -43,6 +43,7 @@ import type {
   SportsHubData,
   SportsPlayerStatView,
 } from "@/services/sports-highlights-service";
+import type { CampusWeather } from "@/services/weather-service";
 
 function ScheduleList({
   games,
@@ -103,6 +104,7 @@ export function SportsAudienceSections({
   canManage = false,
   showFormsSection = true,
   viewerId,
+  weather,
 }: {
   data: SportsHubData;
   basePath: string;
@@ -111,6 +113,7 @@ export function SportsAudienceSections({
   canManage?: boolean;
   showFormsSection?: boolean;
   viewerId?: string;
+  weather?: CampusWeather | null;
 }) {
   const sportLabel = data.activeSport?.name ?? "All sports";
   const highlightManage = viewerId
@@ -135,7 +138,27 @@ export function SportsAudienceSections({
         upcoming={data.upcoming}
         sportLabel={sportLabel}
         canManage={canManage}
+        weather={weather}
       />
+
+      <section aria-labelledby="sports-highlights">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <h2
+            id="sports-highlights"
+            className="text-lg font-semibold text-[#0A2342] dark:text-white"
+          >
+            Highlights
+          </h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#2F80ED]">
+            {sportLabel}
+          </p>
+        </div>
+        <HighlightGrid
+          highlights={data.highlights}
+          emptyLabel="No highlights published for this sport yet."
+          manage={highlightManage}
+        />
+      </section>
 
       <SportSwitcher
         sports={data.sports}
@@ -143,19 +166,6 @@ export function SportsAudienceSections({
         basePath={basePath}
         extraParams={extraParams}
       />
-
-      <PageDropdown
-        id="highlights"
-        title="Top highlights"
-        description="Game clips, photos, and stories from the Broadcasting sports desk."
-        eyebrow={sportLabel}
-      >
-        <HighlightGrid
-          highlights={data.highlights}
-          emptyLabel="No highlights published for this sport yet."
-          manage={highlightManage}
-        />
-      </PageDropdown>
 
       <PageDropdown
         id="schedule"

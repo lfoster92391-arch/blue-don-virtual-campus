@@ -1,9 +1,7 @@
 import Link from "next/link";
 import {
-  AlertTriangle,
   ArrowRight,
   BookOpen,
-  Cloud,
   Cross,
   Lightbulb,
   Megaphone,
@@ -12,6 +10,7 @@ import {
 import type { ReactNode } from "react";
 
 import { BriefingSection } from "@/components/home/briefing-section";
+import { CampusHeroWeather } from "@/components/weather/campus-hero-weather";
 import { FuelTheDonsRow } from "@/components/lunch/fuel-the-dons-link";
 import { AdvisorMessagesPanel } from "@/components/home/advisor-messages-panel";
 import { ClubOpsPulsePanel } from "@/components/home/club-ops-pulse";
@@ -19,7 +18,6 @@ import { CommandCenterMeetings } from "@/components/home/command-center-meetings
 import { CommandCenterTasks } from "@/components/home/command-center-tasks";
 import { PageDropdown } from "@/components/ui/page-dropdown";
 import { CAMPUS_FEED } from "@/config/campus-feed";
-import { CAMPUS_WEATHER_LOCATION } from "@/config/campus-weather";
 import {
   getDailyDiscovery,
   splitBrainGame,
@@ -30,15 +28,10 @@ import type {
   CommandCenterMeetingView,
   StudentMessageView,
 } from "@/lib/command-center";
-import { cn } from "@/lib/utils";
 import type { BroadcastAnnouncementView } from "@/services/broadcast-announcement-service";
 import type { ClubOpsPulse } from "@/services/club-ops-pulse-service";
 import { getTodayInMadonnaHistory } from "@/services/madonna-culture-service";
 import type { HubDigest } from "@/services/school-hub-service";
-import {
-  getCampusWeatherAlerts,
-  type CampusWeather,
-} from "@/services/weather-service";
 import type { CampusRole } from "@/config/roles";
 import { homeEyebrowForView, type ViewAsPersona } from "@/config/view-as";
 import type { CampusUser } from "@/types/auth";
@@ -52,6 +45,7 @@ type TodayAtMadonnaProps = {
   tasks?: ClubStudentTaskView[];
   opsPulse?: ClubOpsPulse | null;
   children?: ReactNode;
+  afterHero?: ReactNode;
   viewRole?: CampusRole;
   previewPersona?: ViewAsPersona | null;
   previewName?: string | null;
@@ -100,73 +94,6 @@ function DiscoveryBriefCard({
         </div>
       </div>
     </article>
-  );
-}
-
-function WeatherBriefing({ weather }: { weather: CampusWeather }) {
-  const snapshot = weather.available ? weather : weather.lastKnown;
-  const alerts = getCampusWeatherAlerts(weather);
-
-  return (
-    <div className="space-y-3">
-      {alerts.map((alert) => (
-        <div
-          key={alert.title}
-          className={cn(
-            "flex gap-3 rounded-xl border px-4 py-3",
-            alert.severity === "warning" &&
-              "border-[#C0392B]/30 bg-[#C0392B]/8 text-[#C0392B]",
-            alert.severity === "watch" &&
-              "border-[#D4A017]/35 bg-[#D4A017]/10 text-[#8A6A00]",
-            alert.severity === "info" &&
-              "border-border bg-muted/40 text-muted-foreground",
-          )}
-          role="status"
-        >
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold">{alert.title}</p>
-            <p className="mt-0.5 text-sm opacity-90">{alert.message}</p>
-          </div>
-        </div>
-      ))}
-
-      <Link
-        href="/weather"
-        className="group flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm transition-colors hover:border-[#2F80ED]/40 sm:flex-row sm:items-center"
-      >
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[#2F80ED]/10">
-          <Cloud className="size-6 text-[#2F80ED]" aria-hidden="true" />
-        </span>
-        <div className="min-w-0 flex-1">
-          {snapshot ? (
-            <>
-              <p className="text-2xl font-semibold tabular-nums text-[#0A2342] dark:text-white">
-                {snapshot.temperatureF}°F
-                <span className="ml-2 text-base font-medium text-muted-foreground">
-                  {snapshot.conditionLabel}
-                </span>
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {CAMPUS_WEATHER_LOCATION.city}, {CAMPUS_WEATHER_LOCATION.state} · UV{" "}
-                {snapshot.uvIndex} ({snapshot.uvLabel}) · Wind{" "}
-                {snapshot.windSpeedMph} mph · {snapshot.precipitationPercent}% precip
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Athletics: {snapshot.athleticLabel} · {snapshot.recessLabel}
-              </p>
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {weather.available ? "Loading…" : weather.message}
-            </p>
-          )}
-        </div>
-        <span className="text-sm font-medium text-[#2F80ED] group-hover:underline">
-          Full station →
-        </span>
-      </Link>
-    </div>
   );
 }
 
@@ -319,6 +246,7 @@ export function TodayAtMadonna({
   tasks = [],
   opsPulse = null,
   children,
+  afterHero,
   viewRole,
   previewPersona,
   previewName,
@@ -354,6 +282,7 @@ export function TodayAtMadonna({
             {greeting} {homeBlurb(role)}
           </p>
           <p className="text-sm text-[#C6CCD6]/80">{hub.dateLabel}</p>
+          <CampusHeroWeather weather={hub.weather} />
         </div>
         <div
           className="pointer-events-none absolute -right-10 -top-10 size-48 rounded-full bg-[#C9A227]/15 blur-3xl"
@@ -364,6 +293,8 @@ export function TodayAtMadonna({
           aria-hidden="true"
         />
       </header>
+
+      {afterHero ? <div className="mt-6">{afterHero}</div> : null}
 
       <div className="mt-6 space-y-3">
         {opsPulse ? (
@@ -401,23 +332,6 @@ export function TodayAtMadonna({
       {children ? <div className="mt-8">{children}</div> : null}
 
       <div className="mt-8 space-y-3">
-        <BriefingSection
-          id="weather"
-          eyebrow="01"
-          title="Campus weather"
-          description={`Live conditions for ${CAMPUS_WEATHER_LOCATION.city}, ${CAMPUS_WEATHER_LOCATION.state}.`}
-          actions={
-            <Link
-              href="/weather"
-              className="text-sm font-medium text-[#2F80ED] hover:underline"
-            >
-              Weather station
-            </Link>
-          }
-        >
-          <WeatherBriefing weather={hub.weather} />
-        </BriefingSection>
-
         <BriefingSection
           id="lunch"
           eyebrow="02"

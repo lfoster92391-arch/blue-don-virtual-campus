@@ -10,11 +10,13 @@ import {
   type ClubFinanceActionState,
 } from "@/features/club-finance/actions";
 import { CampusCampaignForm } from "@/components/fundraisers/campus-campaign-form";
+import { CampusCampaignManageActions } from "@/components/fundraisers/campus-campaign-manage-actions";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { Button } from "@/components/ui/button";
 import {
   ALL_TIME_PERIOD_KEY,
   campusCampaignHeadline,
+  clubFundraiserToFormValues,
   formatCents,
   type ClubFinanceSnapshot,
 } from "@/lib/club-finance";
@@ -452,6 +454,18 @@ export function ClubFinancesPanel({
                       >
                         Cancel
                       </Button>
+                    </div>
+                  ) : null}
+                  {canPost ? (
+                    <div className="mt-3">
+                      <CampusCampaignManageActions
+                        campaign={clubFundraiserToFormValues({
+                          ...f,
+                          organizationSlug: snapshot.organizationSlug,
+                        })}
+                        storageConfigured={storageConfigured}
+                        returnTo="finances"
+                      />
                     </div>
                   ) : null}
                 </li>

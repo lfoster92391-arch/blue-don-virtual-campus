@@ -68,6 +68,7 @@ export function campusCampaignHeadline(
 
 export type ClubFundraiserView = {
   id: string;
+  organizationId: string;
   title: string;
   description: string | null;
   goalCents: number;
@@ -99,10 +100,13 @@ export type ClubFundraiserView = {
 /** Public landing headline — ISO dates so guest/home can stay server components. */
 export type CampusCampaignBannerView = {
   id: string;
+  organizationId: string;
   headline: string;
   title: string;
+  kind: CampusCampaignKind;
   kindLabel: string;
   description: string | null;
+  goalCents: number;
   flyerUrl: string | null;
   linkUrl: string | null;
   pricesText: string | null;
@@ -114,10 +118,86 @@ export type CampusCampaignBannerView = {
   contactEmail: string | null;
   contactPhone: string | null;
   raisingFor: string | null;
+  isPublic: boolean;
   organizationName: string;
   organizationSlug: string;
   href: string;
 };
+
+/** Shared shape for create/edit forms (dates may be Date or ISO). */
+export type CampusCampaignFormValues = {
+  id: string;
+  organizationId: string;
+  organizationSlug: string;
+  title: string;
+  description: string | null;
+  goalCents: number;
+  kind: CampusCampaignKind;
+  flyerUrl: string | null;
+  linkUrl: string | null;
+  pricesText: string | null;
+  startsAt: Date | string | null;
+  endsAt: Date | string | null;
+  arrivesAt: Date | string | null;
+  pickupLocation: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  raisingFor: string | null;
+  isPublic: boolean;
+};
+
+export function clubFundraiserToFormValues(
+  fundraiser: ClubFundraiserView,
+): CampusCampaignFormValues {
+  return {
+    id: fundraiser.id,
+    organizationId: fundraiser.organizationId,
+    organizationSlug: fundraiser.organizationSlug ?? "",
+    title: fundraiser.title,
+    description: fundraiser.description,
+    goalCents: fundraiser.goalCents,
+    kind: fundraiser.kind,
+    flyerUrl: fundraiser.flyerUrl,
+    linkUrl: fundraiser.linkUrl,
+    pricesText: fundraiser.pricesText,
+    startsAt: fundraiser.startsAt,
+    endsAt: fundraiser.endsAt,
+    arrivesAt: fundraiser.arrivesAt,
+    pickupLocation: fundraiser.pickupLocation,
+    contactName: fundraiser.contactName,
+    contactEmail: fundraiser.contactEmail,
+    contactPhone: fundraiser.contactPhone,
+    raisingFor: fundraiser.raisingFor,
+    isPublic: fundraiser.isPublic,
+  };
+}
+
+export function bannerToFormValues(
+  campaign: CampusCampaignBannerView,
+): CampusCampaignFormValues {
+  return {
+    id: campaign.id,
+    organizationId: campaign.organizationId,
+    organizationSlug: campaign.organizationSlug,
+    title: campaign.title,
+    description: campaign.description,
+    goalCents: campaign.goalCents,
+    kind: campaign.kind,
+    flyerUrl: campaign.flyerUrl,
+    linkUrl: campaign.linkUrl,
+    pricesText: campaign.pricesText,
+    startsAt: campaign.orderOpensAt,
+    endsAt: campaign.orderClosesAt,
+    arrivesAt: campaign.arrivesAt,
+    pickupLocation: campaign.pickupLocation,
+    contactName: campaign.contactName,
+    contactEmail: campaign.contactEmail,
+    contactPhone: campaign.contactPhone,
+    raisingFor: campaign.raisingFor,
+    isPublic: campaign.isPublic,
+  };
+}
 
 /**
  * A selectable window over a club ledger. `ALL_TIME_PERIOD_KEY` and

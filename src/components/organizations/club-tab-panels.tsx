@@ -75,8 +75,10 @@ import { getOrganizationHref } from "@/config/madonna-organizations";
 import { getClubProgress } from "@/services/club-xp-service";
 import type { ClubCalendarEventView } from "@/lib/club-calendar";
 import { CampusCampaignForm } from "@/components/fundraisers/campus-campaign-form";
+import { CampusCampaignManageActions } from "@/components/fundraisers/campus-campaign-manage-actions";
 import {
   campusCampaignHeadline,
+  clubFundraiserToFormValues,
   formatCents,
   type ClubFinanceSnapshot,
 } from "@/lib/club-finance";
@@ -1230,6 +1232,18 @@ function FundraisersPanel(props: ClubTabPanelsProps) {
                     nativeButton={false}
                     render={<Link href={`/fundraisers/${f.id}`}>Open post</Link>}
                   />
+                  {canPost ? (
+                    <div className="mt-3">
+                      <CampusCampaignManageActions
+                        campaign={clubFundraiserToFormValues({
+                          ...f,
+                          organizationSlug: props.organizationSlug,
+                        })}
+                        storageConfigured={props.flyerStorageConfigured ?? false}
+                        returnTo="fundraisers"
+                      />
+                    </div>
+                  ) : null}
                 </li>
               );
             })}

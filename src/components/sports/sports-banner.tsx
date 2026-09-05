@@ -13,7 +13,9 @@ import {
   GAME_SITE_LABELS,
   GAME_STATUS_LABELS,
 } from "@/config/sports-highlights";
+import { CampusHeroWeather } from "@/components/weather/campus-hero-weather";
 import type { SportsGameView } from "@/services/sports-highlights-service";
+import type { CampusWeather } from "@/services/weather-service";
 
 function GameSurface({
   href,
@@ -77,6 +79,7 @@ export function SportsBanner({
   sportLabel,
   canManage = false,
   linkGames = true,
+  weather,
 }: {
   lastGame: SportsGameView | null;
   upcoming: SportsGameView[];
@@ -84,6 +87,7 @@ export function SportsBanner({
   canManage?: boolean;
   /** Guest home shows scores without sending people into school-only game pages. */
   linkGames?: boolean;
+  weather?: CampusWeather | null;
 }) {
   if (!lastGame && upcoming.length === 0) {
     return (
@@ -104,6 +108,7 @@ export function SportsBanner({
             ? "Add opponent schools to the directory, then post a game so the scoreboard and student write-up forms light up."
             : "Broadcasting posts scores and upcoming games here as soon as the schedule is set."}
         </p>
+        {weather ? <CampusHeroWeather weather={weather} /> : null}
       </section>
     );
   }
@@ -192,6 +197,11 @@ export function SportsBanner({
           )}
         </div>
       </div>
+      {weather ? (
+        <div className="bg-[#0A2342] px-6 pb-6">
+          <CampusHeroWeather weather={weather} />
+        </div>
+      ) : null}
     </section>
   );
 }

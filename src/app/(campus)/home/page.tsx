@@ -1,5 +1,7 @@
-import { CampusCampaignBanner } from "@/components/fundraisers/campus-campaign-banner";
+import Link from "next/link";
+
 import { PageDropdown } from "@/components/ui/page-dropdown";
+import { HighlightGrid } from "@/components/sports/highlight-grid";
 import { AgreementsWidget } from "@/components/home/agreements-widget";
 import { ClubJoinRequestsAlert } from "@/components/home/club-join-requests-alert";
 import { BlueDonOS } from "@/components/home/blue-don-os";
@@ -47,7 +49,6 @@ import {
   type StudentContext,
 } from "@/services/student-context-service";
 import { listStudentMessagesForUser } from "@/services/student-message-service";
-import { listPublicCampusCampaigns } from "@/services/club-finance-service";
 import { getCricutAmazonWishlistUrl } from "@/services/cricut-shop-service";
 import { FOCUSED_CLUBS_MODE } from "@/config/app-mode";
 import { FOCUS_CLUBS } from "@/config/focused-clubs";
@@ -109,7 +110,6 @@ export default async function HomePage({
     players,
     activeLive,
     schedule,
-    campaigns,
   ] = await Promise.all([
     safeHomeData(
       "digest",
@@ -199,7 +199,6 @@ export default async function HomePage({
     safeHomeData("players", () => listPlayers(), []),
     safeHomeData("live", () => getActiveLiveStream(), null),
     safeHomeData("broadcast-schedule", () => getBroadcastSchedule(), null),
-    safeHomeData("campus-campaigns", () => listPublicCampusCampaigns({ take: 3 }), []),
   ]);
 
   const showAgreements = viewRole === "student" || viewRole === "parent";
@@ -217,7 +216,6 @@ export default async function HomePage({
       )}
       {showAgreements ? <AgreementsWidget user={user} /> : null}
       {showClubJoinRequests ? <ClubJoinRequestsAlert user={user} /> : null}
-      <CampusCampaignBanner campaigns={campaigns} className="mb-6" />
       {FOCUSED_CLUBS_MODE && cricutWishlistUrl ? (
         <div className="mb-6">
           <CricutAmazonWishlistBanner url={cricutWishlistUrl} compact />
@@ -236,6 +234,28 @@ export default async function HomePage({
         viewRole={viewRole}
         previewPersona={identity.previewPersona}
         previewName={identity.previewTarget?.displayName ?? null}
+        afterHero={
+          <section aria-labelledby="home-highlights">
+            <div className="mb-3 flex items-end justify-between gap-3">
+              <h2
+                id="home-highlights"
+                className="text-lg font-semibold text-[#0A2342] dark:text-white"
+              >
+                Highlights
+              </h2>
+              <Link
+                href="/madonna/sports"
+                className="text-sm font-medium text-[#2F80ED] hover:underline"
+              >
+                All sports
+              </Link>
+            </div>
+            <HighlightGrid
+              highlights={highlights}
+              emptyLabel="No highlights posted yet."
+            />
+          </section>
+        }
       >
         <div className="space-y-3">
           <PageDropdown
@@ -254,6 +274,7 @@ export default async function HomePage({
               activeLive,
               nextAirAt: schedule?.nextAirAt ?? null,
             }}
+            showHighlights={false}
           />
         </div>
       </BlueDonOS>

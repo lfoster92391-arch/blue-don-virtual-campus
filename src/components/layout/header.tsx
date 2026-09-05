@@ -5,6 +5,7 @@ import { HandHeart, Menu } from "lucide-react";
 
 import { siteConfig } from "@/config/site";
 import { BrandLogo } from "@/components/brand/brand-logo";
+import { CampusCampaignButton } from "@/components/fundraisers/campus-campaign-button";
 import { CampusClock } from "@/components/shell/campus-clock";
 import { CampusSearch } from "@/components/shell/campus-search";
 import {
@@ -24,9 +25,11 @@ import type { CampusUser } from "@/types/auth";
 export function Header({
   user,
   showViewAs = false,
+  campaigns = [],
 }: {
   user: CampusUser;
   showViewAs?: boolean;
+  campaigns?: { id: string; title: string }[];
 }) {
   const { setMobileSidebarOpen } = useShellStore();
 
@@ -58,6 +61,10 @@ export function Header({
         <div className="ml-auto flex flex-1 items-center justify-end gap-2 lg:ml-0 lg:justify-between">
           <CampusClock />
           <div className="flex flex-1 items-center justify-end gap-1 sm:gap-2">
+            <CampusCampaignButton
+              campaigns={campaigns}
+              className="h-9 max-w-48 px-3 sm:max-w-72"
+            />
             <Button
               variant="action"
               size="sm"

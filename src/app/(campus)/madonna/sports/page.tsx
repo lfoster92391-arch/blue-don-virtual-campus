@@ -27,6 +27,7 @@ import {
   isSportsImageStorageConfigured,
   type SportsHubData,
 } from "@/services/sports-highlights-service";
+import { getCampusWeather } from "@/services/weather-service";
 
 export const metadata = {
   title: "Madonna Sports",
@@ -65,7 +66,7 @@ export default async function MadonnaSportsPage({
   const user = await requireCompleteProfile();
   const { sport } = await searchParams;
 
-  const [sportsData, videos, canManageMedia, canManageDesk, activeLive, schedule] =
+  const [sportsData, videos, canManageMedia, canManageDesk, activeLive, schedule, weather] =
     await Promise.all([
       safe(getSportsHubData(sport ?? null, { viewerId: user.id }), EMPTY_SPORTS_DATA),
       safe(listSportsRecapVideos({ take: 200 }), []),
@@ -73,6 +74,7 @@ export default async function MadonnaSportsPage({
       safe(canManageSportsDesk(user.id, user.role), false),
       safe(getActiveLiveStream(), null),
       safe(getBroadcastSchedule(), null),
+      safe(getCampusWeather(), null),
     ]);
 
   // Play the stream here only when it is tagged as sports coverage; otherwise
@@ -117,6 +119,7 @@ export default async function MadonnaSportsPage({
         storageConfigured={isSportsImageStorageConfigured()}
         canManage={canManageDesk}
         viewerId={user.id}
+        weather={weather}
       />
 
       {canManageMedia ? (

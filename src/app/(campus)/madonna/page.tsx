@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-import { CampusCampaignBanner } from "@/components/fundraisers/campus-campaign-banner";
 import { FuelTheDonsRow } from "@/components/lunch/fuel-the-dons-link";
+import { HighlightGrid } from "@/components/sports/highlight-grid";
 import {
   MadonnaHubHeader,
   MadonnaSectionNav,
@@ -25,8 +25,7 @@ import {
   buildEmptyHubDigest,
   getTodayHubDigest,
 } from "@/services/school-hub-service";
-import { listPublicCampusCampaigns } from "@/services/club-finance-service";
-import { getCurrentOrNextGame } from "@/services/sports-highlights-service";
+import { getCurrentOrNextGame, listHighlights } from "@/services/sports-highlights-service";
 
 export const metadata = {
   title: "Madonna Hub",
@@ -49,7 +48,7 @@ export default async function MadonnaHubPage() {
   const firstName = user.firstName ?? user.displayName.split(" ")[0] ?? "Don";
   const isParent = user.role === "parent";
 
-  const [hub, announcement, activeLive, schedule, nextGame, sportsVideos, campaigns] =
+  const [hub, announcement, activeLive, schedule, nextGame, sportsVideos, highlights] =
     await Promise.all([
       safe(
         getTodayHubDigest({ id: user.id, role: user.role }),
@@ -60,7 +59,7 @@ export default async function MadonnaHubPage() {
       safe(getBroadcastSchedule(), null),
       safe(getCurrentOrNextGame({ withinHours: 24 * 14 }), null),
       safe(listSportsRecapVideos({ take: 200 }), []),
-      safe(listPublicCampusCampaigns({ take: 3 }), []),
+      safe(listHighlights({ publishedOnly: true, take: 8 }), []),
     ]);
 
   // Tile meta is live or absent — never a placeholder count.
@@ -91,7 +90,26 @@ export default async function MadonnaHubPage() {
         }
       />
 
-      <CampusCampaignBanner campaigns={campaigns} />
+      <section aria-labelledby="madonna-highlights">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <h2
+            id="madonna-highlights"
+            className="text-lg font-semibold text-[#0A2342] dark:text-white"
+          >
+            Highlights
+          </h2>
+          <Link
+            href="/madonna/sports"
+            className="text-sm font-medium text-[#2F80ED] hover:underline"
+          >
+            All sports
+          </Link>
+        </div>
+        <HighlightGrid
+          highlights={highlights}
+          emptyLabel="No highlights posted yet."
+        />
+      </section>
 
       <MadonnaSectionNav />
 
